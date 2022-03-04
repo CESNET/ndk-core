@@ -1,0 +1,124 @@
+-- network_mod_ent.vhd: Entity declaration for the core of the Nework module
+-- Copyright (C) 2021 CESNET z. s. p. o.
+-- Author(s): Daniel Kondys <xkondy00@vutbr.cz>
+--
+-- SPDX-License-Identifier: BSD-3-Clause
+
+library IEEE;
+use IEEE.std_logic_1164.all;
+use IEEE.numeric_std.all;
+
+use work.math_pack.all;
+use work.type_pack.all;
+use work.eth_hdr_pack.all;
+
+entity NETWORK_MOD_CORE is
+generic(
+    -- =====================================================================
+    -- Network configuration:
+    -- =====================================================================
+    -- Select Ethernet port speed.
+    -- Options: 400G1 card        : 400, 200, 100, 50, 40, 25, 10;
+    --          DK-DEV-1SDX-P card: 100, 25, 10.
+    ETH_PORT_SPEED  : natural := 100;
+    -- Select number of channels per Ethernet port.
+    -- Options: 400G1 card        : 1, 2, 4, 8;
+    --          DK-DEV-1SDX-P card: 1, 4.
+    ETH_PORT_CHAN   : natural := 1;
+    -- Number of serial lanes.
+    -- Options: 400G1 card        : 8;
+    --          DK-DEV-1SDX-P card: 4.
+    LANES           : natural := 4;
+
+    -- =====================================================================
+    -- MFB configuration:
+    -- =====================================================================
+    -- Set according to eth port mode:
+    --     400G1 card        :        "400g1", "200g2", "100g4", "50g8" | "40g2", "25g8" | "10g8".
+    --     DK-DEV-1SDX-P card:               , "100g1",        ,                , "25g4" | "10g4".
+    REGIONS           : natural := 1; -- 2   ,    1   ,    1   ,        1       ,        1       .
+    REGION_SIZE       : natural := 8; -- 8   ,    8   ,    4   ,        2       ,        1       .
+    BLOCK_SIZE        : natural := 8; -- 8   ,    8   ,    8   ,        8       ,        8       .
+    ITEM_WIDTH        : natural := 8; -- 8   ,    8   ,    8   ,        8       ,        8       .
+
+    -- =====================================================================
+    -- MI configuration:
+    -- =====================================================================
+    MI_DATA_WIDTH_PHY : natural := 32;
+    MI_ADDR_WIDTH_PHY : natural := 32;
+
+    -- =====================================================================
+    -- Other configuration:
+    -- =====================================================================
+    -- Select correct FPGA device.
+    -- "AGILEX", "STRATIX10", "ULTRASCALE", ...
+    DEVICE            : string  := "STRATIX10"
+    );
+port(
+    -- =====================================================================
+    -- CLOCK AND RESET
+    -- =====================================================================
+    CLK_ETH         : out std_logic;
+    RESET_ETH       : in  std_logic;
+
+    -- =====================================================================
+    -- QSFP interface
+    -- =====================================================================
+    QSFP_REFCLK_P   : in  std_logic;                          -- LVDS - 644.53125MHz
+    QSFP_RX_P       : in  std_logic_vector(LANES-1 downto 0); -- QSFP XCVR RX Data
+    QSFP_RX_N       : in  std_logic_vector(LANES-1 downto 0); -- QSFP XCVR RX Data
+    QSFP_TX_P       : out std_logic_vector(LANES-1 downto 0); -- QSFP XCVR TX Data
+    QSFP_TX_N       : out std_logic_vector(LANES-1 downto 0); -- QSFP XCVR TX Data
+
+    -- =====================================================================
+    -- Link control/status 
+    -- =====================================================================        
+    -- REPEATER_CTRL   : in  std_logic_vector(1 downto 0);
+    -- PORT_ENABLED    : out std_logic;
+    -- ACTIVITY_RX     : out std_logic;
+    -- ACTIVITY_TX     : out std_logic;
+    -- LINK            : out std_logic;
+
+    -- =====================================================================
+    -- RX interface (Packets for transmit to Ethernet, recieved from MFB)
+    -- =====================================================================
+    RX_MFB_DATA     : in  slv_array_t     (ETH_PORT_CHAN-1 downto 0)(REGIONS*REGION_SIZE*BLOCK_SIZE*ITEM_WIDTH-1 downto 0);
+    RX_MFB_SOF_POS  : in  slv_array_t     (ETH_PORT_CHAN-1 downto 0)(REGIONS*max(1,log2(REGION_SIZE))-1 downto 0);
+    RX_MFB_EOF_POS  : in  slv_array_t     (ETH_PORT_CHAN-1 downto 0)(REGIONS*max(1,log2(REGION_SIZE*BLOCK_SIZE))-1 downto 0);
+    RX_MFB_SOF      : in  slv_array_t     (ETH_PORT_CHAN-1 downto 0)(REGIONS-1 downto 0);
+    RX_MFB_EOF      : in  slv_array_t     (ETH_PORT_CHAN-1 downto 0)(REGIONS-1 downto 0);
+    RX_MFB_SRC_RDY  : in  std_logic_vector(ETH_PORT_CHAN-1 downto 0);
+    RX_MFB_DST_RDY  : out std_logic_vector(ETH_PORT_CHAN-1 downto 0);
+
+    -- =====================================================================
+    -- TX interface (Packets received from Ethernet, for transmit to MFB)
+    -- =====================================================================
+    TX_MFB_DATA     : out slv_array_t     (ETH_PORT_CHAN-1 downto 0)(REGIONS*REGION_SIZE*BLOCK_SIZE*ITEM_WIDTH-1 downto 0);
+    TX_MFB_ERROR    : out slv_array_t     (ETH_PORT_CHAN-1 downto 0)(REGIONS-1 downto 0);
+    TX_MFB_SOF_POS  : out slv_array_t     (ETH_PORT_CHAN-1 downto 0)(REGIONS*max(1,log2(REGION_SIZE))-1 downto 0);
+    TX_MFB_EOF_POS  : out slv_array_t     (ETH_PORT_CHAN-1 downto 0)(REGIONS*max(1,log2(REGION_SIZE*BLOCK_SIZE))-1 downto 0);
+    TX_MFB_SOF      : out slv_array_t     (ETH_PORT_CHAN-1 downto 0)(REGIONS-1 downto 0);
+    TX_MFB_EOF      : out slv_array_t     (ETH_PORT_CHAN-1 downto 0)(REGIONS-1 downto 0);
+    TX_MFB_SRC_RDY  : out std_logic_vector(ETH_PORT_CHAN-1 downto 0);
+
+    -- =====================================================================
+    -- MI interface - ETH PCS/PMA/QSFP
+    -- =====================================================================
+    MI_CLK_PHY      : in  std_logic;
+    MI_RESET_PHY    : in  std_logic;
+    MI_DWR_PHY      : in  std_logic_vector(MI_ADDR_WIDTH_PHY-1 downto 0);
+    MI_ADDR_PHY     : in  std_logic_vector(MI_DATA_WIDTH_PHY-1 downto 0);
+    MI_RD_PHY       : in  std_logic;
+    MI_WR_PHY       : in  std_logic;
+    MI_BE_PHY       : in  std_logic_vector(MI_DATA_WIDTH_PHY/8-1 downto 0);
+    MI_DRD_PHY      : out std_logic_vector(MI_DATA_WIDTH_PHY-1 downto 0);
+    MI_ARDY_PHY     : out std_logic;
+    MI_DRDY_PHY     : out std_logic;
+
+    -- =====================================================================
+    -- TSU clock and reset
+    -- =====================================================================
+    TSU_CLK         : out std_logic;
+    TSU_RST         : out std_logic  -- ??
+);
+end entity;
