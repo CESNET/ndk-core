@@ -18,18 +18,21 @@ entity NETWORK_MOD is
         -- =====================================================================
         -- Network ports configuration:
         -- =====================================================================    
-        ETH_PORTS         : natural := 1; -- max 2 (MI address space limit)
-        -- Select Ethernet port speed.
-        -- Options: 400G1 card        : 400, 200, 100, 50, 40, 25, 10;
-        --          DK-DEV-1SDX-P card: 100, 25, 10.
-        ETH_PORT_SPEED    : integer_vector(ETH_PORTS-1 downto 0) := (others => 100);
-        -- Select number of channels per Ethernet port.
-        -- Options: 400G1 card        : 1, 2, 4, 8;
-        --          DK-DEV-1SDX-P card: 1, 4.
-        ETH_PORT_CHAN     : integer_vector(ETH_PORTS-1 downto 0) := (others => 1);
+        ETH_PORTS         : natural := 2; -- max 2 (MI address space limit)
+        -- Speed per Ethernet port.
+        -- Options: 400G1            card: 400, 200, 100, 50, 40, 25, 10;
+        --          DK-DEV-AGI027RES card: 400, 200, 100, 50, 40, 25, 10;
+        --          DK-DEV-1SDX-P    card: 100, 25, 10.
+        ETH_PORT_SPEED    : integer_vector(ETH_PORTS-1 downto 0) := (others => 25);
+        -- Number of channels per Ethernet port.
+        -- Options: 400G1            card: 1, 2, 4, 8;
+        --          DK-DEV-AGI027RES card: 1, 2, 4, 8;
+        --          DK-DEV-1SDX-P    card: 1, 4.
+        ETH_PORT_CHAN     : integer_vector(ETH_PORTS-1 downto 0) := (others => 4);
         -- Number of serial lanes.
-        -- Options: 400G1 card        : 8;
-        --          DK-DEV-1SDX-P card: 4.
+        -- Options: 400G1            card  8;
+        --          DK-DEV-AGI027RES card: 8;
+        --          DK-DEV-1SDX-P    card: 4.
         LANES             : natural := 4;
         QSFP_I2C_PORTS    : natural := 1; -- max 2
 
@@ -51,13 +54,13 @@ entity NETWORK_MOD is
         MI_ADDR_WIDTH_PHY : natural := 32;
 
         -- =====================================================================
-        -- OTHER configuration:
+        -- Other configuration:
         -- =====================================================================
-        TX_GENERATOR      : boolean := True;
+        -- Number of user resets.
         RESET_WIDTH       : natural := 8;
         -- Select correct FPGA device.
         DEVICE            : string := "STRATIX10"; -- AGILEX, STRATIX10, ULTRASCALE
-        BOARD             : string := "DK-DEV-1SDX-P" -- 400G1, DK-DEV-1SDX-P
+        BOARD             : string := "DK-DEV-1SDX-P" -- 400G1, DK-DEV-AGI027RES, DK-DEV-1SDX-P
 
     );
     port(
@@ -163,4 +166,3 @@ entity NETWORK_MOD is
         TSU_TS_DV       : in  std_logic
     );
     end entity;
-    
