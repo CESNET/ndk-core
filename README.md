@@ -3,9 +3,9 @@
 Common CORE of Network Development Kit (NDK). It contains the shared parts of the FPGA architecture that are needed to build your own network acceleration application using the NDK.
 
 Additional repositories are needed to build the NDK design for the FPGA:
-- [NDK Minimal Application (top-level repository)](../../../../ndk-app-minimal/)
-- [Open FPGA Modules](../../../../ofm/)
-- [FPGA card supported in NDK (for example DK-DEV-1SDX-P)](../../../../ndk-card-dk-dev-1sdx-p/)
+- [NDK Minimal Application (top-level repository)](https://github.com/CESNET/ndk-app-minimal/)
+- [Open FPGA Modules](https://github.com/CESNET/ofm/)
+- [FPGA card supported in NDK (for example DK-DEV-1SDX-P)](https://github.com/CESNET/ndk-card-dk-dev-1sdx-p/)
 
 ## License
 
