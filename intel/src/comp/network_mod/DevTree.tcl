@@ -25,9 +25,13 @@ proc dts_network_mod { base_mac ports ETH_PORT_SPEED ETH_PORT_CHAN card_name} {
 
     set QSFP_I2C_ADDR(0) "0xA0"
     set QSFP_I2C_ADDR(1) "0xA0"
-    if {$card_name == "DK-DEV-1SDX-P" || $card_name == "DK-DEV-AGI027RES"} {
+    if {$card_name == "DK-DEV-1SDX-P"} {
         set QSFP_I2C_ADDR(0) "0xF0"
         set QSFP_I2C_ADDR(1) "0xF8"
+    }
+    if {$card_name == "DK-DEV-AGI027RES"} {
+        # Only QSFP1 cage is used, QSFP0 is completely disconnected.
+        set QSFP_I2C_ADDR(0) "0xF8"
     }
 
     for {set p 0} {$p < $ports} {incr p} {
