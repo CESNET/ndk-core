@@ -69,11 +69,15 @@ architecture full of qsfp_ctrl is
     signal i2c_qsfp_wen_fsm      : std_logic;
 
     type fpc_fsm_st_t is (st_reset, st_enable, st_wr_dev, st_wr_dev_wait_tip,
-        st_wr_dev_wait, st_wr_reg, st_wr_reg_wait_tip, st_wr_reg_wait,
+        st_wr_dev_wait, st_wr_reg, st_wr_reg_wait_tip, st_wr_reg_wait, st_sleep,
         st_wr_data, st_wr_data_wait_tip, st_wr_data_wait, st_wr_disable, st_done);
     signal fpc_fsm_pst           : fpc_fsm_st_t;
     signal fpc_fsm_nst           : fpc_fsm_st_t;
     signal fpc_fsm_done          : std_logic;
+    signal fpc_fsm_timer_en      : std_logic;
+    signal fpc_conf_st           : std_logic_vector(2-1 downto 0);
+    signal fpc_conf_st_reg       : std_logic_vector(2-1 downto 0);
+    signal sleep_timer           : std_logic_vector(25-1 downto 0);
       
     signal trans_ctrl            : std_logic_vector(3*QSFP_PORTS-1 downto 0);
     signal qsfp_modsel_r         : std_logic_vector(QSFP_PORTS-1 downto 0) := (0 => '1', others => '1');
@@ -196,9 +200,11 @@ begin
         begin
             if (rising_edge(MI_CLK_PHY)) then
                 if (MI_RESET_PHY = '1') then
-                    fpc_fsm_pst <= st_reset;
+                    fpc_fsm_pst     <= st_reset;
+                    fpc_conf_st_reg <= (others => '0');
                 else
-                    fpc_fsm_pst <= fpc_fsm_nst;
+                    fpc_fsm_pst     <= fpc_fsm_nst;
+                    fpc_conf_st_reg <= fpc_conf_st;
                 end if;
             end if;
         end process;
@@ -207,10 +213,12 @@ begin
         fpc202_fsm_logic_p : process (all)
         begin
             fpc_fsm_nst      <= fpc_fsm_pst;
+            fpc_conf_st      <= fpc_conf_st_reg;
             i2c_qsfp_be_fsm  <= (others => '0');
             i2c_qsfp_dwr_fsm <= (others => '0');
             i2c_qsfp_wen_fsm <= '0';
             fpc_fsm_done     <= '0';
+            fpc_fsm_timer_en <= '0';
 
             case (fpc_fsm_pst) is
                 when st_reset =>
@@ -239,8 +247,14 @@ begin
                     end if;
 
                 when st_wr_reg =>
+                    if (fpc_conf_st_reg = "00") then
+                        -- Enable Output register (FPC202 - 0x08)
+                        i2c_qsfp_dwr_fsm <= X"0000081000000000";
+                    else
+                        -- QSFP Reset register (FPC202 - 0x0A)
+                        i2c_qsfp_dwr_fsm <= X"00000A1000000000";
+                    end if;
                     i2c_qsfp_be_fsm  <= "11110000";
-                    i2c_qsfp_dwr_fsm <= X"0000081000000000";
                     i2c_qsfp_wen_fsm <= '1';
                     fpc_fsm_nst      <= st_wr_reg_wait_tip;
 
@@ -255,8 +269,17 @@ begin
                     end if;
 
                 when st_wr_data =>
+                    if (fpc_conf_st_reg = "01") then
+                        -- Enable QSFP reset
+                        i2c_qsfp_dwr_fsm <= X"0000005000000000";
+                    elsif (fpc_conf_st_reg = "10") then
+                        -- Disable QSFP reset
+                        i2c_qsfp_dwr_fsm <= X"00000F5000000000";
+                    else
+                        -- Set Enable Output register
+                        i2c_qsfp_dwr_fsm <= X"0000FF5000000000";
+                    end if;
                     i2c_qsfp_be_fsm  <= "11110000";
-                    i2c_qsfp_dwr_fsm <= X"0000ff5000000000";
                     i2c_qsfp_wen_fsm <= '1';
                     fpc_fsm_nst      <= st_wr_data_wait_tip;
 
@@ -267,7 +290,18 @@ begin
 
                 when st_wr_data_wait =>
                     if (i2c_qsfp_drd(33) = '0' and i2c_qsfp_drd(39) = '0') then
-                        fpc_fsm_nst <= st_wr_disable;
+                        fpc_conf_st <= fpc_conf_st_reg + 1;
+                        fpc_fsm_nst <= st_sleep;
+                    end if;
+
+                when st_sleep =>
+                    fpc_fsm_timer_en <= '1';
+                    if (sleep_timer(24) = '1') then
+                        if (fpc_conf_st_reg = "11") then
+                            fpc_fsm_nst <= st_wr_disable;
+                        else
+                            fpc_fsm_nst <= st_wr_dev;
+                        end if;
                     end if;
 
                 when st_wr_disable =>
@@ -283,6 +317,18 @@ begin
                     fpc_fsm_done     <= '1';
             end case;
         end process;
+
+        process (MI_CLK_PHY)
+        begin
+            if (rising_edge(MI_CLK_PHY)) then
+                if (fpc_fsm_timer_en = '0') then
+                    sleep_timer <= (others => '0');
+                else
+                    sleep_timer <= sleep_timer + 1;
+                end if;
+            end if;
+        end process;
+
     end generate;
 
     fpc202_off_g: if not FPC202_INIT_EN generate
