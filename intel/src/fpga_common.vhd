@@ -23,6 +23,8 @@ generic (
     -- =========================================================================
     --  Board static constants
     -- =========================================================================
+    -- System clock frequency in MHz
+    SYSCLK_FREQ             : natural := 100;
     -- Number of PCIe connectors present on board
     PCIE_CONS               : integer := 1;
     -- Number of PCIe lanes per connector
@@ -165,24 +167,6 @@ architecture FULL of FPGA_COMMON is
         end if;
     end function;
 
-	component iopll_ip is
-    port (
-        rst      : in  std_logic := 'X'; -- reset
-        refclk   : in  std_logic := 'X'; -- clk
-        locked   : out std_logic;        -- export
-        outclk_0 : out std_logic;        -- clk
-        outclk_1 : out std_logic;        -- clk
-        outclk_2 : out std_logic;        -- clk
-        outclk_3 : out std_logic         -- clk
-    );
-	end component iopll_ip;
-
-    component reset_release_ip is
-    port (
-        ninit_done : out std_logic -- ninit_done
-    );
-    end component reset_release_ip;
-
     constant CLK_COUNT      : natural := 4+ETH_PORTS;
     constant ETH_CHANNELS   : natural := ETH_PORT_CHAN(0);
     constant ETH_STREAMS    : natural := ETH_PORTS;
@@ -231,7 +215,7 @@ architecture FULL of FPGA_COMMON is
     constant DMA_CROX_DOUBLE_DMA : boolean := (DMA_CROX_CLK_SEL=0);
 
     signal init_done_n                   : std_logic;
-    signal iopll_locked                  : std_logic;
+    signal pll_locked                    : std_logic;
     signal global_reset                  : std_logic;
     signal clk_vector                    : std_logic_vector(CLK_COUNT-1 downto 0);
     signal rst_vector                    : std_logic_vector(CLK_COUNT*RESET_WIDTH-1 downto 0);
@@ -387,20 +371,21 @@ begin
     --  CLOCK AND RESET GENERATOR
     -- =========================================================================
 
-	s10_reset_release_ip : component reset_release_ip
+    clk_gen_i : entity work.COMMON_CLK_GEN
+    generic map(
+        REFCLK_FREQ        => SYSCLK_FREQ,
+        INIT_DONE_AS_RESET => True,
+        DEVICE             => DEVICE
+    )
     port map (
-        ninit_done => init_done_n
-    );
-
-    s10_iopll_ip : component iopll_ip
-    port map (
-        rst      => init_done_n,  -- reset
-        refclk   => SYSCLK,       -- refclk 100 MHz
-        locked   => iopll_locked, -- PLL locked
-        outclk_0 => clk_usr_x4,   -- 400 MHz
-        outclk_1 => clk_usr_x3,   -- 300 MHz
-        outclk_2 => clk_usr_x2,   -- 200 MHz
-        outclk_3 => clk_usr_x1    -- 100 MHz
+        REFCLK      => SYSCLK,
+        ASYNC_RESET => SYSRST,
+        LOCKED      => pll_locked,
+        INIT_DONE_N => init_done_n,
+        OUTCLK_0    => clk_usr_x4, -- 400 MHz
+        OUTCLK_1    => clk_usr_x3, -- 300 MHz
+        OUTCLK_2    => clk_usr_x2, -- 200 MHz
+        OUTCLK_3    => clk_usr_x1  -- 100 MHz
     );
 
     clk_vector <= clk_eth_phy & clk_usr_x4 & clk_usr_x3 & clk_usr_x2 & clk_usr_x1;
@@ -413,7 +398,7 @@ begin
     )
     port map (
         CLK        => SYSCLK,
-        ASYNC_RST  => not iopll_locked,
+        ASYNC_RST  => not pll_locked,
         OUT_RST(0) => global_reset
     );
 

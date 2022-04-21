@@ -56,3 +56,5 @@ set DMA_RX_BLOCKING_MODE  true
 set TSU_ENABLE false
 # Generic value must be replaced for each card
 set TSU_FREQUENCY 161132812
+# Clock generator achitecture (INTEL or USP)
+set CLOCK_GEN_ARCH "INTEL"

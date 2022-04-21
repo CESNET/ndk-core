@@ -8,6 +8,7 @@
 global BOARD
 global DMA_ENABLE
 global ETH_ENABLE
+global CLOCK_GEN_ARCH
 
 # Paths to components
 set ASYNC_RESET_BASE     "$OFM_PATH/comp/base/async/reset"
@@ -16,6 +17,7 @@ set TSU_BASE             "$OFM_PATH/comp/tsu/tsu_gen"
 set PCIE_BASE            "$ENTITY_BASE/src/comp/pcie"
 set DMA_BUS_BASE         "$ENTITY_BASE/src/comp/dma"
 set NETWORK_MOD_BASE     "$ENTITY_BASE/src/comp/network_mod"
+set CLOCK_GEN_BASE       "$ENTITY_BASE/src/comp/clk_gen"
 set MI_SPLITTER_BASE     "$OFM_PATH/comp/mi_tools/splitter_plus_gen"
 set RESET_TREE_GEN_BASE  "$OFM_PATH/comp/base/misc/reset_tree_gen"
 set MI_TEST_SPACE_BASE   "$OFM_PATH/comp/mi_tools/test_space"
@@ -46,9 +48,10 @@ if {$BOARD == "400G1" || $BOARD == "DK-DEV-AGI027RES"} {
 }
 
 if { $ARCHGRP == "APPLICATION_CORE_ENTYTY_ONLY" } {
-  set MOD "$MOD $ENTITY_BASE/src/application_ent.vhd"
+  lappend MOD "$ENTITY_BASE/src/application_ent.vhd"
 } else {
   set COMPONENTS [concat $COMPONENTS [list \
+      [list "CLOCK_GEN"       $CLOCK_GEN_BASE       $CLOCK_GEN_ARCH  ] \
       [list "ASYNC_RESET"     $ASYNC_RESET_BASE     "FULL"           ] \
       [list "ASYNC_OPEN_LOOP" $ASYNC_OPEN_LOOP_BASE "FULL"           ] \
       [list "TSU"             $TSU_BASE             "FULL"           ] \
@@ -62,10 +65,7 @@ if { $ARCHGRP == "APPLICATION_CORE_ENTYTY_ONLY" } {
       [list "DMA_GENERATOR"   $DMA_GENERATOR_BASE   "FULL"           ] \
   ]]
 
-  #set MOD "$MOD $ENTITY_BASE/src/comp/ip/iopll_ip.ip"
-  #set MOD "$MOD $ENTITY_BASE/src/comp/ip/reset_release_ip.ip"
-  set MOD "$MOD $ENTITY_BASE/src/application_ent.vhd"
-  set MOD "$MOD $ENTITY_BASE/src/fpga_common.vhd"
-
-  set MOD "$MOD $ENTITY_BASE/src/DevTree.tcl"
+  lappend MOD "$ENTITY_BASE/src/application_ent.vhd"
+  lappend MOD "$ENTITY_BASE/src/fpga_common.vhd"
+  lappend MOD "$ENTITY_BASE/src/DevTree.tcl"
 }
