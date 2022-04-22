@@ -957,7 +957,6 @@ begin
         MI_DATA_WIDTH_PHY => 32             ,
         MI_ADDR_WIDTH_PHY => 32             ,
 
-        TX_GENERATOR      => False          , --TBD
         RESET_WIDTH       => 1              ,
         DEVICE            => DEVICE         ,
         BOARD             => BOARD
