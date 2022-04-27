@@ -34,8 +34,8 @@ architecture FULL of NETWORK_MOD is
     constant REGION_SIZE_CORE  : natural := region_size_core_f;
 
     constant ETH_CHANNELS      : integer := ETH_PORT_CHAN(0); -- TODO: support different speeds/number of channels for each port
-    --                                      Network mod core, ETH_CHANNELS x (TX MAC lite, RX MAC lite)
-    constant RESET_REPLICAS    : natural := 1               + ETH_CHANNELS * (1          + 1          );
+    --                                      TSU, Network mod core, ETH_CHANNELS x (TX MAC lite, RX MAC lite)
+    constant RESET_REPLICAS    : natural := 1  + 1               + ETH_CHANNELS * (1          + 1          );
 
     constant PORTS_OFF         : std_logic_vector(MI_ADDR_WIDTH-1 downto 0) := X"0000_2000";
     constant MI_ADDR_BASES     : natural := ETH_PORTS;
@@ -305,7 +305,7 @@ begin
             MI_ADDR_WIDTH    => MI_ADDR_WIDTH   ,
             -- Other
             RESET_USER_WIDTH => RESET_WIDTH     ,
-            RESET_CORE_WIDTH => RESET_REPLICAS-1,
+            RESET_CORE_WIDTH => RESET_REPLICAS-2,
             DEVICE           => DEVICE          ,
             BOARD            => BOARD
         )
@@ -313,7 +313,7 @@ begin
             CLK_USER        => CLK_USER,
             CLK_CORE        => CLK_ETH(p),
             RESET_USER      => RESET_USER,
-            RESET_CORE      => repl_rst_arr(p)(RESET_REPLICAS-1 downto 1),
+            RESET_CORE      => repl_rst_arr(p)(RESET_REPLICAS-1 downto 2),
 
             -- USER side
             RX_USER_MFB_DATA    => RX_MFB_DATA_arr   (p),
@@ -414,8 +414,8 @@ begin
             TX_MFB_ERROR    => rx_mfb_error_i  (p),
             TX_MFB_SRC_RDY  => rx_mfb_src_rdy_i(p),
 
-            TSU_CLK         => tsu_clk_vec(p),
-            TSU_RST         => tsu_rst_vec(p), -- useless port
+            TSU_CLK         => open,
+            TSU_RST         => open, -- useless port
 
             -- Control/status - not located in the core, TODO?
             -- REPEATER_CTRL         => REPEATER_CTRL(p*2+1 downto p*2),
@@ -458,8 +458,8 @@ begin
             DEVICE     => DEVICE
         )
         port map (
-            WR_CLK    => tsu_clk_vec(0),
-            WR_RST    => tsu_rst_vec(0),
+            WR_CLK    => CLK_ETH(0),
+            WR_RST    => repl_rst_arr(0)(1),
             WR_DATA   => TSU_TS_NS     ,
             WR_EN     => TSU_TS_DV     ,
             WR_FULL   => open          ,
@@ -467,7 +467,7 @@ begin
             WR_STATUS => open          ,
 
             RD_CLK    => CLK_ETH        (p),
-            RD_RST    => RESET_ETH      (p),
+            RD_RST    => repl_rst_arr   (p)(1),
             RD_DATA   => asfifox_rd_data(p),
             RD_EN     => '1'               ,
             RD_EMPTY  => asfifox_empty  (p),
@@ -483,8 +483,8 @@ begin
             end if;
         end process;
 
-        TSU_CLK <= tsu_clk_vec(0);
-        TSU_RST <= tsu_rst_vec(0);
+        TSU_CLK <= CLK_ETH(0);
+        TSU_RST <= repl_rst_arr(0)(1);
 
     end generate;
 
