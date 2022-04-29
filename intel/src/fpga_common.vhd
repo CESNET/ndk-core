@@ -32,10 +32,10 @@ generic (
     -- Number of PCIe clocks per connector (useful for bifurcation)
     PCIE_CLKS               : integer := 1;
     -- PCI device identification (not applicable when using XCI PCIe cores)
-    PCI_VENDOR_ID           : std_logic_vector(15 downto 0) := X"1B26";
+    PCI_VENDOR_ID           : std_logic_vector(15 downto 0) := X"18EC";
     PCI_DEVICE_ID           : std_logic_vector(15 downto 0) := X"C400";
-    PCI_SUBVENDOR_ID        : std_logic_vector(15 downto 0) := X"1B26";
-    PCI_SUBDEVICE_ID        : std_logic_vector(15 downto 0) := X"0800";
+    PCI_SUBVENDOR_ID        : std_logic_vector(15 downto 0) := X"0000";
+    PCI_SUBDEVICE_ID        : std_logic_vector(15 downto 0) := X"0000";
     -- Number of Ethernet ports present on board
     ETH_PORTS               : integer := 1;
     -- Number of lanes per Ethernet port
@@ -97,7 +97,8 @@ port (
     SYSRST                  : in    std_logic;
 
     -- PCIe interface
-    PCIE_SYSCLK             : in    std_logic_vector(PCIE_CONS*PCIE_CLKS-1 downto 0);
+    PCIE_SYSCLK_P           : in    std_logic_vector(PCIE_CONS*PCIE_CLKS-1 downto 0);
+    PCIE_SYSCLK_N           : in    std_logic_vector(PCIE_CONS*PCIE_CLKS-1 downto 0);
     PCIE_SYSRST_N           : in    std_logic_vector(PCIE_CONS-1 downto 0);
     PCIE_RX_P               : in    std_logic_vector(PCIE_CONS*PCIE_LANES-1 downto 0);
     PCIE_RX_N               : in    std_logic_vector(PCIE_CONS*PCIE_LANES-1 downto 0);
@@ -125,23 +126,23 @@ port (
     QSFP_INT_N              : in    std_logic_vector(QSFP_PORTS-1 downto 0);
 
     -- External memory interfaces (clocked at MEM_CLK)
-    MEM_CLK                 : in  std_logic_vector(MEM_PORTS-1 downto 0);
-    MEM_RST                 : in  std_logic_vector(MEM_PORTS-1 downto 0);
+    MEM_CLK                 : in  std_logic_vector(MEM_PORTS-1 downto 0) := (others => '0');
+    MEM_RST                 : in  std_logic_vector(MEM_PORTS-1 downto 0) := (others => '0');
 
-    MEM_AVMM_READY          : in  std_logic_vector(MEM_PORTS-1 downto 0);
+    MEM_AVMM_READY          : in  std_logic_vector(MEM_PORTS-1 downto 0) := (others => '0');
     MEM_AVMM_READ           : out std_logic_vector(MEM_PORTS-1 downto 0);
     MEM_AVMM_WRITE          : out std_logic_vector(MEM_PORTS-1 downto 0);
     MEM_AVMM_ADDRESS        : out slv_array_t(MEM_PORTS-1 downto 0)(MEM_ADDR_WIDTH-1 downto 0);
     MEM_AVMM_BURSTCOUNT     : out slv_array_t(MEM_PORTS-1 downto 0)(MEM_BURST_WIDTH-1 downto 0);
     MEM_AVMM_WRITEDATA      : out slv_array_t(MEM_PORTS-1 downto 0)(MEM_DATA_WIDTH-1 downto 0);
-    MEM_AVMM_READDATA       : in  slv_array_t(MEM_PORTS-1 downto 0)(MEM_DATA_WIDTH-1 downto 0);
-    MEM_AVMM_READDATAVALID  : in  std_logic_vector(MEM_PORTS-1 downto 0);
+    MEM_AVMM_READDATA       : in  slv_array_t(MEM_PORTS-1 downto 0)(MEM_DATA_WIDTH-1 downto 0) := (others => (others => '0'));
+    MEM_AVMM_READDATAVALID  : in  std_logic_vector(MEM_PORTS-1 downto 0) := (others => '0');
 
     EMIF_RST_REQ            : out std_logic_vector(MEM_PORTS-1 downto 0);
-    EMIF_RST_DONE           : in  std_logic_vector(MEM_PORTS-1 downto 0);
-    EMIF_ECC_USR_INT        : in  std_logic_vector(MEM_PORTS-1 downto 0);
-    EMIF_CAL_SUCCESS        : in  std_logic_vector(MEM_PORTS-1 downto 0);
-    EMIF_CAL_FAIL           : in  std_logic_vector(MEM_PORTS-1 downto 0);
+    EMIF_RST_DONE           : in  std_logic_vector(MEM_PORTS-1 downto 0) := (others => '0');
+    EMIF_ECC_USR_INT        : in  std_logic_vector(MEM_PORTS-1 downto 0) := (others => '0');
+    EMIF_CAL_SUCCESS        : in  std_logic_vector(MEM_PORTS-1 downto 0) := (others => '0');
+    EMIF_CAL_FAIL           : in  std_logic_vector(MEM_PORTS-1 downto 0) := (others => '0');
 
     STATUS_LED_G            : out   std_logic_vector(STATUS_LEDS-1 downto 0);
     STATUS_LED_R            : out   std_logic_vector(STATUS_LEDS-1 downto 0);
@@ -437,6 +438,13 @@ begin
         BAR5_BASE_ADDR      => BAR5_BASE_ADDR,
         EXP_ROM_BASE_ADDR   => EXP_ROM_BASE_ADDR,
 
+        VENDOR_ID           => PCI_VENDOR_ID,
+        DEVICE_ID           => PCI_DEVICE_ID,
+        SUBVENDOR_ID        => PCI_SUBVENDOR_ID,
+        SUBDEVICE_ID        => PCI_SUBDEVICE_ID,
+        XVC_ENABLE          => false,
+        PF0_TOTAL_VF        => 0,
+
         DMA_ENDPOINTS       => DMA_ENDPOINTS,
 
         MVB_UP_ITEMS        => DMA_UP_MVB_ITEMS,
@@ -460,7 +468,8 @@ begin
         DEVICE              => DEVICE
     )
     port map (
-        PCIE_SYSCLK        => PCIE_SYSCLK,
+        PCIE_SYSCLK_P      => PCIE_SYSCLK_P,
+        PCIE_SYSCLK_N      => PCIE_SYSCLK_N,
         PCIE_SYSRST_N      => PCIE_SYSRST_N,
         INIT_DONE_N        => init_done_n,
         PCIE_RX_P          => PCIE_RX_P,

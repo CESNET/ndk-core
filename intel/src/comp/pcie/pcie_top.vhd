@@ -29,6 +29,13 @@ entity PCIE is
         -- Expansion ROM base address for PCIE->MI32 transalation
         EXP_ROM_BASE_ADDR   : std_logic_vector(31 downto 0) := X"0A000000";
 
+        VENDOR_ID           : std_logic_vector(15 downto 0) := X"18EC";
+        DEVICE_ID           : std_logic_vector(15 downto 0) := X"C400";
+        SUBVENDOR_ID        : std_logic_vector(15 downto 0) := X"0000";
+        SUBDEVICE_ID        : std_logic_vector(15 downto 0) := X"0000";
+        XVC_ENABLE          : boolean := false;
+        PF0_TOTAL_VF        : natural := 0;
+
         DMA_ENDPOINTS       : natural := 1; -- total number of DMA_EP, DMA_EP=PCIE_EP or 2*DMA_EP=PCIE_EP
 
         MVB_UP_ITEMS        : natural := 2;   -- Number of items (headers) in word
@@ -63,7 +70,8 @@ entity PCIE is
         --  PCIE INTERFACE
         -- =====================================================================
         -- Clock from PCIe port, 100 MHz
-        PCIE_SYSCLK      : in  std_logic_vector(PCIE_CONS*PCIE_CLKS-1 downto 0);
+        PCIE_SYSCLK_P    : in  std_logic_vector(PCIE_CONS*PCIE_CLKS-1 downto 0);
+        PCIE_SYSCLK_N    : in  std_logic_vector(PCIE_CONS*PCIE_CLKS-1 downto 0);
         -- PCIe reset from PCIe port
         PCIE_SYSRST_N    : in  std_logic_vector(PCIE_CONS-1 downto 0);
         -- nINIT_DONE output of the Reset Release Intel Stratix 10 FPGA IP
@@ -161,6 +169,11 @@ architecture FULL of PCIE is
     constant MTC_FIFO_ITEMS   : natural := 512;
     constant MTC_FIFO_CRDT    : natural := MTC_FIFO_ITEMS*AVST_WORD_CRDT;
     constant CRDT_TOTAL_XPH   : natural := MTC_FIFO_CRDT/(MAX_PAYLOAD_SIZE/16);
+    constant AXI_DATA_WIDTH   : natural := PCIE_MFB_REGIONS*256;
+    constant AXI_CQUSER_WIDTH : natural := 183;
+    constant AXI_CCUSER_WIDTH : natural := 81;
+    constant AXI_RQUSER_WIDTH : natural := 137;
+    constant AXI_RCUSER_WIDTH : natural := 161;
 
     signal pcie_clk                 : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
     signal pcie_reset               : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(RESET_WIDTH-1 downto 0);
@@ -208,6 +221,37 @@ architecture FULL of PCIE is
     signal pcie_avst_up_valid       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_MFB_REGIONS-1 downto 0);
 	signal pcie_avst_up_ready       : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
 
+    signal pcie_cq_axi_data         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_DATA_WIDTH-1 downto 0);
+    signal pcie_cq_axi_user         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_CQUSER_WIDTH-1 downto 0);
+    signal pcie_cq_axi_last         : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal pcie_cq_axi_keep         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_DATA_WIDTH/32-1 downto 0);
+    signal pcie_cq_axi_valid        : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal pcie_cq_axi_ready        : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+
+    signal pcie_cc_axi_data         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_DATA_WIDTH-1 downto 0);
+    signal pcie_cc_axi_user         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_CCUSER_WIDTH-1 downto 0);
+    signal pcie_cc_axi_last         : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal pcie_cc_axi_keep         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_DATA_WIDTH/32-1 downto 0);
+    signal pcie_cc_axi_valid        : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal pcie_cc_axi_ready        : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+
+    signal pcie_rq_axi_data         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_DATA_WIDTH-1 downto 0);
+    signal pcie_rq_axi_user         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_RQUSER_WIDTH-1 downto 0);
+    signal pcie_rq_axi_last         : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal pcie_rq_axi_keep         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_DATA_WIDTH/32-1 downto 0);
+    signal pcie_rq_axi_valid        : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal pcie_rq_axi_ready        : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+
+    signal pcie_rc_axi_data         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_DATA_WIDTH-1 downto 0);
+    signal pcie_rc_axi_user         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_RCUSER_WIDTH-1 downto 0);
+    signal pcie_rc_axi_last         : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal pcie_rc_axi_keep         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_DATA_WIDTH/32-1 downto 0);
+    signal pcie_rc_axi_valid        : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal pcie_rc_axi_ready        : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+
+    signal pcie_tag_assign          : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_MFB_REGIONS*8-1 downto 0);
+    signal pcie_tag_assign_vld      : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_MFB_REGIONS-1 downto 0);
+
 begin
 
     -- =========================================================================
@@ -217,22 +261,36 @@ begin
     -- the architecture depends on the selected board, see Modules.tcl
     pcie_core_i : entity work.PCIE_CORE
     generic map (
-        AVST_REGIONS    => PCIE_MFB_REGIONS,
-        ENDPOINT_MODE   => ENDPOINT_MODE,
-        PCIE_ENDPOINTS  => PCIE_ENDPOINTS,
-        PCIE_CLKS       => PCIE_CLKS,
-        PCIE_CONS       => PCIE_CONS,
-        PCIE_LANES      => PCIE_LANES,
-        CRDT_TOTAL_PH   => CRDT_TOTAL_XPH/2,
-        CRDT_TOTAL_NPH  => CRDT_TOTAL_XPH/2,
-        CRDT_TOTAL_CPLH => 0,
-        CRDT_TOTAL_PD   => MTC_FIFO_CRDT/2,
-        CRDT_TOTAL_NPD  => MTC_FIFO_CRDT/2,
-        CRDT_TOTAL_CPLD => 0,
-        RESET_WIDTH     => RESET_WIDTH
+        AVST_REGIONS     => PCIE_MFB_REGIONS,
+        AXI_DATA_WIDTH   => AXI_DATA_WIDTH,
+        AXI_CQUSER_WIDTH => AXI_CQUSER_WIDTH,
+        AXI_CCUSER_WIDTH => AXI_CCUSER_WIDTH,
+        AXI_RQUSER_WIDTH => AXI_RQUSER_WIDTH,
+        AXI_RCUSER_WIDTH => AXI_RCUSER_WIDTH,
+        MVB_UP_ITEMS     => PCIE_MFB_REGIONS,
+        ENDPOINT_MODE    => ENDPOINT_MODE,
+        PCIE_ENDPOINTS   => PCIE_ENDPOINTS,
+        PCIE_CLKS        => PCIE_CLKS,
+        PCIE_CONS        => PCIE_CONS,
+        PCIE_LANES       => PCIE_LANES,
+        VENDOR_ID        => VENDOR_ID,
+        DEVICE_ID        => DEVICE_ID,
+        SUBVENDOR_ID     => SUBVENDOR_ID,
+        SUBDEVICE_ID     => SUBDEVICE_ID,
+        XVC_ENABLE       => XVC_ENABLE,
+        PF0_TOTAL_VF     => PF0_TOTAL_VF,
+        CRDT_TOTAL_PH    => CRDT_TOTAL_XPH/2,
+        CRDT_TOTAL_NPH   => CRDT_TOTAL_XPH/2,
+        CRDT_TOTAL_CPLH  => 0,
+        CRDT_TOTAL_PD    => MTC_FIFO_CRDT/2,
+        CRDT_TOTAL_NPD   => MTC_FIFO_CRDT/2,
+        CRDT_TOTAL_CPLD  => 0,
+        RESET_WIDTH      => RESET_WIDTH,
+        DEVICE           => DEVICE
     )
     port map (
-        PCIE_SYSCLK         => PCIE_SYSCLK,
+        PCIE_SYSCLK_P       => PCIE_SYSCLK_P,
+        PCIE_SYSCLK_N       => PCIE_SYSCLK_N,
         PCIE_SYSRST_N       => PCIE_SYSRST_N,
         INIT_DONE_N         => INIT_DONE_N,
         
@@ -286,7 +344,38 @@ begin
         AVST_UP_EOP         => pcie_avst_up_eop, 
         AVST_UP_ERROR       => pcie_avst_up_error, 
         AVST_UP_VALID       => pcie_avst_up_valid,
-        AVST_UP_READY       => pcie_avst_up_ready
+        AVST_UP_READY       => pcie_avst_up_ready,
+
+        CQ_AXI_DATA         => pcie_cq_axi_data,
+        CQ_AXI_USER         => pcie_cq_axi_user,
+        CQ_AXI_LAST         => pcie_cq_axi_last,
+        CQ_AXI_KEEP         => pcie_cq_axi_keep,
+        CQ_AXI_VALID        => pcie_cq_axi_valid,
+        CQ_AXI_READY        => pcie_cq_axi_ready,
+
+        CC_AXI_DATA         => pcie_cc_axi_data,
+        CC_AXI_USER         => pcie_cc_axi_user,
+        CC_AXI_LAST         => pcie_cc_axi_last,
+        CC_AXI_KEEP         => pcie_cc_axi_keep,
+        CC_AXI_VALID        => pcie_cc_axi_valid,
+        CC_AXI_READY        => pcie_cc_axi_ready,
+
+        RQ_AXI_DATA         => pcie_rq_axi_data,
+        RQ_AXI_USER         => pcie_rq_axi_user,
+        RQ_AXI_LAST         => pcie_rq_axi_last,
+        RQ_AXI_KEEP         => pcie_rq_axi_keep,
+        RQ_AXI_VALID        => pcie_rq_axi_valid,
+        RQ_AXI_READY        => pcie_rq_axi_ready,
+
+        RC_AXI_DATA         => pcie_rc_axi_data,
+        RC_AXI_USER         => pcie_rc_axi_user,
+        RC_AXI_LAST         => pcie_rc_axi_last,
+        RC_AXI_KEEP         => pcie_rc_axi_keep,
+        RC_AXI_VALID        => pcie_rc_axi_valid,
+        RC_AXI_READY        => pcie_rc_axi_ready,
+
+        TAG_ASSIGN          => pcie_tag_assign,
+        TAG_ASSIGN_VLD      => pcie_tag_assign_vld
     );
 
     PCIE_USER_CLK <= pcie_clk;
@@ -307,6 +396,12 @@ begin
     pcie_ctrl_g: for i in 0 to PCIE_ENDPOINTS-1 generate
         pcie_ctrl_i : entity work.PCIE_CTRL
         generic map (
+            AXI_DATA_WIDTH       => AXI_DATA_WIDTH,
+            AXI_CQUSER_WIDTH     => AXI_CQUSER_WIDTH,
+            AXI_CCUSER_WIDTH     => AXI_CCUSER_WIDTH,
+            AXI_RQUSER_WIDTH     => AXI_RQUSER_WIDTH,
+            AXI_RCUSER_WIDTH     => AXI_RCUSER_WIDTH,
+
             BAR0_BASE_ADDR       => BAR0_BASE_ADDR,
             BAR1_BASE_ADDR       => BAR1_BASE_ADDR,
             BAR2_BASE_ADDR       => BAR2_BASE_ADDR,
@@ -392,6 +487,37 @@ begin
             AVST_UP_ERROR       => pcie_avst_up_error(i), 
             AVST_UP_VALID       => pcie_avst_up_valid(i),
             AVST_UP_READY       => pcie_avst_up_ready(i),
+
+            CQ_AXI_DATA         => pcie_cq_axi_data(i),
+            CQ_AXI_USER         => pcie_cq_axi_user(i),
+            CQ_AXI_LAST         => pcie_cq_axi_last(i),
+            CQ_AXI_KEEP         => pcie_cq_axi_keep(i),
+            CQ_AXI_VALID        => pcie_cq_axi_valid(i),
+            CQ_AXI_READY        => pcie_cq_axi_ready(i),
+    
+            CC_AXI_DATA         => pcie_cc_axi_data(i),
+            CC_AXI_USER         => pcie_cc_axi_user(i),
+            CC_AXI_LAST         => pcie_cc_axi_last(i),
+            CC_AXI_KEEP         => pcie_cc_axi_keep(i),
+            CC_AXI_VALID        => pcie_cc_axi_valid(i),
+            CC_AXI_READY        => pcie_cc_axi_ready(i),
+
+            RQ_AXI_DATA         => pcie_rq_axi_data(i),
+            RQ_AXI_USER         => pcie_rq_axi_user(i),
+            RQ_AXI_LAST         => pcie_rq_axi_last(i),
+            RQ_AXI_KEEP         => pcie_rq_axi_keep(i),
+            RQ_AXI_VALID        => pcie_rq_axi_valid(i),
+            RQ_AXI_READY        => pcie_rq_axi_ready(i),
+
+            RC_AXI_DATA         => pcie_rc_axi_data(i),
+            RC_AXI_USER         => pcie_rc_axi_user(i),
+            RC_AXI_LAST         => pcie_rc_axi_last(i),
+            RC_AXI_KEEP         => pcie_rc_axi_keep(i),
+            RC_AXI_VALID        => pcie_rc_axi_valid(i),
+            RC_AXI_READY        => pcie_rc_axi_ready(i),
+
+            TAG_ASSIGN          => pcie_tag_assign(i),
+            TAG_ASSIGN_VLD      => pcie_tag_assign_vld(i),
 
             UP_MVB_DATA         => UP_MVB_DATA((i+1)*DMA_PORTS_PER_EP-1 downto i*DMA_PORTS_PER_EP),
             UP_MVB_VLD          => UP_MVB_VLD((i+1)*DMA_PORTS_PER_EP-1 downto i*DMA_PORTS_PER_EP),
