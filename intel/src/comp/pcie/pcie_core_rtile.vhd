@@ -639,8 +639,8 @@ begin
                 p1_tx_st1_dvalid_i           => pcie_avst_up_dvalid(i*2+1)(1),           --                       .valid
                 p1_tx_ehp_deallocate_empty_o => open, --              p1_tx_ehp.tx_ehp_deallocate_empty
 
-                refclk0                      => PCIE_SYSCLK(i*PCIE_CLKS),                      --                refclk0.clk
-                refclk1                      => PCIE_SYSCLK(i*PCIE_CLKS+1),                      --                refclk1.clk
+                refclk0                      => PCIE_SYSCLK_P(i*PCIE_CLKS),                      --                refclk0.clk
+                refclk1                      => PCIE_SYSCLK_P(i*PCIE_CLKS+1),                      --                refclk1.clk
                 coreclkout_hip               => pcie_hip_clk(i),               --         coreclkout_hip.clk
                 pin_perst_n                  => PCIE_SYSRST_N(i),                  --              pin_perst.pin_perst
                 pin_perst_n_o                => open,
@@ -956,8 +956,8 @@ begin
                 tx_p_out14                   => PCIE_TX_P(i*PCIE_LANES+14),                   --                       .tx_p_out14
                 tx_p_out15                   => PCIE_TX_P(i*PCIE_LANES+15),                   --                       .tx_p_out15
 
-                refclk0                      => PCIE_SYSCLK(i*PCIE_CLKS),                      --                refclk0.clk
-                refclk1                      => PCIE_SYSCLK(i*PCIE_CLKS+1),                      --                refclk1.clk
+                refclk0                      => PCIE_SYSCLK_P(i*PCIE_CLKS),                      --                refclk0.clk
+                refclk1                      => PCIE_SYSCLK_P(i*PCIE_CLKS+1),                      --                refclk1.clk
                 coreclkout_hip               => pcie_hip_clk(i),               --         coreclkout_hip.clk
                 ninit_done                   => pcie_init_done_n(i),                   --             ninit_done.ninit_done
                 slow_clk                     => pcie_hip_slow_clk(i),                    --               slow_clk.clk

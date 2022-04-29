@@ -13,6 +13,12 @@ use work.type_pack.all;
 
 entity PCIE_CTRL is
     generic(
+        -- AXI configuration
+        AXI_DATA_WIDTH      : natural := 512;
+        AXI_CQUSER_WIDTH    : natural := 183;
+        AXI_CCUSER_WIDTH    : natural := 81;
+        AXI_RQUSER_WIDTH    : natural := 137;
+        AXI_RCUSER_WIDTH    : natural := 161;
         -- BAR0 base address for PCIE->MI32 transalation
         BAR0_BASE_ADDR      : std_logic_vector(31 downto 0) := X"01000000";
         -- BAR1 base address for PCIE->MI32 transalation
@@ -130,6 +136,107 @@ entity PCIE_CTRL is
 		AVST_UP_READY       : in  std_logic;
 
         -- =====================================================================
+        --  AXI Completer Request Interfaces (CQ) - Xilinx FPGA Only (PCIE_CLK)
+        -- =====================================================================
+        -- See Xilinx PG213 (UltraScale+ Devices Integrated Block for PCI Express).
+
+        -- CQ_AXI: Data word. For detailed specifications, see Xilinx PG213.
+        CQ_AXI_DATA       : in  std_logic_vector(AXI_DATA_WIDTH-1 downto 0);
+        -- CQ_AXI: Set of signals with sideband information about trasferred
+        -- transaction. For detailed specifications, see Xilinx PG213.
+        CQ_AXI_USER       : in  std_logic_vector(AXI_CQUSER_WIDTH-1 downto 0);
+        -- CQ_AXI: Indication of the last word of a transaction. For detailed
+        -- specifications, see Xilinx PG213.
+        CQ_AXI_LAST       : in  std_logic;
+        -- CQ_AXI: Indication of valid data: each bit determines validity of
+        -- different Dword. For detailed specifications, see Xilinx PG213.
+        CQ_AXI_KEEP       : in  std_logic_vector(AXI_DATA_WIDTH/32-1 downto 0);
+        -- CQ_AXI: Indication of valid data: i.e. completer is ready to send a
+        -- transaction. For detailed specifications, see Xilinx PG213.
+        CQ_AXI_VALID      : in  std_logic;
+        -- CQ_AXI: User application is ready to receive a transaction.
+        -- For detailed specifications, see Xilinx PG213.
+        CQ_AXI_READY      : out std_logic;
+
+        -- =====================================================================
+        --  AXI Completer Completion Interfaces (CC) - Xilinx FPGA Only (PCIE_CLK)
+        -- =====================================================================
+        -- See Xilinx PG213 (UltraScale+ Devices Integrated Block for PCI Express).
+
+        -- CC_AXI: Data word. For detailed specifications, see Xilinx PG213.
+        CC_AXI_DATA       : out std_logic_vector(AXI_DATA_WIDTH-1 downto 0);
+        -- CC_AXI: Set of signals with sideband information about trasferred
+        -- transaction. For detailed specifications, see Xilinx PG213.
+        CC_AXI_USER       : out std_logic_vector(AXI_CCUSER_WIDTH-1 downto 0);
+        -- CC_AXI: Indication of the last word of a transaction. For detailed
+        -- specifications, see Xilinx PG213.
+        CC_AXI_LAST       : out std_logic;
+        -- CC_AXI: Indication of valid data: each bit determines validity of
+        -- different Dword. For detailed specifications, see Xilinx PG213.
+        CC_AXI_KEEP       : out std_logic_vector(AXI_DATA_WIDTH/32-1 downto 0);
+        -- CC_AXI: Indication of valid data: i.e. completer is ready to send a
+        -- transaction. For detailed specifications, see Xilinx PG213.
+        CC_AXI_VALID      : out std_logic;
+        -- CC_AXI: User application is ready to receive a transaction.
+        -- For detailed specifications, see Xilinx PG213.
+        CC_AXI_READY      : in  std_logic;
+
+        -- =====================================================================
+        --  AXI Requester Request Interfaces (RQ) - Xilinx FPGA Only (PCIE_CLK)
+        -- =====================================================================
+        -- See Xilinx PG213 (UltraScale+ Devices Integrated Block for PCI Express).
+
+        -- RQ_AXI: Data word. For detailed specifications, see Xilinx PG213.
+        RQ_AXI_DATA       : out std_logic_vector(AXI_DATA_WIDTH-1 downto 0);
+        -- RQ_AXI: Set of signals with sideband information about trasferred
+        -- transaction. For detailed specifications, see Xilinx PG213.
+        RQ_AXI_USER       : out std_logic_vector(AXI_RQUSER_WIDTH-1 downto 0);
+        -- RQ_AXI: Indication of the last word of a transaction. For detailed
+        -- specifications, see Xilinx PG213.
+        RQ_AXI_LAST       : out std_logic;
+        -- RQ_AXI: Indication of valid data: each bit determines validity of
+        -- different Dword. For detailed specifications, see Xilinx PG213.
+        RQ_AXI_KEEP       : out std_logic_vector(AXI_DATA_WIDTH/32-1 downto 0);
+        -- RQ_AXI: Indication of valid data: i.e. completer is ready to send a
+        -- transaction. For detailed specifications, see Xilinx PG213.
+        RQ_AXI_VALID      : out std_logic;
+        -- RQ_AXI: User application is ready to receive a transaction.
+        -- For detailed specifications, see Xilinx PG213.
+        RQ_AXI_READY      : in  std_logic;
+
+        -- =====================================================================
+        --  AXI Requester Completion Interfaces (RC) - Xilinx FPGA Only (PCIE_CLK)
+        -- =====================================================================
+        -- See Xilinx PG213 (UltraScale+ Devices Integrated Block for PCI Express).
+
+        -- RC_AXI: Data word. For detailed specifications, see Xilinx PG213.
+        RC_AXI_DATA       : in  std_logic_vector(AXI_DATA_WIDTH-1 downto 0);
+        -- RC_AXI: Set of signals with sideband information about trasferred
+        -- transaction. For detailed specifications, see Xilinx PG213.
+        RC_AXI_USER       : in  std_logic_vector(AXI_RCUSER_WIDTH-1 downto 0);
+        -- RC_AXI: Indication of the last word of a transaction. For detailed
+        -- specifications, see Xilinx PG213.
+        RC_AXI_LAST       : in  std_logic;
+        -- RC_AXI: Indication of valid data: each bit determines validity of
+        -- different Dword. For detailed specifications, see Xilinx PG213.
+        RC_AXI_KEEP       : in  std_logic_vector(AXI_DATA_WIDTH/32-1 downto 0);
+        -- RC_AXI: Indication of valid data: i.e. completer is ready to send a
+        -- transaction. For detailed specifications, see Xilinx PG213.
+        RC_AXI_VALID      : in  std_logic;
+        -- RC_AXI: User application is ready to receive a transaction.
+        -- For detailed specifications, see Xilinx PG213.
+        RC_AXI_READY      : out std_logic;
+
+        -- =====================================================================
+        --  PCIe tags interface - Xilinx FPGA Only (PCIE_CLK)
+        -- =====================================================================
+
+        -- PCIe tag assigned to send transaction
+        TAG_ASSIGN        : in  std_logic_vector(MVB_UP_ITEMS*8-1 downto 0);
+        -- Valid bit for assigned tags
+        TAG_ASSIGN_VLD    : in  std_logic_vector(MVB_UP_ITEMS-1 downto 0);
+
+        -- =====================================================================
         --  DMA DOWN/UP MFB/MVB Streams (DMA_CLK)
         -- =====================================================================
         UP_MVB_DATA      : in  slv_array_t(DMA_PORTS-1 downto 0)(DMA_MVB_UP_ITEMS*MVB_UP_ITEM_WIDTH-1 downto 0);
@@ -176,9 +283,6 @@ architecture FULL of PCIE_CTRL is
     constant PCI_HDR_W           : natural := 128;
     constant PCI_CHDR_W          : natural := 96;
     constant PCI_PREFIX_W        : natural := 32;
-    constant AXI_DATA_WIDTH      : natural := 512;
-    constant AXI_CQUSER_WIDTH    : natural := 183;
-    constant AXI_CCUSER_WIDTH    : natural := 81;
     constant MFB_DOWN_META_WIDTH : natural := PCI_HDR_W+PCI_PREFIX_W+3;
     constant MFB_UP_META_WIDTH   : natural := PCI_HDR_W+PCI_PREFIX_W;
 
@@ -381,6 +485,9 @@ begin
     generic map(
         DMA_PORTS            => DMA_PORTS,
 
+        RQ_TUSER_WIDTH       => AXI_RQUSER_WIDTH,
+        RC_TUSER_WIDTH       => AXI_RCUSER_WIDTH,
+
         MVB_UP_ITEMS         => MVB_UP_ITEMS,
         DMA_MVB_UP_ITEMS     => DMA_MVB_UP_ITEMS,
         MFB_UP_REGIONS       => MFB_UP_REGIONS,
@@ -409,6 +516,20 @@ begin
 
         CLK_DMA            => DMA_CLK,
         RESET_DMA          => DMA_RESET,
+
+        RQ_TDATA           => RQ_AXI_DATA,
+        RQ_TUSER           => RQ_AXI_USER,
+        RQ_TLAST           => RQ_AXI_LAST,
+        RQ_TKEEP           => RQ_AXI_KEEP,
+        RQ_TVALID          => RQ_AXI_VALID,
+        RQ_TREADY          => RQ_AXI_READY,
+
+        RC_TDATA           => RC_AXI_DATA,
+        RC_TUSER           => RC_AXI_USER,
+        RC_TLAST           => RC_AXI_LAST,
+        RC_TKEEP           => RC_AXI_KEEP,
+        RC_TVALID          => RC_AXI_VALID,
+        RC_TREADY          => RC_AXI_READY,
 
         RQ_MVB_HDR_DATA    => ptc_up_mfb_hdr,
         RQ_MVB_PREFIX_DATA => ptc_up_mfb_prefix,
@@ -460,8 +581,8 @@ begin
 
         RCB_SIZE         => CTL_RCB_SIZE,
 
-        TAG_ASSIGN       => (others => '0'),
-        TAG_ASSIGN_VLD   => (others => '0')
+        TAG_ASSIGN       => TAG_ASSIGN,
+        TAG_ASSIGN_VLD   => TAG_ASSIGN_VLD
     );
 
     -- =========================================================================
@@ -526,19 +647,19 @@ begin
             CC_MFB_SRC_RDY    => mtc_up_mfb_src_rdy,
             CC_MFB_DST_RDY    => mtc_up_mfb_dst_rdy,
 
-            CQ_AXI_DATA       => (others => '0'),
-            CQ_AXI_USER       => (others => '0'),
-            CQ_AXI_LAST       => '0',
-            CQ_AXI_KEEP       => (others => '0'),
-            CQ_AXI_VALID      => '0',
-            CQ_AXI_READY      => open,
+            CQ_AXI_DATA       => CQ_AXI_DATA,
+            CQ_AXI_USER       => CQ_AXI_USER,
+            CQ_AXI_LAST       => CQ_AXI_LAST,
+            CQ_AXI_KEEP       => CQ_AXI_KEEP,
+            CQ_AXI_VALID      => CQ_AXI_VALID,
+            CQ_AXI_READY      => CQ_AXI_READY,
 
-            CC_AXI_DATA       => open,
-            CC_AXI_USER       => open,
-            CC_AXI_LAST       => open,
-            CC_AXI_KEEP       => open,
-            CC_AXI_VALID      => open,
-            CC_AXI_READY      => '0',
+            CC_AXI_DATA       => CC_AXI_DATA,
+            CC_AXI_USER       => CC_AXI_USER,
+            CC_AXI_LAST       => CC_AXI_LAST,
+            CC_AXI_KEEP       => CC_AXI_KEEP,
+            CC_AXI_VALID      => CC_AXI_VALID,
+            CC_AXI_READY      => CC_AXI_READY,
 
             MI_DWR            => mtc_mi_dwr,
             MI_ADDR           => mtc_mi_addr,

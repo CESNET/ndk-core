@@ -478,8 +478,8 @@ begin
                 tx_p_out14                   => PCIE_TX_P(i*PCIE_LANES+14),     --                  .tx_p_out14
                 tx_p_out15                   => PCIE_TX_P(i*PCIE_LANES+15),     --                  .tx_p_out15
                 coreclkout_hip               => pcie_hip_clk(i),                --    coreclkout_hip.clk
-                refclk0                      => PCIE_SYSCLK(i*PCIE_CLKS),       --           refclk0.clk
-                refclk1                      => PCIE_SYSCLK(i*PCIE_CLKS+1),     --           refclk1.clk
+                refclk0                      => PCIE_SYSCLK_P(i*PCIE_CLKS),       --           refclk0.clk
+                refclk1                      => PCIE_SYSCLK_P(i*PCIE_CLKS+1),     --           refclk1.clk
                 pin_perst_n                  => PCIE_SYSRST_N(i),               --         pin_perst.pin_perst
                 ninit_done                   => pcie_init_done_n(i)             --        ninit_done.ninit_done
             );
@@ -651,8 +651,8 @@ begin
                 tx_p_out14                   => PCIE_TX_P(i*PCIE_LANES+14),     --                  .tx_p_out14
                 tx_p_out15                   => PCIE_TX_P(i*PCIE_LANES+15),     --                  .tx_p_out15
                 coreclkout_hip               => pcie_hip_clk(i),                --    coreclkout_hip.clk
-                refclk0                      => PCIE_SYSCLK(i*PCIE_CLKS),       --           refclk0.clk
-                refclk1                      => PCIE_SYSCLK(i*PCIE_CLKS+1),     --           refclk1.clk
+                refclk0                      => PCIE_SYSCLK_P(i*PCIE_CLKS),       --           refclk0.clk
+                refclk1                      => PCIE_SYSCLK_P(i*PCIE_CLKS+1),     --           refclk1.clk
                 pin_perst_n                  => PCIE_SYSRST_N(i),               --         pin_perst.pin_perst
                 ninit_done                   => pcie_init_done_n(i)             --        ninit_done.ninit_done
             );
