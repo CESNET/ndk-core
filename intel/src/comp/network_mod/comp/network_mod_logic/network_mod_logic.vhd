@@ -68,11 +68,16 @@ port(
     RESET_USER      : in std_logic_vector(RESET_USER_WIDTH-1 downto 0);
     RESET_CORE      : in std_logic_vector(RESET_CORE_WIDTH-1 downto 0);
 
+    -- Status/control interface
+    ACTIVITY_RX     : out std_logic_vector(ETH_PORT_CHAN-1 downto 0);
+    ACTIVITY_TX     : out std_logic_vector(ETH_PORT_CHAN-1 downto 0);
+    RX_LINK_UP      : in  std_logic_vector(ETH_PORT_CHAN-1 downto 0);
+    TX_LINK_UP      : in  std_logic_vector(ETH_PORT_CHAN-1 downto 0);
+
     -- =====================================================================
     -- USER interface
     -- =====================================================================
     -- from the USER
-    -- RX_USER_MFB_SEL      : in  std_logic_vector(USER_REGIONS*max(1,log2(ETH_PORT_CHAN))-1 downto 0);
     RX_USER_MFB_DATA     : in  std_logic_vector(USER_REGIONS*USER_REGION_SIZE*BLOCK_SIZE*ITEM_WIDTH-1 downto 0);
     RX_USER_MFB_HDR      : in  std_logic_vector(USER_REGIONS*ETH_TX_HDR_WIDTH-1 downto 0); -- valid with SOF
     RX_USER_MFB_SOF_POS  : in  std_logic_vector(USER_REGIONS*max(1,log2(USER_REGION_SIZE))-1 downto 0);
@@ -134,8 +139,6 @@ port(
     -- =====================================================================
     -- TSU interface
     -- =====================================================================
-    -- TSU_CLK         : out std_logic;
-    -- TSU_RST         : out std_logic;
     TSU_TS_NS       : in  std_logic_vector(64-1 downto 0);
     TSU_TS_DV       : in  std_logic
 );
@@ -343,7 +346,7 @@ begin
             RX_INCLUDE_IPG  => false           ,
             CRC_INSERT_EN   => false           ,
             IPG_GENERATE_EN => false           ,
-            USE_DSP_CNT     => true            ,--todo
+            USE_DSP_CNT     => true            ,
             --TRANS_FIFO_SIZE => ,
             --ETH_VERSION     => ,
             DEVICE          => DEVICE
@@ -381,7 +384,7 @@ begin
             TX_MFB_SRC_RDY => TX_CORE_MFB_SRC_RDY(ch),
             TX_MFB_DST_RDY => TX_CORE_MFB_DST_RDY(ch),
 
-            OUTGOING_FRAME => open--todo
+            OUTGOING_FRAME => ACTIVITY_TX(ch)
         );
 
         -- =====================================================================
@@ -421,7 +424,7 @@ begin
             RX_MFB_ERROR    => RX_CORE_MFB_ERROR  (ch),
             RX_MFB_SRC_RDY  => RX_CORE_MFB_SRC_RDY(ch),
 
-            ADAPTER_LINK_UP => '1', --TODO
+            ADAPTER_LINK_UP => RX_LINK_UP(ch),
 
             TSU_TS_NS       => TSU_TS_NS,
             TSU_TS_DV       => TSU_TS_DV,
@@ -438,8 +441,8 @@ begin
             TX_MVB_SRC_RDY  => merg_mvb_src_rdy(ch),
             TX_MVB_DST_RDY  => merg_mvb_dst_rdy(ch),
 
-            --LINK_UP         => LINK_UP,
-            INCOMING_FRAME  => open,
+            LINK_UP         => open,
+            INCOMING_FRAME  => ACTIVITY_RX(ch),
 
             MI_CLK          => MI_CLK  ,
             MI_RESET        => MI_RESET,

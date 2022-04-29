@@ -413,11 +413,8 @@ architecture ETILE of NETWORK_MOD_CORE is
     -- =========================================================================
     --                                SIGNALS
     -- =========================================================================
-    -- signal qsfp_rx_p_sig : slv_array_t(ETH_CHANNELS-1 downto 0)(LANES_PER_CHANNEL-1 downto 0); -- QSFP XCVR RX Data;
-
     signal etile_clk_out_vec      : std_logic_vector(ETH_PORT_CHAN-1 downto 0); -- in case of multiple IP cores, only one is chosen
     signal etile_clk_out          : std_logic; -- drives i_clk_rx and i_clk_tx of one or more other IP cores
-    --signal etile_clk_out_chill    : std_logic_vector(ETH_CHANNELS-1 downto 0); -- signals when the etile_clk_out_vec) signal is chill
 
     signal tx_avst_data      : std_logic_vector(ETH_PORT_CHAN*AVST_DATA_WIDTH -1 downto 0);
     signal tx_avst_sop       : std_logic_vector(ETH_PORT_CHAN                 -1 downto 0);
@@ -440,12 +437,15 @@ architecture ETILE of NETWORK_MOD_CORE is
     signal rx_avst_eop       : std_logic_vector(ETH_PORT_CHAN                    -1 downto 0);
     signal rx_avst_empty     : std_logic_vector(ETH_PORT_CHAN*AVST_EMPTY_WIDTH   -1 downto 0);
     signal rx_avst_error     : std_logic_vector(ETH_PORT_CHAN*RX_AVST_ERROR_WIDTH-1 downto 0);
-    signal rx_pcs_ready      : std_logic_vector(ETH_PORT_CHAN                    -1 downto 0);
-    signal rx_block_lock     : std_logic_vector(ETH_PORT_CHAN                    -1 downto 0);
-    signal rx_am_lock        : std_logic_vector(ETH_PORT_CHAN                    -1 downto 0);
+
+    -- Status signals
+    signal rx_pcs_ready      : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
+    signal rx_block_lock     : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
+    signal rx_am_lock        : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
+    signal tx_lanes_stable   : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
 
     -- MI_PHY for E-tile reconfiguration interfaces (Ethernet, Transceiver (XCVR), RS-FEC)
-    -- from MI Indirect Access (-> _ia)
+    -- from MI Indirect Access (-> mi_ia_)
     signal mi_ia_dwr_phy  : slv_array_t     (IA_OUTPUT_INFS-1 downto 0)(MI_DATA_WIDTH_PHY-1 downto 0);
     signal mi_ia_addr_phy : slv_array_t     (IA_OUTPUT_INFS-1 downto 0)(MI_ADDR_WIDTH_PHY-1 downto 0);
     signal mi_ia_rd_phy   : std_logic_vector(IA_OUTPUT_INFS-1 downto 0);
@@ -587,9 +587,6 @@ begin
 
             etile_clk_out <= etile_clk_out_vec(0);
             CLK_ETH       <= etile_clk_out;
-            
-            TSU_CLK       <= etile_clk_out;
-            TSU_RST       <= RESET_ETH;
 
             -- =========================================================================
             -- E-TILE Ethernet
@@ -650,7 +647,7 @@ begin
             port map (
                 i_stats_snapshot              => '1',
                 o_cdr_lock                    => open,
-                o_tx_pll_locked               => open, --etile_clk_out_chill
+                o_tx_pll_locked               => open,
                 -- Eth reconfig inf (0x0)
                 i_eth_reconfig_addr           => eth_inf_addr_phy_res_ser,
                 i_eth_reconfig_read           => eth_inf_rd_phy(0),
@@ -666,7 +663,7 @@ begin
                 o_rsfec_reconfig_readdata     => rsfec_inf_drd_phy_res,
                 i_rsfec_reconfig_writedata    => rsfec_inf_dwr_phy_res,
                 o_rsfec_reconfig_waitrequest  => rsfec_inf_ardy_phy_n,
-                o_tx_lanes_stable             => open,
+                o_tx_lanes_stable             => tx_lanes_stable(0),
                 o_rx_pcs_ready                => rx_pcs_ready(0),
                 o_ehip_ready                  => open,
                 o_rx_block_lock               => rx_block_lock(0),
@@ -675,8 +672,8 @@ begin
                 o_local_fault_status          => open,
                 o_remote_fault_status         => open,
                 i_clk_ref                     => (others => QSFP_REFCLK_P),
-                i_clk_tx                      => etile_clk_out, -- and etile_clk_out_chill?
-                i_clk_rx                      => etile_clk_out, -- and etile_clk_out_chill?
+                i_clk_tx                      => etile_clk_out,
+                i_clk_rx                      => etile_clk_out,
                 o_clk_pll_div64               => etile_clk_out_vec, -- o_clk_pll_div64 is reliable only after o_tx_pll_locked is asserted
                 o_clk_pll_div66               => open,
                 o_clk_rec_div64               => open,
@@ -718,6 +715,19 @@ begin
                 i_tx_pause                    => '0',
                 o_rx_pause                    => open
             );
+
+            process(etile_clk_out)
+            begin
+                if rising_edge(etile_clk_out) then
+                    if (RESET_ETH = '1') then
+                        RX_LINK_UP <= (others => '0');
+                        TX_LINK_UP <= (others => '0');
+                    else
+                        RX_LINK_UP <= rx_pcs_ready and rx_block_lock and rx_am_lock;
+                        TX_LINK_UP <= tx_lanes_stable;
+                    end if;
+                end if;
+            end process;
 
             -- =========================================================================
             -- ADAPTERS
@@ -766,9 +776,9 @@ begin
                 IN_AVST_EMPTY    => rx_avst_empty   ,
                 IN_AVST_ERROR    => rx_avst_error   ,
                 IN_AVST_VALID    => rx_avst_valid(0),
-                IN_RX_PCS_READY  => rx_pcs_ready (0),
-                IN_RX_BLOCK_LOCK => rx_block_lock(0),
-                IN_RX_AM_LOCK    => rx_am_lock   (0),
+                IN_RX_PCS_READY  => '0', -- rx_pcs_ready (0)
+                IN_RX_BLOCK_LOCK => '0', -- rx_block_lock(0)
+                IN_RX_AM_LOCK    => '0', -- rx_am_lock   (0)
 
                 OUT_MFB_DATA     => TX_MFB_DATA   (0),
                 OUT_MFB_SOF      => TX_MFB_SOF    (0),
@@ -777,16 +787,13 @@ begin
                 OUT_MFB_EOF_POS  => TX_MFB_EOF_POS(0),
                 OUT_MFB_ERROR    => TX_MFB_ERROR  (0),
                 OUT_MFB_SRC_RDY  => TX_MFB_SRC_RDY(0),
-                OUT_LINK_UP      => open -- TODO
+                OUT_LINK_UP      => open -- this is done here
             );
 
         when 25 =>
 
             etile_clk_out <= etile_clk_out_vec(0);
             CLK_ETH       <= etile_clk_out;
-            
-            TSU_CLK       <= etile_clk_out;
-            TSU_RST       <= RESET_ETH;
 
             -- =========================================================================
             -- E-TILE Ethernet
@@ -919,6 +926,19 @@ begin
                 o_sl_rx_pause                    => open
             );
 
+            process(etile_clk_out)
+            begin
+                if rising_edge(etile_clk_out) then
+                    if (RESET_ETH = '1') then
+                        RX_LINK_UP <= (others => '0');
+                        TX_LINK_UP <= (others => '0');
+                    else
+                        RX_LINK_UP <= rx_pcs_ready and rx_block_lock and rx_am_lock;
+                        TX_LINK_UP <= tx_lanes_stable;
+                    end if;
+                end if;
+            end process;
+
             -- =========================================================================
             -- ADAPTERS
             -- =========================================================================
@@ -979,9 +999,9 @@ begin
                     IN_AVST_EMPTY    => rx_avst_empty_arr(i),
                     IN_AVST_ERROR    => rx_avst_error_arr(i),
                     IN_AVST_VALID    => rx_avst_valid    (i),
-                    IN_RX_PCS_READY  => rx_pcs_ready     (i),
-                    IN_RX_BLOCK_LOCK => rx_block_lock    (i),
-                    IN_RX_AM_LOCK    => rx_am_lock       (i),
+                    IN_RX_PCS_READY  => '0',
+                    IN_RX_BLOCK_LOCK => '0',
+                    IN_RX_AM_LOCK    => '0',
 
                     OUT_MFB_DATA     => TX_MFB_DATA   (i),
                     OUT_MFB_SOF      => TX_MFB_SOF    (i),
@@ -990,7 +1010,7 @@ begin
                     OUT_MFB_EOF_POS  => TX_MFB_EOF_POS(i),
                     OUT_MFB_ERROR    => TX_MFB_ERROR  (i),
                     OUT_MFB_SRC_RDY  => TX_MFB_SRC_RDY(i),
-                    OUT_LINK_UP      => open -- TODO
+                    OUT_LINK_UP      => open -- this is done here
                 );
 
             end generate;
@@ -999,9 +1019,6 @@ begin
 
             etile_clk_out <= etile_clk_out_vec(0);
             CLK_ETH       <= etile_clk_out;
-            
-            TSU_CLK       <= etile_clk_out;
-            TSU_RST       <= RESET_ETH;
 
             -- =========================================================================
             -- E-TILE Ethernet
@@ -1127,6 +1144,19 @@ begin
                 o_sl_rx_pause                    => open
             );
 
+            process(etile_clk_out)
+            begin
+                if rising_edge(etile_clk_out) then
+                    if (RESET_ETH = '1') then
+                        RX_LINK_UP <= (others => '0');
+                        TX_LINK_UP <= (others => '0');
+                    else
+                        RX_LINK_UP <= rx_pcs_ready and rx_block_lock and rx_am_lock;
+                        TX_LINK_UP <= tx_lanes_stable;
+                    end if;
+                end if;
+            end process;
+
             -- =========================================================================
             -- ADAPTERS
             -- =========================================================================
@@ -1187,9 +1217,9 @@ begin
                     IN_AVST_EMPTY    => rx_avst_empty_arr(i),
                     IN_AVST_ERROR    => rx_avst_error_arr(i),
                     IN_AVST_VALID    => rx_avst_valid    (i),
-                    IN_RX_PCS_READY  => rx_pcs_ready     (i),
-                    IN_RX_BLOCK_LOCK => rx_block_lock    (i),
-                    IN_RX_AM_LOCK    => rx_am_lock       (i),
+                    IN_RX_PCS_READY  => '0',
+                    IN_RX_BLOCK_LOCK => '0',
+                    IN_RX_AM_LOCK    => '0',
 
                     OUT_MFB_DATA     => TX_MFB_DATA   (i),
                     OUT_MFB_SOF      => TX_MFB_SOF    (i),
@@ -1198,7 +1228,7 @@ begin
                     OUT_MFB_EOF_POS  => TX_MFB_EOF_POS(i),
                     OUT_MFB_ERROR    => TX_MFB_ERROR  (i),
                     OUT_MFB_SRC_RDY  => TX_MFB_SRC_RDY(i),
-                    OUT_LINK_UP      => open -- TODO
+                    OUT_LINK_UP      => open -- this is done here
                 );
 
             end generate;

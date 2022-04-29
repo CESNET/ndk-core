@@ -18,26 +18,30 @@ generic(
     -- Network configuration:
     -- =====================================================================
     -- Select Ethernet port speed.
-    -- Options: 400G1 card        : 400, 200, 100, 50, 40, 25, 10;
-    --          DK-DEV-1SDX-P card: 100, 25, 10.
-    ETH_PORT_SPEED  : natural := 100;
+    -- Options: 400G1            card: 400, 200, 100, 50, 40, 25, 10;
+    --          DK-DEV-AGI027RES card: 400, 200, 100, 50, 40, 25, 10;
+    --          DK-DEV-1SDX-P    card: 100, 25, 10.
+    ETH_PORT_SPEED  : natural := 25;
     -- Select number of channels per Ethernet port.
-    -- Options: 400G1 card        : 1, 2, 4, 8;
-    --          DK-DEV-1SDX-P card: 1, 4.
-    ETH_PORT_CHAN   : natural := 1;
+    -- Options: 400G1            card: 1, 2, 4, 8;
+    --          DK-DEV-AGI027RES card: 1, 2, 4, 8;
+    --          DK-DEV-1SDX-P    card: 1, 4.
+    ETH_PORT_CHAN   : natural := 8;
     -- Number of serial lanes.
-    -- Options: 400G1 card        : 8;
-    --          DK-DEV-1SDX-P card: 4.
-    LANES           : natural := 4;
+    -- Options: 400G1            card: 8;
+    --          DK-DEV-AGI027RES card: 8;
+    --          DK-DEV-1SDX-P    card: 4.
+    LANES           : natural := 8;
 
     -- =====================================================================
     -- MFB configuration:
     -- =====================================================================
     -- Set according to eth port mode:
-    --     400G1 card        :        "400g1", "200g2", "100g4", "50g8" | "40g2", "25g8" | "10g8".
-    --     DK-DEV-1SDX-P card:               , "100g1",        ,                , "25g4" | "10g4".
+    --     400G1            card:     "400g1", "200g2", "100g4", "50g8" | "40g2", "25g8" | "10g8".
+    --     DK-DEV-AGI027RES card:     "400g1", "200g2", "100g4", "50g8" | "40g2", "25g8" | "10g8".
+    --     DK-DEV-1SDX-P    card:            , "100g1",        ,                , "25g4" | "10g4".
     REGIONS           : natural := 1; -- 2   ,    1   ,    1   ,        1       ,        1       .
-    REGION_SIZE       : natural := 8; -- 8   ,    8   ,    4   ,        2       ,        1       .
+    REGION_SIZE       : natural := 1; -- 8   ,    8   ,    4   ,        2       ,        1       .
     BLOCK_SIZE        : natural := 8; -- 8   ,    8   ,    8   ,        8       ,        8       .
     ITEM_WIDTH        : natural := 8; -- 8   ,    8   ,    8   ,        8       ,        8       .
 
@@ -53,7 +57,7 @@ generic(
     -- Select correct FPGA device.
     -- "AGILEX", "STRATIX10", "ULTRASCALE", ...
     DEVICE            : string  := "STRATIX10"
-    );
+);
 port(
     -- =====================================================================
     -- CLOCK AND RESET
@@ -75,9 +79,8 @@ port(
     -- =====================================================================        
     -- REPEATER_CTRL   : in  std_logic_vector(1 downto 0);
     -- PORT_ENABLED    : out std_logic;
-    -- ACTIVITY_RX     : out std_logic;
-    -- ACTIVITY_TX     : out std_logic;
-    -- LINK            : out std_logic;
+    RX_LINK_UP      : out std_logic_vector(ETH_PORT_CHAN-1 downto 0);
+    TX_LINK_UP      : out std_logic_vector(ETH_PORT_CHAN-1 downto 0);
 
     -- =====================================================================
     -- RX interface (Packets for transmit to Ethernet, recieved from MFB)
@@ -113,12 +116,6 @@ port(
     MI_BE_PHY       : in  std_logic_vector(MI_DATA_WIDTH_PHY/8-1 downto 0);
     MI_DRD_PHY      : out std_logic_vector(MI_DATA_WIDTH_PHY-1 downto 0);
     MI_ARDY_PHY     : out std_logic;
-    MI_DRDY_PHY     : out std_logic;
-
-    -- =====================================================================
-    -- TSU clock and reset
-    -- =====================================================================
-    TSU_CLK         : out std_logic;
-    TSU_RST         : out std_logic  -- ??
+    MI_DRDY_PHY     : out std_logic
 );
 end entity;

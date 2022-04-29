@@ -145,6 +145,12 @@ architecture FULL of NETWORK_MOD is
     signal tx_mfb_src_rdy_i : slv_array_t   (ETH_PORTS-1 downto 0)(ETH_CHANNELS-1 downto 0);
     signal tx_mfb_dst_rdy_i : slv_array_t   (ETH_PORTS-1 downto 0)(ETH_CHANNELS-1 downto 0);
 
+    -- Control/Status signals
+    signal sig_activity_rx : slv_array_t(ETH_PORTS-1 downto 0)(ETH_CHANNELS-1 downto 0);
+    signal sig_activity_tx : slv_array_t(ETH_PORTS-1 downto 0)(ETH_CHANNELS-1 downto 0);
+    signal sig_rx_link_up  : slv_array_t(ETH_PORTS-1 downto 0)(ETH_CHANNELS-1 downto 0);
+    signal sig_tx_link_up  : slv_array_t(ETH_PORTS-1 downto 0)(ETH_CHANNELS-1 downto 0);
+
     -- MI for MAC lites
     signal mi_split_dwr  : slv_array_t     (MI_ADDR_BASES-1 downto 0)(MI_DATA_WIDTH-1 downto 0);
     signal mi_split_addr : slv_array_t     (MI_ADDR_BASES-1 downto 0)(MI_ADDR_WIDTH-1 downto 0);
@@ -176,6 +182,8 @@ architecture FULL of NETWORK_MOD is
     signal asfifox_ts_dv   : std_logic_vector(ETH_PORTS-1 downto 0);
 
 begin
+
+    assert (REGION_SIZE_CORE /= 0) report "REGION_SIZE_CORE=0! Check function region_size_core_f!" severity failure;
 
     -- =========================================================================
     --  Resets replication
@@ -310,10 +318,16 @@ begin
             BOARD            => BOARD
         )
         port map(
-            CLK_USER        => CLK_USER,
-            CLK_CORE        => CLK_ETH(p),
-            RESET_USER      => RESET_USER,
-            RESET_CORE      => repl_rst_arr(p)(RESET_REPLICAS-1 downto 2),
+            CLK_USER            => CLK_USER,
+            CLK_CORE            => CLK_ETH(p),
+            RESET_USER          => RESET_USER,
+            RESET_CORE          => repl_rst_arr(p)(RESET_REPLICAS-1 downto 2),
+
+            -- Control/status interface
+            ACTIVITY_RX         => sig_activity_rx(p),
+            ACTIVITY_TX         => sig_activity_tx(p),
+            RX_LINK_UP          => sig_rx_link_up (p),
+            TX_LINK_UP          => sig_tx_link_up (p),
 
             -- USER side
             RX_USER_MFB_DATA    => RX_MFB_DATA_arr   (p),
@@ -414,15 +428,12 @@ begin
             TX_MFB_ERROR    => rx_mfb_error_i  (p),
             TX_MFB_SRC_RDY  => rx_mfb_src_rdy_i(p),
 
-            TSU_CLK         => open,
-            TSU_RST         => open, -- useless port
-
-            -- Control/status - not located in the core, TODO?
+            -- Control/status
             -- REPEATER_CTRL         => REPEATER_CTRL(p*2+1 downto p*2),
             -- PORT_ENABLED          => PORT_ENABLED(p),
-            -- ACTIVITY_RX           => ACTIVITY_RX(p),
-            -- ACTIVITY_TX           => ACTIVITY_TX(p),
-            -- LINK_UP               => LINK(p),
+            RX_LINK_UP      => sig_rx_link_up(p),
+            TX_LINK_UP      => sig_tx_link_up(p),
+
             -- MI interface
             MI_CLK_PHY      => MI_CLK,
             MI_RESET_PHY    => MI_RESET,
@@ -458,20 +469,20 @@ begin
             DEVICE     => DEVICE
         )
         port map (
-            WR_CLK    => CLK_ETH(0),
+            WR_CLK    => CLK_ETH     (0)   ,
             WR_RST    => repl_rst_arr(0)(1),
-            WR_DATA   => TSU_TS_NS     ,
-            WR_EN     => TSU_TS_DV     ,
-            WR_FULL   => open          ,
-            WR_AFULL  => open          ,
-            WR_STATUS => open          ,
+            WR_DATA   => TSU_TS_NS         ,
+            WR_EN     => TSU_TS_DV         ,
+            WR_FULL   => open              ,
+            WR_AFULL  => open              ,
+            WR_STATUS => open              ,
 
-            RD_CLK    => CLK_ETH        (p),
+            RD_CLK    => CLK_ETH        (p)   ,
             RD_RST    => repl_rst_arr   (p)(1),
-            RD_DATA   => asfifox_rd_data(p),
-            RD_EN     => '1'               ,
-            RD_EMPTY  => asfifox_empty  (p),
-            RD_AEMPTY => open              ,
+            RD_DATA   => asfifox_rd_data(p)   ,
+            RD_EN     => '1'                  ,
+            RD_EMPTY  => asfifox_empty  (p)   ,
+            RD_AEMPTY => open                 ,
             RD_STATUS => open
         );
 
@@ -483,10 +494,15 @@ begin
             end if;
         end process;
 
-        TSU_CLK <= CLK_ETH(0);
+        TSU_CLK <= CLK_ETH     (0)   ;
         TSU_RST <= repl_rst_arr(0)(1);
 
     end generate;
+
+    ACTIVITY_RX <= slv_array_ser(sig_activity_rx);
+    ACTIVITY_TX <= slv_array_ser(sig_activity_tx);
+    RX_LINK_UP  <= slv_array_ser(sig_rx_link_up);
+    TX_LINK_UP  <= slv_array_ser(sig_tx_link_up);
 
     -- =====================================================================
     -- QSFP control

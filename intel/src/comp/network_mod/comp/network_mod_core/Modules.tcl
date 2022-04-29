@@ -5,9 +5,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 # Paths to components
-set RX_ADAPTER_BASE     "$OFM_PATH/comp/nic/mac_lite/rx_mac_lite/comp/adapters/"
-set TX_ADAPTER_BASE     "$OFM_PATH/comp/nic/mac_lite/tx_mac_lite/comp/adapters/"
-set MI_TOOLS_BASE       "$OFM_PATH/comp/mi_tools/"
+set RX_ADAPTER_BASE     "$OFM_PATH/comp/nic/mac_lite/rx_mac_lite/comp/adapters"
+set TX_ADAPTER_BASE     "$OFM_PATH/comp/nic/mac_lite/tx_mac_lite/comp/adapters"
+set MI_TOOLS_BASE       "$OFM_PATH/comp/mi_tools"
 set CARDS_BASE          "$OFM_PATH/../cards"
 set DK_1SDX_IP_BASE     "$CARDS_BASE/dk-dev-1sdx-p/src/ip"
 set DK_AGI_IP_BASE      "$CARDS_BASE/dk-dev-agi027res/src/ip"
@@ -17,6 +17,9 @@ set AGI_FH400G_IP_BASE  "$CARDS_BASE/agi-fh400g/src/ip"
 lappend PACKAGES "$OFM_PATH/comp/base/pkg/math_pack.vhd"
 lappend PACKAGES "$OFM_PATH/comp/base/pkg/type_pack.vhd"
 lappend PACKAGES "$OFM_PATH/comp/base/pkg/eth_hdr_pack.vhd"
+
+# For local synthesis only !
+# set ARCHGRP DK-DEV-1SDX-P
 
 set COMPONENTS [concat $COMPONENTS [list \
     [ list "MI_INDIRECT_ACCESS"    "$MI_TOOLS_BASE/indirect_access"  "FULL" ] \
@@ -50,20 +53,20 @@ if { $ARCHGRP == "400G1" || $ARCHGRP == "DK-DEV-AGI027RES"} {
 
     # IP are now in card (DK-DEV-AGI027RES) top-level Modules.tcl
     # Uncomment for network module synthesis only!
-    #lappend MOD "$$DK_AGI_IP_BASE/ftile_pll_1x400g.ip"
-    #lappend MOD "$$DK_AGI_IP_BASE/ftile_eth_1x400g.ip"
-    #lappend MOD "$$DK_AGI_IP_BASE/ftile_pll_2x200g.ip"
-    #lappend MOD "$$DK_AGI_IP_BASE/ftile_eth_2x200g.ip"
-    #lappend MOD "$$DK_AGI_IP_BASE/ftile_pll_4x100g.ip"
-    #lappend MOD "$$DK_AGI_IP_BASE/ftile_eth_4x100g.ip"
-    #lappend MOD "$$DK_AGI_IP_BASE/ftile_pll_8x50g.ip"
-    #lappend MOD "$$DK_AGI_IP_BASE/ftile_eth_8x50g.ip"
-    #lappend MOD "$$DK_AGI_IP_BASE/ftile_pll_2x40g.ip"
-    #lappend MOD "$$DK_AGI_IP_BASE/ftile_eth_2x40g.ip"
-    #lappend MOD "$$DK_AGI_IP_BASE/ftile_pll_8x25g.ip"
-    #lappend MOD "$$DK_AGI_IP_BASE/ftile_eth_8x25g.ip"
-    #lappend MOD "$$DK_AGI_IP_BASE/ftile_pll_8x10g.ip"
-    #lappend MOD "$$DK_AGI_IP_BASE/ftile_eth_8x10g.ip"
+    #lappend MOD "$DK_AGI_IP_BASE/ftile_pll_1x400g.ip"
+    #lappend MOD "$DK_AGI_IP_BASE/ftile_eth_1x400g.ip"
+    #lappend MOD "$DK_AGI_IP_BASE/ftile_pll_2x200g.ip"
+    #lappend MOD "$DK_AGI_IP_BASE/ftile_eth_2x200g.ip"
+    #lappend MOD "$DK_AGI_IP_BASE/ftile_pll_4x100g.ip"
+    #lappend MOD "$DK_AGI_IP_BASE/ftile_eth_4x100g.ip"
+    #lappend MOD "$DK_AGI_IP_BASE/ftile_pll_8x50g.ip"
+    #lappend MOD "$DK_AGI_IP_BASE/ftile_eth_8x50g.ip"
+    #lappend MOD "$DK_AGI_IP_BASE/ftile_pll_2x40g.ip"
+    #lappend MOD "$DK_AGI_IP_BASE/ftile_eth_2x40g.ip"
+    #lappend MOD "$DK_AGI_IP_BASE/ftile_pll_8x25g.ip"
+    #lappend MOD "$DK_AGI_IP_BASE/ftile_eth_8x25g.ip"
+    #lappend MOD "$DK_AGI_IP_BASE/ftile_pll_8x10g.ip"
+    #lappend MOD "$DK_AGI_IP_BASE/ftile_eth_8x10g.ip"
 
     # Source files for implemented component
     lappend MOD "$ENTITY_BASE/network_mod_core_ftile.vhd"
