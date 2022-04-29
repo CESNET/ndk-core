@@ -823,7 +823,7 @@ architecture FULL of NETWORK_MOD_CORE is
     -- =========================================================================
 
     -- MI_PHY for E-tile reconfiguration interfaces (Ethernet, Transceiver (XCVR), RS-FEC)
-    -- from MI Indirect Access (-> _ia)
+    -- from MI Indirect Access (-> mi_ia_)
     signal mi_ia_dwr_phy    : slv_array_t     (IA_OUTPUT_INFS-1 downto 0)(MI_DATA_WIDTH_PHY-1 downto 0);
     signal mi_ia_addr_phy   : slv_array_t     (IA_OUTPUT_INFS-1 downto 0)(MI_ADDR_WIDTH_PHY-1 downto 0);
     signal mi_ia_rd_phy     : std_logic_vector(IA_OUTPUT_INFS-1 downto 0);
@@ -852,6 +852,10 @@ architecture FULL of NETWORK_MOD_CORE is
     signal ftile_clk_out_vec      : std_logic_vector(ETH_PORT_CHAN-1 downto 0); -- in case of multiple IP cores, only one is chosen
     signal ftile_clk_out          : std_logic; -- drives i_clk_rx and i_clk_tx of one or more other IP cores
 
+    signal ftile_rx_pcs_ready         : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
+    signal ftile_rx_pcs_fully_aligned : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
+    signal ftile_tx_lanes_stable      : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
+
     signal ftile_tx_mac_data      : slv_array_t     (ETH_PORT_CHAN-1 downto 0)(MAC_DATA_WIDTH        -1 downto 0);
     signal ftile_tx_mac_valid     : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
     signal ftile_tx_mac_inframe   : slv_array_t     (ETH_PORT_CHAN-1 downto 0)(MAC_INFRAME_WIDTH     -1 downto 0);
@@ -866,12 +870,6 @@ architecture FULL of NETWORK_MOD_CORE is
     signal ftile_rx_mac_fcs_error : slv_array_t     (ETH_PORT_CHAN-1 downto 0)(RX_MAC_FCS_ERROR_WIDTH-1 downto 0);
     signal ftile_rx_mac_error     : slv_array_t     (ETH_PORT_CHAN-1 downto 0)(RX_MAC_ERROR_WIDTH    -1 downto 0);
     signal ftile_rx_mac_status    : slv_array_t     (ETH_PORT_CHAN-1 downto 0)(RX_MAC_STATUS_WIDTH   -1 downto 0);
-
-    -- not yet used
-    -- signal dbg_tx_lanes_stable : std_logic;
-    -- signal dbg_rx_pcs_ready    : std_logic;
-    -- signal dbg_rx_block_lock   : std_logic;
-    -- signal dbg_rx_am_lock      : std_logic;
 
     -- Synchronization of REPEATER_CTRL
     -- signal sync_repeater_ctrl : std_logic_vector(REPEATER_CTRL'range);
@@ -932,11 +930,6 @@ begin
                 in_refclk_fgt_0           => QSFP_REFCLK_P
             );
 
-            -- QSFP_TX_P        <= qsfp_tx_p_sig(0);
-            -- QSFP_TX_N        <= qsfp_tx_n_sig(0);
-            -- qsfp_rx_p_sig(0) <= QSFP_RX_P;
-            -- qsfp_rx_n_sig(0) <= QSFP_RX_N;
-
             CLK_ETH <= ftile_clk_out;
 
             -- =========================================================================
@@ -961,8 +954,8 @@ begin
                 i_reconfig_reset                => MI_RESET_PHY,
                 o_cdr_lock                      => open,
                 o_tx_pll_locked                 => open,
-                o_tx_lanes_stable               => open,
-                o_rx_pcs_ready                  => open,
+                o_tx_lanes_stable               => ftile_tx_lanes_stable(0),
+                o_rx_pcs_ready                  => ftile_rx_pcs_ready(0),
                 o_tx_serial                     => QSFP_TX_P,
                 i_rx_serial                     => QSFP_RX_P,
                 o_tx_serial_n                   => QSFP_TX_N,
@@ -1056,7 +1049,7 @@ begin
                 o_remote_fault_status           => open,
                 i_stats_snapshot                => '1',
                 o_rx_hi_ber                     => open,
-                o_rx_pcs_fully_aligned          => open,
+                o_rx_pcs_fully_aligned          => ftile_rx_pcs_fully_aligned(0),
                 i_tx_mac_data                   => ftile_tx_mac_data(0),
                 i_tx_mac_valid                  => ftile_tx_mac_valid(0),
                 i_tx_mac_inframe                => ftile_tx_mac_inframe(0),
@@ -1077,10 +1070,22 @@ begin
                 o_rx_pause                      => open
             );
 
+            process(ftile_clk_out)
+            begin
+                if rising_edge(ftile_clk_out) then
+                    if (RESET_ETH = '1') then
+                        RX_LINK_UP(0) <= '0';
+                        TX_LINK_UP(0) <= '0';
+                    else
+                        RX_LINK_UP(0) <= ftile_rx_pcs_ready(0) and ftile_rx_pcs_fully_aligned(0);
+                        TX_LINK_UP(0) <= ftile_tx_lanes_stable(0);
+                    end if;
+                end if;
+            end process;
+
             -- =========================================================================
             --  Loopback (repeater) control
             -- =========================================================================
-
             -- Synchronization of REPEATER_CTRL
             -- sync_repeater_ctrl_i : entity work.ASYNC_BUS_HANDSHAKE
             -- generic map (
@@ -1170,16 +1175,14 @@ begin
             ftile_clk_out <= ftile_clk_out_vec(0);
             CLK_ETH       <= ftile_clk_out;
 
+            -- Distribution of serial lanes to IP cores
+            qsfp_rx_p_sig <= slv_array_deser(QSFP_RX_P, ETH_PORT_CHAN);
+            qsfp_rx_n_sig <= slv_array_deser(QSFP_RX_N, ETH_PORT_CHAN);
+            QSFP_TX_P <= slv_array_ser(qsfp_tx_p_sig);
+            QSFP_TX_N <= slv_array_ser(qsfp_tx_n_sig);
+
             -- can have upto two 200g channels
             eth_ftile_g : for i in ETH_PORT_CHAN-1 downto 0 generate
-
-                -- Distribution of serial lanes to IP cores
-                qsfp_rx_p_sig(i) <= QSFP_RX_P((i+1)*LANES_PER_CHANNEL-1 downto i*LANES_PER_CHANNEL);
-                qsfp_rx_n_sig(i) <= QSFP_RX_N((i+1)*LANES_PER_CHANNEL-1 downto i*LANES_PER_CHANNEL);
-
-                QSFP_TX_P((i+1)*LANES_PER_CHANNEL-1 downto i*LANES_PER_CHANNEL) <= qsfp_tx_p_sig(i);
-                QSFP_TX_N((i+1)*LANES_PER_CHANNEL-1 downto i*LANES_PER_CHANNEL) <= qsfp_tx_n_sig(i);
-
                 -- =========================================================================
                 -- F-TILE Ethernet
                 -- =========================================================================
@@ -1201,8 +1204,8 @@ begin
                     i_reconfig_reset                => MI_RESET_PHY,
                     o_cdr_lock                      => open,
                     o_tx_pll_locked                 => open,
-                    o_tx_lanes_stable               => open,
-                    o_rx_pcs_ready                  => open,
+                    o_tx_lanes_stable               => ftile_tx_lanes_stable(i),
+                    o_rx_pcs_ready                  => ftile_rx_pcs_ready(i),
                     o_tx_serial                     => qsfp_tx_p_sig(i),
                     i_rx_serial                     => qsfp_rx_p_sig(i),
                     o_tx_serial_n                   => qsfp_tx_n_sig(i),
@@ -1265,7 +1268,7 @@ begin
                     o_remote_fault_status           => open,
                     i_stats_snapshot                => '1',
                     o_rx_hi_ber                     => open,
-                    o_rx_pcs_fully_aligned          => open,
+                    o_rx_pcs_fully_aligned          => ftile_rx_pcs_fully_aligned(i),
                     i_tx_mac_data                   => ftile_tx_mac_data(i),
                     i_tx_mac_valid                  => ftile_tx_mac_valid(i),
                     i_tx_mac_inframe                => ftile_tx_mac_inframe(i),
@@ -1286,10 +1289,22 @@ begin
                     o_rx_pause                      => open
                 );
 
+                process(ftile_clk_out)
+                begin
+                    if rising_edge(ftile_clk_out) then
+                        if (RESET_ETH = '1') then
+                            RX_LINK_UP(i) <= '0';
+                            TX_LINK_UP(i) <= '0';
+                        else
+                            RX_LINK_UP(i) <= ftile_rx_pcs_ready(i) and ftile_rx_pcs_fully_aligned(i);
+                            TX_LINK_UP(i) <= ftile_tx_lanes_stable(i);
+                        end if;
+                    end if;
+                end process;
+
                 -- =========================================================================
                 --  Loopback (repeater) control
                 -- =========================================================================
-
                 -- Synchronization of REPEATER_CTRL
                 -- sync_repeater_ctrl_i : entity work.ASYNC_BUS_HANDSHAKE
                 -- generic map (
@@ -1380,16 +1395,14 @@ begin
             ftile_clk_out <= ftile_clk_out_vec(0);
             CLK_ETH       <= ftile_clk_out;
 
+            -- Distribution of serial lanes to IP cores
+            qsfp_rx_p_sig <= slv_array_deser(QSFP_RX_P, ETH_PORT_CHAN);
+            qsfp_rx_n_sig <= slv_array_deser(QSFP_RX_N, ETH_PORT_CHAN);
+            QSFP_TX_P <= slv_array_ser(qsfp_tx_p_sig);
+            QSFP_TX_N <= slv_array_ser(qsfp_tx_n_sig);
+
             -- can have upto four 100g channels
             eth_ftile_g : for i in ETH_PORT_CHAN-1 downto 0 generate
-
-                -- Distribution of serial lanes to IP cores
-                QSFP_TX_P((i+1)*LANES_PER_CHANNEL-1 downto i*LANES_PER_CHANNEL) <= qsfp_tx_p_sig(i);
-                QSFP_TX_N((i+1)*LANES_PER_CHANNEL-1 downto i*LANES_PER_CHANNEL) <= qsfp_tx_n_sig(i);
-
-                qsfp_rx_p_sig(i) <= QSFP_RX_P((i+1)*LANES_PER_CHANNEL-1 downto i*LANES_PER_CHANNEL);
-                qsfp_rx_n_sig(i) <= QSFP_RX_N((i+1)*LANES_PER_CHANNEL-1 downto i*LANES_PER_CHANNEL);
-
                 -- =========================================================================
                 -- F-TILE Ethernet
                 -- =========================================================================
@@ -1411,8 +1424,8 @@ begin
                     i_reconfig_reset                => MI_RESET_PHY,
                     o_cdr_lock                      => open,
                     o_tx_pll_locked                 => open,
-                    o_tx_lanes_stable               => open,
-                    o_rx_pcs_ready                  => open,
+                    o_tx_lanes_stable               => ftile_tx_lanes_stable(i),
+                    o_rx_pcs_ready                  => ftile_rx_pcs_ready(i),
                     o_tx_serial                     => qsfp_tx_p_sig(i),
                     i_rx_serial                     => qsfp_rx_p_sig(i),
                     o_tx_serial_n                   => qsfp_tx_n_sig(i),
@@ -1453,7 +1466,7 @@ begin
                     o_remote_fault_status           => open,
                     i_stats_snapshot                => '1',
                     o_rx_hi_ber                     => open,
-                    o_rx_pcs_fully_aligned          => open,
+                    o_rx_pcs_fully_aligned          => ftile_rx_pcs_fully_aligned(i),
                     i_tx_mac_data                   => ftile_tx_mac_data(i),
                     i_tx_mac_valid                  => ftile_tx_mac_valid(i),
                     i_tx_mac_inframe                => ftile_tx_mac_inframe(i),
@@ -1473,6 +1486,19 @@ begin
                     i_tx_pause                      => '0',
                     o_rx_pause                      => open
                 );
+
+                process(ftile_clk_out)
+                begin
+                    if rising_edge(ftile_clk_out) then
+                        if (RESET_ETH = '1') then
+                            RX_LINK_UP(i) <= '0';
+                            TX_LINK_UP(i) <= '0';
+                        else
+                            RX_LINK_UP(i) <= ftile_rx_pcs_ready(i) and ftile_rx_pcs_fully_aligned(i);
+                            TX_LINK_UP(i) <= ftile_tx_lanes_stable(i);
+                        end if;
+                    end if;
+                end process;
 
                 -- =========================================================================
                 -- ADAPTERS
@@ -1547,16 +1573,14 @@ begin
             ftile_clk_out <= ftile_clk_out_vec(0);
             CLK_ETH       <= ftile_clk_out;
 
+            -- Distribution of serial lanes to IP cores
+            qsfp_rx_p_sig <= slv_array_deser(QSFP_RX_P, ETH_PORT_CHAN);
+            qsfp_rx_n_sig <= slv_array_deser(QSFP_RX_N, ETH_PORT_CHAN);
+            QSFP_TX_P <= slv_array_ser(qsfp_tx_p_sig);
+            QSFP_TX_N <= slv_array_ser(qsfp_tx_n_sig);
+
             -- can have upto eight 50g lanes
             eth_ftile_g : for i in ETH_PORT_CHAN-1 downto 0 generate
-
-                -- Distribution of serial lanes to IP cores
-                QSFP_TX_P((i+1)*LANES_PER_CHANNEL-1 downto i*LANES_PER_CHANNEL) <= qsfp_tx_p_sig(i);
-                QSFP_TX_N((i+1)*LANES_PER_CHANNEL-1 downto i*LANES_PER_CHANNEL) <= qsfp_tx_n_sig(i);
-
-                qsfp_rx_p_sig(i) <= QSFP_RX_P((i+1)*LANES_PER_CHANNEL-1 downto i*LANES_PER_CHANNEL);
-                qsfp_rx_n_sig(i) <= QSFP_RX_N((i+1)*LANES_PER_CHANNEL-1 downto i*LANES_PER_CHANNEL);
-
                 -- =========================================================================
                 -- F-TILE Ethernet
                 -- =========================================================================
@@ -1578,8 +1602,8 @@ begin
                     i_reconfig_reset                => MI_RESET_PHY,
                     o_cdr_lock                      => open,
                     o_tx_pll_locked                 => open,
-                    o_tx_lanes_stable               => open,
-                    o_rx_pcs_ready                  => open,
+                    o_tx_lanes_stable               => ftile_tx_lanes_stable(i),
+                    o_rx_pcs_ready                  => ftile_rx_pcs_ready(i),
                     o_tx_serial                     => qsfp_tx_p_sig(i),
                     i_rx_serial                     => qsfp_rx_p_sig(i),
                     o_tx_serial_n                   => qsfp_tx_n_sig(i),
@@ -1618,7 +1642,7 @@ begin
                     o_remote_fault_status           => open,
                     i_stats_snapshot                => '1',
                     o_rx_hi_ber                     => open,
-                    o_rx_pcs_fully_aligned          => open,
+                    o_rx_pcs_fully_aligned          => ftile_rx_pcs_fully_aligned(i),
                     i_tx_mac_data                   => ftile_tx_mac_data(i),
                     i_tx_mac_valid                  => ftile_tx_mac_valid(i),
                     i_tx_mac_inframe                => ftile_tx_mac_inframe(i),
@@ -1638,6 +1662,19 @@ begin
                     i_tx_pause                      => '0',
                     o_rx_pause                      => open
                 );
+
+                process(ftile_clk_out)
+                begin
+                    if rising_edge(ftile_clk_out) then
+                        if (RESET_ETH = '1') then
+                            RX_LINK_UP(i) <= '0';
+                            TX_LINK_UP(i) <= '0';
+                        else
+                            RX_LINK_UP(i) <= ftile_rx_pcs_ready(i) and ftile_rx_pcs_fully_aligned(i);
+                            TX_LINK_UP(i) <= ftile_tx_lanes_stable(i);
+                        end if;
+                    end if;
+                end process;
 
                 -- =========================================================================
                 -- ADAPTERS
@@ -1712,16 +1749,14 @@ begin
             ftile_clk_out <= ftile_clk_out_vec(0);
             CLK_ETH       <= ftile_clk_out;
 
+            -- Distribution of serial lanes to IP cores
+            qsfp_rx_p_sig <= slv_array_deser(QSFP_RX_P, ETH_PORT_CHAN);
+            qsfp_rx_n_sig <= slv_array_deser(QSFP_RX_N, ETH_PORT_CHAN);
+            QSFP_TX_P <= slv_array_ser(qsfp_tx_p_sig);
+            QSFP_TX_N <= slv_array_ser(qsfp_tx_n_sig);
+
             -- can have upto two 40g lanes
             eth_ftile_g : for i in ETH_PORT_CHAN-1 downto 0 generate
-
-                -- Distribution of serial lanes to IP cores
-                QSFP_TX_P((i+1)*LANES_PER_CHANNEL-1 downto i*LANES_PER_CHANNEL) <= qsfp_tx_p_sig(i);
-                QSFP_TX_N((i+1)*LANES_PER_CHANNEL-1 downto i*LANES_PER_CHANNEL) <= qsfp_tx_n_sig(i);
-
-                qsfp_rx_p_sig(i) <= QSFP_RX_P((i+1)*LANES_PER_CHANNEL-1 downto i*LANES_PER_CHANNEL);
-                qsfp_rx_n_sig(i) <= QSFP_RX_N((i+1)*LANES_PER_CHANNEL-1 downto i*LANES_PER_CHANNEL);
-
                 -- =========================================================================
                 -- F-TILE Ethernet
                 -- =========================================================================
@@ -1743,8 +1778,8 @@ begin
                     i_reconfig_reset                => MI_RESET_PHY,
                     o_cdr_lock                      => open,
                     o_tx_pll_locked                 => open,
-                    o_tx_lanes_stable               => open,
-                    o_rx_pcs_ready                  => open,
+                    o_tx_lanes_stable               => ftile_tx_lanes_stable(i),
+                    o_rx_pcs_ready                  => ftile_rx_pcs_ready(i),
                     o_tx_serial                     => qsfp_tx_p_sig(i),
                     i_rx_serial                     => qsfp_rx_p_sig(i),
                     o_tx_serial_n                   => qsfp_tx_n_sig(i),
@@ -1807,7 +1842,7 @@ begin
                     o_remote_fault_status           => open,
                     i_stats_snapshot                => '1',
                     o_rx_hi_ber                     => open,
-                    o_rx_pcs_fully_aligned          => open,
+                    o_rx_pcs_fully_aligned          => ftile_rx_pcs_fully_aligned(i),
                     i_tx_mac_data                   => ftile_tx_mac_data(i),
                     i_tx_mac_valid                  => ftile_tx_mac_valid(i),
                     i_tx_mac_inframe                => ftile_tx_mac_inframe(i),
@@ -1827,6 +1862,19 @@ begin
                     i_tx_pause                      => '0',
                     o_rx_pause                      => open
                 );
+
+                process(ftile_clk_out)
+                begin
+                    if rising_edge(ftile_clk_out) then
+                        if (RESET_ETH = '1') then
+                            RX_LINK_UP(i) <= '0';
+                            TX_LINK_UP(i) <= '0';
+                        else
+                            RX_LINK_UP(i) <= ftile_rx_pcs_ready(i) and ftile_rx_pcs_fully_aligned(i);
+                            TX_LINK_UP(i) <= ftile_tx_lanes_stable(i);
+                        end if;
+                    end if;
+                end process;
 
                 -- =========================================================================
                 -- ADAPTERS
@@ -1901,16 +1949,14 @@ begin
             ftile_clk_out <= ftile_clk_out_vec(0);
             CLK_ETH       <= ftile_clk_out;
 
+            -- Distribution of serial lanes to IP cores
+            qsfp_rx_p_sig <= slv_array_deser(QSFP_RX_P, ETH_PORT_CHAN);
+            qsfp_rx_n_sig <= slv_array_deser(QSFP_RX_N, ETH_PORT_CHAN);
+            QSFP_TX_P <= slv_array_ser(qsfp_tx_p_sig);
+            QSFP_TX_N <= slv_array_ser(qsfp_tx_n_sig);
+
             -- can have upto eight 25g lanes
             eth_ftile_g : for i in ETH_PORT_CHAN-1 downto 0 generate
-
-                -- Distribution of serial lanes to IP cores
-                QSFP_TX_P((i+1)*LANES_PER_CHANNEL-1 downto i*LANES_PER_CHANNEL) <= qsfp_tx_p_sig(i);
-                QSFP_TX_N((i+1)*LANES_PER_CHANNEL-1 downto i*LANES_PER_CHANNEL) <= qsfp_tx_n_sig(i);
-
-                qsfp_rx_p_sig(i) <= QSFP_RX_P((i+1)*LANES_PER_CHANNEL-1 downto i*LANES_PER_CHANNEL);
-                qsfp_rx_n_sig(i) <= QSFP_RX_N((i+1)*LANES_PER_CHANNEL-1 downto i*LANES_PER_CHANNEL);
-
                 -- =========================================================================
                 -- F-TILE Ethernet
                 -- =========================================================================
@@ -1932,8 +1978,8 @@ begin
                     i_reconfig_reset                => MI_RESET_PHY,
                     o_cdr_lock                      => open,
                     o_tx_pll_locked                 => open,
-                    o_tx_lanes_stable               => open,
-                    o_rx_pcs_ready                  => open,
+                    o_tx_lanes_stable               => ftile_tx_lanes_stable(i),
+                    o_rx_pcs_ready                  => ftile_rx_pcs_ready(i),
                     o_tx_serial                     => qsfp_tx_p_sig(i),
                     i_rx_serial                     => qsfp_rx_p_sig(i),
                     o_tx_serial_n                   => qsfp_tx_n_sig(i),
@@ -1972,7 +2018,7 @@ begin
                     o_remote_fault_status           => open,
                     i_stats_snapshot                => '1',
                     o_rx_hi_ber                     => open,
-                    o_rx_pcs_fully_aligned          => open,
+                    o_rx_pcs_fully_aligned          => ftile_rx_pcs_fully_aligned(i),
                     i_tx_mac_data                   => ftile_tx_mac_data(i),
                     i_tx_mac_valid                  => ftile_tx_mac_valid(i),
                     i_tx_mac_inframe                => ftile_tx_mac_inframe(i)(0),
@@ -1992,6 +2038,19 @@ begin
                     i_tx_pause                      => '0',
                     o_rx_pause                      => open
                 );
+
+                process(ftile_clk_out)
+                begin
+                    if rising_edge(ftile_clk_out) then
+                        if (RESET_ETH = '1') then
+                            RX_LINK_UP(i) <= '0';
+                            TX_LINK_UP(i) <= '0';
+                        else
+                            RX_LINK_UP(i) <= ftile_rx_pcs_ready(i) and ftile_rx_pcs_fully_aligned(i);
+                            TX_LINK_UP(i) <= ftile_tx_lanes_stable(i);
+                        end if;
+                    end if;
+                end process;
 
                 -- =========================================================================
                 -- ADAPTERS
@@ -2066,16 +2125,14 @@ begin
             ftile_clk_out <= ftile_clk_out_vec(0);
             CLK_ETH       <= ftile_clk_out;
 
+            -- Distribution of serial lanes to IP cores
+            qsfp_rx_p_sig <= slv_array_deser(QSFP_RX_P, ETH_PORT_CHAN);
+            qsfp_rx_n_sig <= slv_array_deser(QSFP_RX_N, ETH_PORT_CHAN);
+            QSFP_TX_P <= slv_array_ser(qsfp_tx_p_sig);
+            QSFP_TX_N <= slv_array_ser(qsfp_tx_n_sig);
+
             -- can have upto eight 10g channels
             eth_ftile_g : for i in ETH_PORT_CHAN-1 downto 0 generate
-
-                -- Distribution of serial lanes to IP cores
-                QSFP_TX_P((i+1)*LANES_PER_CHANNEL-1 downto i*LANES_PER_CHANNEL) <= qsfp_tx_p_sig(i);
-                QSFP_TX_N((i+1)*LANES_PER_CHANNEL-1 downto i*LANES_PER_CHANNEL) <= qsfp_tx_n_sig(i);
-
-                qsfp_rx_p_sig(i) <= QSFP_RX_P((i+1)*LANES_PER_CHANNEL-1 downto i*LANES_PER_CHANNEL);
-                qsfp_rx_n_sig(i) <= QSFP_RX_N((i+1)*LANES_PER_CHANNEL-1 downto i*LANES_PER_CHANNEL);
-
                 -- =========================================================================
                 -- F-TILE Ethernet
                 -- =========================================================================
@@ -2097,8 +2154,8 @@ begin
 		        	i_reconfig_reset                => MI_RESET_PHY,
 		        	o_cdr_lock                      => open,
 		        	o_tx_pll_locked                 => open,
-		        	o_tx_lanes_stable               => open,
-		        	o_rx_pcs_ready                  => open,
+		        	o_tx_lanes_stable               => ftile_tx_lanes_stable(i),
+		        	o_rx_pcs_ready                  => ftile_rx_pcs_ready(i),
 		        	o_tx_serial                     => qsfp_tx_p_sig(i),
 		        	i_rx_serial                     => qsfp_rx_p_sig(i),
 		        	o_tx_serial_n                   => qsfp_tx_n_sig(i),
@@ -2137,7 +2194,7 @@ begin
 		        	o_remote_fault_status           => open,
 		        	i_stats_snapshot                => '1',
 		        	o_rx_hi_ber                     => open,
-		        	o_rx_pcs_fully_aligned          => open,
+		        	o_rx_pcs_fully_aligned          => ftile_rx_pcs_fully_aligned(i),
 		        	i_tx_mac_data                   => ftile_tx_mac_data(i),
 		        	i_tx_mac_valid                  => ftile_tx_mac_valid(i),
 		        	i_tx_mac_inframe                => ftile_tx_mac_inframe(i)(0),
@@ -2157,6 +2214,19 @@ begin
 		        	i_tx_pause                      => '0',
 		        	o_rx_pause                      => open
 		        );
+
+                process(ftile_clk_out)
+                begin
+                    if rising_edge(ftile_clk_out) then
+                        if (RESET_ETH = '1') then
+                            RX_LINK_UP(i) <= '0';
+                            TX_LINK_UP(i) <= '0';
+                        else
+                            RX_LINK_UP(i) <= ftile_rx_pcs_ready(i) and ftile_rx_pcs_fully_aligned(i);
+                            TX_LINK_UP(i) <= ftile_tx_lanes_stable(i);
+                        end if;
+                    end if;
+                end process;
 
                 -- =========================================================================
                 -- ADAPTERS
