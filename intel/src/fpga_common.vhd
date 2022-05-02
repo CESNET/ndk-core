@@ -363,8 +363,14 @@ architecture FULL of FPGA_COMMON is
     signal tsu_ns                        : std_logic_vector(63 downto 0);
     signal tsu_dv                        : std_logic;
 
-    signal qsfp_led_rx                   : std_logic_vector(ETH_PORTS-1 downto 0);
-    signal qsfp_led_tx                   : std_logic_vector(ETH_PORTS-1 downto 0);
+    signal eth_rx_link_up_ser            : std_logic_vector(ETH_PORTS*ETH_CHANNELS-1 downto 0);
+    signal eth_tx_phy_rdy_ser            : std_logic_vector(ETH_PORTS*ETH_CHANNELS-1 downto 0);
+    signal eth_rx_link_up                : slv_array_t(ETH_PORTS-1 downto 0)(ETH_CHANNELS-1 downto 0);
+    signal eth_tx_phy_rdy                : slv_array_t(ETH_PORTS-1 downto 0)(ETH_CHANNELS-1 downto 0);
+    signal eth_rx_activity_ser           : std_logic_vector(ETH_PORTS*ETH_CHANNELS-1 downto 0);
+    signal eth_tx_activity_ser           : std_logic_vector(ETH_PORTS*ETH_CHANNELS-1 downto 0);
+    signal eth_rx_activity               : slv_array_t(ETH_PORTS-1 downto 0)(ETH_CHANNELS-1 downto 0);
+    signal eth_tx_activity               : slv_array_t(ETH_PORTS-1 downto 0)(ETH_CHANNELS-1 downto 0);
 
 begin
 
@@ -860,7 +866,8 @@ begin
         APP_RESET          => rst_app,
 
         PCIE_LINK_UP       => app_pcie_link_up,
-        ETH_RX_LINK_UP     => (others => '1'), --TODO
+        ETH_RX_LINK_UP     => eth_rx_link_up_ser,
+        ETH_TX_PHY_RDY     => eth_tx_phy_rdy_ser,
 
         ETH_RX_MVB_DATA    => eth_rx_mvb_data,
         ETH_RX_MVB_VLD     => eth_rx_mvb_vld,
@@ -990,11 +997,12 @@ begin
         QSFP_MODPRS_N   => QSFP_MODPRS_N,
         QSFP_INT_N      => QSFP_INT_N,
 
-        REPEATER_CTRL   => (others => '0'), --TBD
-        PORT_ENABLED    => open, --TBD
-        ACTIVITY_RX     => qsfp_led_rx,
-        ACTIVITY_TX     => qsfp_led_tx,
-        LINK            => open, --TBD
+        --REPEATER_CTRL   => (others => '0'), --TBD
+        --PORT_ENABLED    => open, --TBD
+        ACTIVITY_RX     => eth_rx_activity_ser,
+        ACTIVITY_TX     => eth_tx_activity_ser,
+        RX_LINK_UP      => eth_rx_link_up_ser,
+        TX_LINK_UP      => eth_tx_phy_rdy_ser,
 
         RX_MFB_DATA     => eth_tx_mfb_data,
         RX_MFB_HDR      => eth_tx_mfb_hdr,
@@ -1045,8 +1053,20 @@ begin
         TSU_TS_DV       => tsu_dv
     );
 
-    ETH_LED_G(ETH_PORTS-1 downto 0) <= qsfp_led_rx;
-    ETH_LED_R(ETH_PORTS-1 downto 0) <= qsfp_led_tx;
+    eth_rx_link_up  <= slv_array_deser(eth_rx_link_up_ser,ETH_PORTS,ETH_CHANNELS);
+    eth_tx_phy_rdy  <= slv_array_deser(eth_tx_phy_rdy_ser,ETH_PORTS,ETH_CHANNELS);
+    eth_rx_activity <= slv_array_deser(eth_rx_activity_ser,ETH_PORTS,ETH_CHANNELS);
+    eth_tx_activity <= slv_array_deser(eth_tx_activity_ser,ETH_PORTS,ETH_CHANNELS);
+
+    led_eth_g: for i in 0 to ETH_PORTS-1 generate
+        process (clk_eth_phy)
+        begin
+            if rising_edge(clk_eth_phy(i)) then
+                ETH_LED_G(i) <= (and eth_rx_link_up(i)) and (and eth_tx_phy_rdy(i));
+                ETH_LED_R(i) <= (or eth_rx_activity(i)) or (or eth_tx_activity(i));
+            end if;
+        end process;
+    end generate;
 
     -- =========================================================================
     --  TimeStamp Unit

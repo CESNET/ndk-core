@@ -116,8 +116,10 @@ port (
     -- Link Up flags of each PCIe endpoints, active when PCIe EP is ready for data transfers.
     -- DMA channels are statically and evenly mapped to all PCIe EPs
     PCIE_LINK_UP            : in  std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
-    -- Link Up flags of each Ethernet channel
+    -- RX Link Up flags of each Ethernet channel
     ETH_RX_LINK_UP          : in  std_logic_vector(ETH_STREAMS*ETH_CHANNELS-1 downto 0);
+    -- TX PHY Ready flags of each Ethernet channel
+    ETH_TX_PHY_RDY          : in  std_logic_vector(ETH_STREAMS*ETH_CHANNELS-1 downto 0);
  
     -- =========================================================================
     --  ETHERNET STREAMS (clocked at APP_CLK)
