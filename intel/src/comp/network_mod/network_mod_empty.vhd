@@ -21,10 +21,11 @@ begin
     QSFP_LPMODE   <= (others => '0');
     QSFP_RESET_N  <= (others => '0');
 
-    PORT_ENABLED  <= (others => '0');
-    ACTIVITY_RX   <= (others => '0');
-    ACTIVITY_TX   <= (others => '0');
-    LINK          <= (others => '0');
+    -- PORT_ENABLED <= (others => '0');
+    ACTIVITY_RX <= (others => '0');
+    ACTIVITY_TX <= (others => '0');
+    RX_LINK_UP  <= (others => '0');
+    TX_LINK_UP  <= (others => '0');
 
     RX_MFB_DST_RDY <= (others => '0');
 
