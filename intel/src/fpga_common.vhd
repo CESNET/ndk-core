@@ -172,7 +172,7 @@ architecture FULL of FPGA_COMMON is
     constant ETH_CHANNELS   : natural := ETH_PORT_CHAN(0);
     constant ETH_STREAMS    : natural := ETH_PORTS;
     constant ETH_MFB_REGION : natural := f_eth_mfb_region;
-    constant DMA_STREAMS    : natural := ETH_PORTS;
+    constant DMA_STREAMS    : natural := DMA_MODULES;
 
     constant PCIE_MPS     : natural := 256;
     constant PCIE_MRRS    : natural := 512;
@@ -371,6 +371,10 @@ architecture FULL of FPGA_COMMON is
     signal eth_tx_activity_ser           : std_logic_vector(ETH_PORTS*ETH_CHANNELS-1 downto 0);
     signal eth_rx_activity               : slv_array_t(ETH_PORTS-1 downto 0)(ETH_CHANNELS-1 downto 0);
     signal eth_tx_activity               : slv_array_t(ETH_PORTS-1 downto 0)(ETH_CHANNELS-1 downto 0);
+
+    signal flash_wr_data                 : std_logic_vector(64-1 downto 0);
+    signal flash_wr_en                   : std_logic;
+    signal flash_rd_data                 : std_logic_vector(64-1 downto 0);
 
 begin
 
@@ -597,11 +601,43 @@ begin
         TX_DRDY    => mi_adc_drdy
     );
 
-    -- unused MI ports
-    mi_adc_ardy(MI_ADC_PORT_BOOT) <= '1';
-    mi_adc_drdy(MI_ADC_PORT_BOOT) <= '0';
-    mi_adc_drd (MI_ADC_PORT_BOOT) <= (others => '0');
+    boot_ctrl_g: if BOARD = "FB4CGG3" generate
+        boot_ctrl_i : entity work.BOOT_CTRL
+        generic map(
+            DEVICE => DEVICE
+        )
+        port map(
+            MI_CLK        => clk_mi,
+            MI_RESET      => rst_mi(1),
+            MI_DWR        => mi_adc_dwr (MI_ADC_PORT_BOOT),
+            MI_ADDR       => mi_adc_addr(MI_ADC_PORT_BOOT),
+            MI_BE         => mi_adc_be  (MI_ADC_PORT_BOOT),
+            MI_RD         => mi_adc_rd  (MI_ADC_PORT_BOOT),
+            MI_WR         => mi_adc_wr  (MI_ADC_PORT_BOOT),
+            MI_ARDY       => mi_adc_ardy(MI_ADC_PORT_BOOT),
+            MI_DRD        => mi_adc_drd (MI_ADC_PORT_BOOT),
+            MI_DRDY       => mi_adc_drdy(MI_ADC_PORT_BOOT),
 
+            BOOT_CLK      => clk_pci(0),
+            BOOT_RESET    => rst_pci(0),
+
+            BOOT_REQUEST  => open,
+            BOOT_IMAGE    => open,
+
+            FLASH_WR_DATA => flash_wr_data,
+            FLASH_WR_EN   => flash_wr_en,
+            FLASH_RD_DATA => flash_rd_data
+        );
+
+        flash_rd_data <= MISC_IN;
+        MISC_OUT <= flash_wr_data & flash_wr_en & rst_pci(0) & clk_pci(0);
+    else generate
+        mi_adc_ardy(MI_ADC_PORT_BOOT) <= '1';
+        mi_adc_drdy(MI_ADC_PORT_BOOT) <= '0';
+        mi_adc_drd (MI_ADC_PORT_BOOT) <= (others => '0');
+    end generate;
+
+    -- unused MI ports
     mi_adc_ardy(MI_ADC_PORT_MSIX) <= '1';
     mi_adc_drdy(MI_ADC_PORT_MSIX) <= '0';
     mi_adc_drd (MI_ADC_PORT_MSIX) <= (others => '0');

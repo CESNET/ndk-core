@@ -5,7 +5,7 @@ proc dts_build_netcope {} {
     # =========================================================================
     set ADDR_TEST_SPACE "0x00000000"
     set ADDR_SENSOR     "0x00001000"
-    #set ADDR_SDM_CTRL   "0x00002000"
+    set ADDR_SDM_CTRL   "0x00002000"
     set ADDR_TSU        "0x00004000"
     set ADDR_GEN_LOOP   "0x00005000"
     set ADDR_NET_MOD    "0x00008000"
@@ -35,6 +35,11 @@ proc dts_build_netcope {} {
     append ret "compatible = \"netcope,bus,mi\";"
     append ret "resource = \"PCI0,BAR0\";"
     append ret "width = <0x20>;"
+
+    # BOOT component
+    if {$CARD_NAME == "FB4CGG3"} {
+        append ret "boot:" [dts_boot_controller $ADDR_SDM_CTRL]
+    }
 
     # TSU component
     global TSU_ENABLE
