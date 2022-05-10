@@ -18,6 +18,7 @@ set PCIE_BASE            "$ENTITY_BASE/src/comp/pcie"
 set DMA_BUS_BASE         "$ENTITY_BASE/src/comp/dma"
 set NETWORK_MOD_BASE     "$ENTITY_BASE/src/comp/network_mod"
 set CLOCK_GEN_BASE       "$ENTITY_BASE/src/comp/clk_gen"
+set BOOT_CTRL_BASE       "$ENTITY_BASE/src/comp/boot_ctrl"
 set MI_SPLITTER_BASE     "$OFM_PATH/comp/mi_tools/splitter_plus_gen"
 set RESET_TREE_GEN_BASE  "$OFM_PATH/comp/base/misc/reset_tree_gen"
 set MI_TEST_SPACE_BASE   "$OFM_PATH/comp/mi_tools/test_space"
@@ -50,20 +51,19 @@ if {$BOARD == "DK-DEV-1SDX-P"} {
 if { $ARCHGRP == "APPLICATION_CORE_ENTYTY_ONLY" } {
   lappend MOD "$ENTITY_BASE/src/application_ent.vhd"
 } else {
-  set COMPONENTS [concat $COMPONENTS [list \
-      [list "CLOCK_GEN"       $CLOCK_GEN_BASE       $CLOCK_GEN_ARCH  ] \
-      [list "ASYNC_RESET"     $ASYNC_RESET_BASE     "FULL"           ] \
-      [list "ASYNC_OPEN_LOOP" $ASYNC_OPEN_LOOP_BASE "FULL"           ] \
-      [list "TSU"             $TSU_BASE             "FULL"           ] \
-      [list "RESET_TREE_GEN"  $RESET_TREE_GEN_BASE  "FULL"           ] \
-      [list "PCIE"            $PCIE_BASE            $BOARD           ] \
-      [list "MI_SPLITTER"     $MI_SPLITTER_BASE     "FULL"           ] \
-      [list "MI_TEST_SPACE"   $MI_TEST_SPACE_BASE   "FULL"           ] \
-      [list "ADC_SENSORS"     $ADC_SENSORS_BASE     $ADC_SENSORS_ARCH] \
-      [list "NETWORK_MOD"     $NETWORK_MOD_BASE     $NET_MOD_ARCH    ] \
-      [list "DMA_BUS"         $DMA_BUS_BASE         $DMA_BUS_ARCH    ] \
-      [list "DMA_GENERATOR"   $DMA_GENERATOR_BASE   "FULL"           ] \
-  ]]
+  lappend COMPONENTS [list "CLOCK_GEN"       $CLOCK_GEN_BASE       $CLOCK_GEN_ARCH  ]
+  lappend COMPONENTS [list "BOOT_CTRL"       $BOOT_CTRL_BASE       "FULL"           ]
+  lappend COMPONENTS [list "ASYNC_RESET"     $ASYNC_RESET_BASE     "FULL"           ]
+  lappend COMPONENTS [list "ASYNC_OPEN_LOOP" $ASYNC_OPEN_LOOP_BASE "FULL"           ]
+  lappend COMPONENTS [list "TSU"             $TSU_BASE             "FULL"           ]
+  lappend COMPONENTS [list "RESET_TREE_GEN"  $RESET_TREE_GEN_BASE  "FULL"           ]
+  lappend COMPONENTS [list "PCIE"            $PCIE_BASE            $BOARD           ]
+  lappend COMPONENTS [list "MI_SPLITTER"     $MI_SPLITTER_BASE     "FULL"           ]
+  lappend COMPONENTS [list "MI_TEST_SPACE"   $MI_TEST_SPACE_BASE   "FULL"           ]
+  lappend COMPONENTS [list "ADC_SENSORS"     $ADC_SENSORS_BASE     $ADC_SENSORS_ARCH]
+  lappend COMPONENTS [list "NETWORK_MOD"     $NETWORK_MOD_BASE     $NET_MOD_ARCH    ]
+  lappend COMPONENTS [list "DMA_BUS"         $DMA_BUS_BASE         $DMA_BUS_ARCH    ]
+  lappend COMPONENTS [list "DMA_GENERATOR"   $DMA_GENERATOR_BASE   "FULL"           ]
 
   lappend MOD "$ENTITY_BASE/src/application_ent.vhd"
   lappend MOD "$ENTITY_BASE/src/fpga_common.vhd"
