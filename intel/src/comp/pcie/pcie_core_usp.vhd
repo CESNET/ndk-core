@@ -17,17 +17,6 @@ use UNISIM.vcomponents.all;
 architecture USP of PCIE_CORE is
 
     component pcie4_uscale_plus
-    generic(
-        VENDOR_ID                              : std_logic_vector(15 downto 0);
-        DEVICE_ID                              : std_logic_vector(15 downto 0);
-        SUBVENDOR_ID                           : std_logic_vector(15 downto 0);
-        SUBDEVICE_ID                           : std_logic_vector(15 downto 0);
-        BAR0_APERTURE_SIZE                     : std_logic_vector(4 downto 0);
-        BAR0_CONTROL                           : std_logic_vector(2 downto 0);
-        PF0_SRIOV_CAP_TOTAL_VF                 : std_logic_vector(15 downto 0);
-        PF0_SRIOV_VF_DEVICE_ID                 : std_logic_vector(15 downto 0);
-        LOCATION                               : string
-    );
     port (
         user_clk                               :  out  std_logic;
         user_reset                             :  out  std_logic;
@@ -215,9 +204,9 @@ architecture USP of PCIE_CORE is
     signal cfg_ext_write_data       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(31 downto 0);
     signal cfg_ext_write_be         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(3 downto 0);
     signal cfg_ext_read_xvc_data    : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(31 downto 0);
-    signal cfg_ext_read_xvc_dv      : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal cfg_ext_read_xvc_dv      : std_logic_vector(PCIE_ENDPOINTS-1 downto 0) := (others => '0');
     signal cfg_ext_read_dtb_data    : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(31 downto 0);
-    signal cfg_ext_read_dtb_dv      : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal cfg_ext_read_dtb_dv      : std_logic_vector(PCIE_ENDPOINTS-1 downto 0) := (others => '0');
     signal cfg_ext_read_data        : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(31 downto 0);
     signal cfg_ext_read_dv          : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
 
@@ -254,18 +243,9 @@ begin
             RQ_AXI_READY(i) <= s_axis_rq_tready(i)(0);
             CC_AXI_READY(i) <= s_axis_cc_tready(i)(0);
 
+            pcie_clk(i) <= pcie_hip_clk(i);
+
             pcie_i : pcie4_uscale_plus
-            generic map (
-                VENDOR_ID                         => VENDOR_ID,
-                DEVICE_ID                         => DEVICE_ID,
-                SUBVENDOR_ID                      => SUBVENDOR_ID,
-                SUBDEVICE_ID                      => SUBDEVICE_ID,
-                BAR0_APERTURE_SIZE                => "10011",
-                BAR0_CONTROL                      => "110",
-                PF0_SRIOV_CAP_TOTAL_VF            => std_logic_vector(to_unsigned(max(PF0_TOTAL_VF, 4), 16)),
-                PF0_SRIOV_VF_DEVICE_ID            => DEVICE_ID,
-                LOCATION                          => tsel(i=0,"X1Y2","X1Y0")
-            )
             port map (
                 sys_clk                           => pcie_sysclk_buf(i),
                 sys_clk_gt                        => pcie_sysclk_gt_buf(i),
@@ -347,7 +327,7 @@ begin
                 cfg_tph_st_mode                   => open,
                 cfg_vf_tph_requester_enable       => open,
                 cfg_vf_tph_st_mode                => open,
-                cfg_dsn                           => (others => '0'),
+                cfg_dsn                           => (others => '1'),
                 cfg_bus_number                    => open,
                 cfg_msg_received                  => open,
                 cfg_msg_received_data             => open,
