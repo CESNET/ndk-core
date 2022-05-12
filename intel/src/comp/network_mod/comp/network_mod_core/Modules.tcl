@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 # Paths to components
+set MGMT_BASE           "$OFM_PATH/comp/nic/eth_phy/comp/mgmt"
 set RX_ADAPTER_BASE     "$OFM_PATH/comp/nic/mac_lite/rx_mac_lite/comp/adapters"
 set TX_ADAPTER_BASE     "$OFM_PATH/comp/nic/mac_lite/tx_mac_lite/comp/adapters"
 set MI_TOOLS_BASE       "$OFM_PATH/comp/mi_tools"
@@ -21,9 +22,9 @@ lappend PACKAGES "$OFM_PATH/comp/base/pkg/eth_hdr_pack.vhd"
 # For local synthesis only !
 # set ARCHGRP DK-DEV-1SDX-P
 
-set COMPONENTS [concat $COMPONENTS [list \
-    [ list "MI_INDIRECT_ACCESS"    "$MI_TOOLS_BASE/indirect_access"  "FULL" ] \
-]]
+lappend COMPONENTS [ list "MI_INDIRECT_ACCESS"   "$MI_TOOLS_BASE/indirect_access"   "FULL" ]
+lappend COMPONENTS [ list "MI_SPLITTER_PLUS_GEN" "$MI_TOOLS_BASE/splitter_plus_gen" "FULL" ]
+lappend COMPONENTS [ list "MGMT"                  $MGMT_BASE                        "FULL" ]
 
 lappend MOD "$ENTITY_BASE/network_mod_core_ent.vhd"
 

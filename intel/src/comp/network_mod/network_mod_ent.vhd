@@ -148,7 +148,7 @@ port(
     MI_DRDY         : out std_logic;
 
     -- =====================================================================
-    -- MI interface - ETH PCS/PMA/QSFP
+    -- MI interface - ETH PCS/PMA
     -- =====================================================================
     MI_CLK_PHY      : in  std_logic;
     MI_RESET_PHY    : in  std_logic;
@@ -160,6 +160,20 @@ port(
     MI_DRD_PHY      : out std_logic_vector(MI_DATA_WIDTH-1 downto 0);
     MI_ARDY_PHY     : out std_logic;
     MI_DRDY_PHY     : out std_logic;
+
+    -- =====================================================================
+    -- MI interface - ETH PMD (QSFP)
+    -- =====================================================================
+    MI_CLK_PMD      : in  std_logic;
+    MI_RESET_PMD    : in  std_logic;
+    MI_DWR_PMD      : in  std_logic_vector(MI_DATA_WIDTH-1 downto 0);
+    MI_ADDR_PMD     : in  std_logic_vector(MI_ADDR_WIDTH-1 downto 0);
+    MI_RD_PMD       : in  std_logic;
+    MI_WR_PMD       : in  std_logic;
+    MI_BE_PMD       : in  std_logic_vector(MI_DATA_WIDTH/8-1 downto 0);
+    MI_DRD_PMD      : out std_logic_vector(MI_DATA_WIDTH-1 downto 0);
+    MI_ARDY_PMD     : out std_logic;
+    MI_DRDY_PMD     : out std_logic;
 
     -- =====================================================================
     -- TSU interface

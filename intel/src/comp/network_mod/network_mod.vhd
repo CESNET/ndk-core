@@ -40,10 +40,10 @@ architecture FULL of NETWORK_MOD is
     constant PORTS_OFF         : std_logic_vector(MI_ADDR_WIDTH-1 downto 0) := X"0000_2000";
     constant MI_ADDR_BASES     : natural := ETH_PORTS;
     -- MI_PHY for E/F-tile reconfiguration infs
-    --                                      QSFP_CTRL + NETWORK_MOD_COREs
-    constant MI_ADDR_BASES_PHY : natural := 1         + ETH_PORTS;
+    --                                      NETWORK_MOD_COREs
+    constant MI_ADDR_BASES_PHY : natural := ETH_PORTS;
     -- MI Indirect Access offset (X"0000_0020" is enough)
-    constant IA_OFF            : std_logic_vector(MI_ADDR_WIDTH_PHY-1 downto 0) := X"0000_1000";
+    constant IA_OFF            : std_logic_vector(MI_ADDR_WIDTH_PHY-1 downto 0) := X"0020_0000";
 
     -- MFB adjustments
     constant MFB_WIDTH      : natural := REGIONS*REGION_SIZE*BLOCK_SIZE*ITEM_WIDTH;
@@ -437,14 +437,14 @@ begin
             -- MI interface
             MI_CLK_PHY      => MI_CLK,
             MI_RESET_PHY    => MI_RESET,
-            MI_DWR_PHY      => mi_split_dwr_phy (p+1),
-            MI_ADDR_PHY     => mi_split_addr_phy(p+1),
-            MI_BE_PHY       => mi_split_be_phy  (p+1),
-            MI_RD_PHY       => mi_split_rd_phy  (p+1),
-            MI_WR_PHY       => mi_split_wr_phy  (p+1),
-            MI_DRD_PHY      => mi_split_drd_phy (p+1),
-            MI_ARDY_PHY     => mi_split_ardy_phy(p+1),
-            MI_DRDY_PHY     => mi_split_drdy_phy(p+1)
+            MI_DWR_PHY      => mi_split_dwr_phy (p),
+            MI_ADDR_PHY     => mi_split_addr_phy(p),
+            MI_BE_PHY       => mi_split_be_phy  (p),
+            MI_RD_PHY       => mi_split_rd_phy  (p),
+            MI_WR_PHY       => mi_split_wr_phy  (p),
+            MI_DRD_PHY      => mi_split_drd_phy (p),
+            MI_ARDY_PHY     => mi_split_ardy_phy(p),
+            MI_DRDY_PHY     => mi_split_drdy_phy(p)
         );
 
         TX_MFB_DATA    <= slv_array_ser(TX_MFB_DATA_arr);
@@ -509,12 +509,12 @@ begin
     -- =====================================================================
     qsfp_ctrl_i : entity work.QSFP_CTRL
     generic map (
-       QSFP_PORTS          => 2,
-       QSFP_I2C_PORTS      => 1,
+       QSFP_PORTS          => ETH_PORTS,
+       QSFP_I2C_PORTS      => QSFP_I2C_PORTS,
        FPC202_INIT_EN      => FPC202_INIT_EN
     )
     port map (
-       RST            => MI_RESET_PHY   ,
+       RST            => MI_RESET_PMD   ,
        --
        TX_READY       => (others => '1'),
        -- QSFP control/status
@@ -529,16 +529,16 @@ begin
        -- Select which QSFP port is targetting during MI read/writes
        MI_QSFP_SEL    => (others => '0'),
        -- MI interface
-       MI_CLK_PHY     => MI_CLK_PHY          ,
-       MI_RESET_PHY   => MI_RESET_PHY        ,
-       MI_DWR_PHY     => mi_split_dwr_phy (0),
-       MI_ADDR_PHY    => mi_split_addr_phy(0),
-       MI_RD_PHY      => mi_split_rd_phy  (0),
-       MI_WR_PHY      => mi_split_wr_phy  (0),
-       MI_BE_PHY      => mi_split_be_phy  (0),
-       MI_DRD_PHY     => mi_split_drd_phy (0),
-       MI_ARDY_PHY    => mi_split_ardy_phy(0),
-       MI_DRDY_PHY    => mi_split_drdy_phy(0)
+       MI_CLK_PHY     => MI_CLK_PMD  ,
+       MI_RESET_PHY   => MI_RESET_PMD,
+       MI_DWR_PHY     => MI_DWR_PMD  ,
+       MI_ADDR_PHY    => MI_ADDR_PMD ,
+       MI_RD_PHY      => MI_RD_PMD   ,
+       MI_WR_PHY      => MI_WR_PMD   ,
+       MI_BE_PHY      => MI_BE_PMD   ,
+       MI_DRD_PHY     => MI_DRD_PMD  ,
+       MI_ARDY_PHY    => MI_ARDY_PMD ,
+       MI_DRDY_PHY    => MI_DRDY_PMD
     );
 
 end architecture;

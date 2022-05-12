@@ -1083,6 +1083,17 @@ begin
         MI_ARDY_PHY     => mi_adc_ardy(MI_ADC_PORT_ETHMOD),
         MI_DRDY_PHY     => mi_adc_drdy(MI_ADC_PORT_ETHMOD),
 
+        MI_CLK_PMD      => clk_mi,
+        MI_RESET_PMD    => rst_mi(6),
+        MI_DWR_PMD      => mi_adc_dwr(MI_ADC_PORT_ETHPMD),
+        MI_ADDR_PMD     => mi_adc_addr(MI_ADC_PORT_ETHPMD),
+        MI_RD_PMD       => mi_adc_rd(MI_ADC_PORT_ETHPMD),
+        MI_WR_PMD       => mi_adc_wr(MI_ADC_PORT_ETHPMD),
+        MI_BE_PMD       => mi_adc_be(MI_ADC_PORT_ETHPMD),
+        MI_DRD_PMD      => mi_adc_drd(MI_ADC_PORT_ETHPMD),
+        MI_ARDY_PMD     => mi_adc_ardy(MI_ADC_PORT_ETHPMD),
+        MI_DRDY_PMD     => mi_adc_drdy(MI_ADC_PORT_ETHPMD),
+
         TSU_CLK         => tsu_clk,
         TSU_RST         => tsu_rst,
         TSU_TS_NS       => tsu_ns,

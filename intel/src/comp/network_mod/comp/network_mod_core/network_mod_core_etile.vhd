@@ -396,7 +396,7 @@ architecture ETILE of NETWORK_MOD_CORE is
     -- =========================================================================
     --                               CONSTANTS
     -- =========================================================================
-    -- constant LANES_PER_CHANNEL : natural := LANES/ETH_CHANNELS;
+    constant LANES_PER_CHANNEL : natural := LANES/ETH_PORT_CHAN;
 
     constant MFB2AVST_FIFO_DEPTH    : natural := 512;
 
@@ -410,9 +410,49 @@ architecture ETILE of NETWORK_MOD_CORE is
     --                                           eth inf       + xcvr inf + rsfec in case of 100g1 or 25g4
     constant IA_OUTPUT_INFS         : natural := ETH_PORT_CHAN + LANES    + tsel(ETH_PORT_SPEED = 10, 0, 1);
 
+    constant MI_ADDR_BASES_PHY      : natural := ETH_PORT_CHAN;
+    constant MGMT_OFF               : std_logic_vector(MI_ADDR_WIDTH_PHY-1 downto 0) := X"0004_0000";
+
+    function mi_addr_base_init_phy_f return slv_array_t is
+        variable mi_addr_base_var : slv_array_t(MI_ADDR_BASES_PHY-1 downto 0)(MI_ADDR_WIDTH_PHY-1 downto 0);
+    begin
+        for i in 0 to MI_ADDR_BASES_PHY-1 loop
+            mi_addr_base_var(i) := std_logic_vector(resize(i*unsigned(MGMT_OFF), MI_ADDR_WIDTH_PHY));
+        end loop;
+        return mi_addr_base_var;
+    end function;
+
+    function speed_cap_f return std_logic_vector is
+        variable speed_cap_v : std_logic_vector(15 downto 0);
+    begin
+        speed_cap_v := (others => '0');
+        case ETH_PORT_SPEED is
+            when 400 => speed_cap_v(15) := '1';
+            when 200 => speed_cap_v(12) := '1';
+            when 100 => speed_cap_v(9)  := '1';
+            when 50  => speed_cap_v(3)  := '1';
+            when 40  => speed_cap_v(8)  := '1';
+            when 25  => speed_cap_v(11) := '1';
+            when others => speed_cap_v(0)  := '1'; -- 10GE
+        end case;
+        return speed_cap_v;
+    end function;
+
+    constant SPEED_CAP : std_logic_vector(16-1 downto 0) := speed_cap_f;
+
     -- =========================================================================
     --                                SIGNALS
     -- =========================================================================
+
+    signal split_mi_dwr_phy  : slv_array_t     (MI_ADDR_BASES_PHY-1 downto 0)(MI_DATA_WIDTH_PHY-1 downto 0);
+    signal split_mi_addr_phy : slv_array_t     (MI_ADDR_BASES_PHY-1 downto 0)(MI_ADDR_WIDTH_PHY-1 downto 0);
+    signal split_mi_rd_phy   : std_logic_vector(MI_ADDR_BASES_PHY-1 downto 0);
+    signal split_mi_wr_phy   : std_logic_vector(MI_ADDR_BASES_PHY-1 downto 0);
+    signal split_mi_be_phy   : slv_array_t     (MI_ADDR_BASES_PHY-1 downto 0)(MI_DATA_WIDTH_PHY/8-1 downto 0);
+    signal split_mi_ardy_phy : std_logic_vector(MI_ADDR_BASES_PHY-1 downto 0);
+    signal split_mi_drd_phy  : slv_array_t     (MI_ADDR_BASES_PHY-1 downto 0)(MI_DATA_WIDTH_PHY-1 downto 0);
+    signal split_mi_drdy_phy : std_logic_vector(MI_ADDR_BASES_PHY-1 downto 0);
+
     signal etile_clk_out_vec      : std_logic_vector(ETH_PORT_CHAN-1 downto 0); -- in case of multiple IP cores, only one is chosen
     signal etile_clk_out          : std_logic; -- drives i_clk_rx and i_clk_tx of one or more other IP cores
 
@@ -439,6 +479,7 @@ architecture ETILE of NETWORK_MOD_CORE is
     signal rx_avst_error     : std_logic_vector(ETH_PORT_CHAN*RX_AVST_ERROR_WIDTH-1 downto 0);
 
     -- Status signals
+    signal rx_hi_ber         : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
     signal rx_pcs_ready      : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
     signal rx_block_lock     : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
     signal rx_am_lock        : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
@@ -489,7 +530,102 @@ architecture ETILE of NETWORK_MOD_CORE is
     signal rsfec_inf_drd_phy      : std_logic_vector(MI_DATA_WIDTH_PHY-1 downto 0);
     signal rsfec_inf_drd_phy_res  : std_logic_vector(8                -1 downto 0);
 
+    signal mgmt_pcs_reset : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
+    signal mgmt_pma_reset : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
+
 begin
+
+    mi_splitter_i : entity work.MI_SPLITTER_PLUS_GEN
+    generic map(
+        ADDR_WIDTH  => MI_ADDR_WIDTH_PHY,
+        DATA_WIDTH  => MI_DATA_WIDTH_PHY,
+        META_WIDTH  => 0,
+        PORTS       => MI_ADDR_BASES_PHY,
+        PIPE_OUT    => (others => true),
+        PIPE_TYPE   => "REG",
+        ADDR_BASES  => MI_ADDR_BASES_PHY,
+        ADDR_BASE   => mi_addr_base_init_phy_f,
+        DEVICE      => DEVICE
+    )
+    port map(
+        CLK     => MI_CLK_PHY,
+        RESET   => MI_RESET_PHY,
+
+        RX_DWR  => MI_DWR_PHY,
+        RX_MWR  => (others => '0'),
+        RX_ADDR => MI_ADDR_PHY,
+        RX_BE   => MI_BE_PHY,
+        RX_RD   => MI_RD_PHY,
+        RX_WR   => MI_WR_PHY,
+        RX_ARDY => MI_ARDY_PHY,
+        RX_DRD  => MI_DRD_PHY,
+        RX_DRDY => MI_DRDY_PHY,
+
+        TX_DWR  => split_mi_dwr_phy,
+        TX_MWR  => open,
+        TX_ADDR => split_mi_addr_phy,
+        TX_BE   => split_mi_be_phy,
+        TX_RD   => split_mi_rd_phy,
+        TX_WR   => split_mi_wr_phy,
+        TX_ARDY => split_mi_ardy_phy,
+        TX_DRD  => split_mi_drd_phy,
+        TX_DRDY => split_mi_drdy_phy
+    );
+
+    mgmt_g : for i in ETH_PORT_CHAN-1 downto 0 generate
+        mgmt_i : entity work.mgmt
+        generic map (
+            NUM_LANES => LANES_PER_CHANNEL,
+            PMA_LANES => LANES_PER_CHANNEL,
+            SPEED     => ETH_PORT_SPEED,
+            SPEED_CAP => SPEED_CAP,
+            DEVICE    => DEVICE
+        )
+        port map (
+            RESET         => MI_RESET_PHY,
+            MI_CLK        => MI_CLK_PHY,
+            MI_DWR        => split_mi_dwr_phy(i),
+            MI_ADDR       => split_mi_addr_phy(i),
+            MI_RD         => split_mi_rd_phy(i),
+            MI_WR         => split_mi_wr_phy(i),
+            MI_BE         => split_mi_be_phy(i),
+            MI_DRD        => split_mi_drd_phy(i),
+            MI_ARDY       => split_mi_ardy_phy(i),
+            MI_DRDY       => split_mi_drdy_phy(i),
+            -- PCS status
+            HI_BER        => rx_hi_ber(i),
+            BLK_LOCK      => (others => rx_block_lock(i)),
+            LINKSTATUS    => rx_pcs_ready(i) and not rx_hi_ber(i),
+            BER_COUNT     => (others => '0'),
+            BER_COUNT_CLR => open,
+            BLK_ERR_CNTR  => (others => '0'),
+            BLK_ERR_CLR   => open,
+            SCR_BYPASS    => open,
+            PCS_RESET     => mgmt_pcs_reset(i), --TODO
+            PCS_LPBCK     => open,
+            -- PCS Lane align
+            ALGN_LOCKED   => rx_am_lock(i),
+            BIP_ERR_CNTRS => (others => '0'),
+            BIP_ERR_CLR   => open,
+            LANE_MAP      => (others => '0'),
+            LANE_ALIGN    => (others => rx_pcs_ready(i)),
+            -- PMA & PMD status/control
+            PMA_LOPWR     => open,
+            PMA_LPBCK     => open,
+            PMA_REM_LPBCK => open,
+            PMA_RESET     => mgmt_pma_reset(i), --TODO
+            PMA_RETUNE    => open,
+            PMA_CONTROL   => open,
+            PMA_STATUS    => (others => '0'),
+            PMA_PTRN_EN   => open,
+            PMA_TX_DIS    => open,
+            PMA_RX_OK     => (others => rx_pcs_ready(i)), --TODO
+            PMD_SIG_DET   => (others => rx_pcs_ready(i)), --TODO
+            PMA_PRECURSOR => open,
+            PMA_POSTCURSOR=> open,
+            PMA_DRIVE     => open              
+        );
+    end generate;
 
     -- =========================================================================
     -- MI_PHY Indirect Access
@@ -497,33 +633,36 @@ begin
     -- How to set the Output interface in MI Indirect Access: 
     -- ETH_PORT_CHAN=1: "0x0"         for Ethernet inf, "0x4" - "0x1" for Transceiver (XCVR) inf, "0x5" for RS-FEC inf
     -- ETH_PORT_CHAN=4: "0x3" - "0x0" for Ethernet inf, "0x7" - "0x4" for Transceiver (XCVR) inf, "0x8" for RS-FEC inf (RS-FEC does not exist in 10GE IP core!)
-    mi_indirect_access_i : entity work.MI_INDIRECT_ACCESS
-    generic map(
-        ADDR_WIDTH        => MI_ADDR_WIDTH_PHY,
-        DATA_WIDTH        => MI_DATA_WIDTH_PHY,
-        OUTPUT_INTERFACES => IA_OUTPUT_INFS
-    )
-    port map(
-        -- Common interface ----------------------------------------------------
-        CLK         => MI_CLK_PHY  ,
-        RESET       => MI_RESET_PHY,
-        -- Input MI interface --------------------------------------------------
-        RX_DWR      => MI_DWR_PHY     ,
-        RX_ADDR     => MI_ADDR_PHY    ,
-        RX_RD       => MI_RD_PHY      ,
-        RX_WR       => MI_WR_PHY      ,
-        RX_ARDY     => MI_ARDY_PHY    ,
-        RX_DRD      => MI_DRD_PHY     ,
-        RX_DRDY     => MI_DRDY_PHY    ,
-        -- Output MI interfaces ------------------------------------------------
-        TX_DWR     => mi_ia_dwr_phy ,
-        TX_ADDR    => mi_ia_addr_phy,
-        TX_RD      => mi_ia_rd_phy  ,
-        TX_WR      => mi_ia_wr_phy  ,
-        TX_ARDY    => mi_ia_ardy_phy,
-        TX_DRD     => mi_ia_drd_phy ,
-        TX_DRDY    => mi_ia_drdy_phy
-    );
+    --mi_indirect_access_i : entity work.MI_INDIRECT_ACCESS
+    --generic map(
+    --    ADDR_WIDTH        => MI_ADDR_WIDTH_PHY,
+    --    DATA_WIDTH        => MI_DATA_WIDTH_PHY,
+    --    OUTPUT_INTERFACES => IA_OUTPUT_INFS
+    --)
+    --port map(
+    --    -- Common interface ----------------------------------------------------
+    --    CLK         => MI_CLK_PHY  ,
+    --    RESET       => MI_RESET_PHY,
+    --    -- Input MI interface --------------------------------------------------
+    --    RX_DWR      => MI_DWR_PHY     ,
+    --    RX_ADDR     => MI_ADDR_PHY    ,
+    --    RX_RD       => MI_RD_PHY      ,
+    --    RX_WR       => MI_WR_PHY      ,
+    --    RX_ARDY     => MI_ARDY_PHY    ,
+    --    RX_DRD      => MI_DRD_PHY     ,
+    --    RX_DRDY     => MI_DRDY_PHY    ,
+    --    -- Output MI interfaces ------------------------------------------------
+    --    TX_DWR     => mi_ia_dwr_phy ,
+    --    TX_ADDR    => mi_ia_addr_phy,
+    --    TX_RD      => mi_ia_rd_phy  ,
+    --    TX_WR      => mi_ia_wr_phy  ,
+    --    TX_ARDY    => mi_ia_ardy_phy,
+    --    TX_DRD     => mi_ia_drd_phy ,
+    --    TX_DRDY    => mi_ia_drdy_phy
+    --);
+
+    mi_ia_rd_phy <= (others => '0');
+    mi_ia_wr_phy <= (others => '0');
 
     -- eth ---------------------------------------------------------------------
     eth_inf_dwr_phy  <= mi_ia_dwr_phy (ETH_PORT_CHAN-1 downto 0);
@@ -668,7 +807,7 @@ begin
                 o_ehip_ready                  => open,
                 o_rx_block_lock               => rx_block_lock(0),
                 o_rx_am_lock                  => rx_am_lock(0),
-                o_rx_hi_ber                   => open,
+                o_rx_hi_ber                   => rx_hi_ber(0),
                 o_local_fault_status          => open,
                 o_remote_fault_status         => open,
                 i_clk_ref                     => (others => QSFP_REFCLK_P),
@@ -880,7 +1019,7 @@ begin
                 i_xcvr_reconfig_writedata        => xcvr_inf_dwr_phy_res_ser,
                 o_xcvr_reconfig_waitrequest      => xcvr_inf_ardy_phy_n,
                 i_sl_stats_snapshot              => (others => '1'),
-                o_sl_rx_hi_ber                   => open, -- enabled in generics
+                o_sl_rx_hi_ber                   => rx_hi_ber, -- enabled in generics
                 -- Eth reconfig inf (0x3 downto 0x0)
                 i_sl_eth_reconfig_addr           => eth_inf_addr_phy_res_ser,
                 i_sl_eth_reconfig_read           => eth_inf_rd_phy,
@@ -1098,7 +1237,7 @@ begin
                 i_xcvr_reconfig_writedata        => xcvr_inf_dwr_phy_res_ser,
                 o_xcvr_reconfig_waitrequest      => xcvr_inf_ardy_phy_n,
                 i_sl_stats_snapshot              => (others => '1'),
-                o_sl_rx_hi_ber                   => open, -- enabled in generics
+                o_sl_rx_hi_ber                   => rx_hi_ber, -- enabled in generics
                 -- Eth reconfig inf (0x3 downto 0x0)
                 i_sl_eth_reconfig_addr           => eth_inf_addr_phy_res_ser,
                 i_sl_eth_reconfig_read           => eth_inf_rd_phy,
