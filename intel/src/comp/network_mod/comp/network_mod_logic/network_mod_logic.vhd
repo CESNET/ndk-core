@@ -53,9 +53,11 @@ generic(
     RESET_USER_WIDTH  : natural := 8;
     --                             ETH_PORT_CHAN x (TX MAC lite + RX MAC lite)
     RESET_CORE_WIDTH  : natural := ETH_PORT_CHAN * (1           + 1          );
+    -- Resize Buffer feature of RX_MAC_LITE.
+    RESIZE_BUFFER     : boolean := True;
     -- Select FPGA device.
     DEVICE            : string := "STRATIX10"; -- AGILEX, STRATIX10, ULTRASCALE
-    -- Select target board.
+    -- Select target board. Unused, only for back-compatibility.
     BOARD             : string := "DK-DEV-1SDX-P" -- 400G1, DK-DEV-AGI027RES, DK-DEV-1SDX-P
 );
 port(
@@ -165,8 +167,6 @@ architecture FULL of NETWORK_MOD_LOGIC is
     constant MFB_WIDTH      : natural := USER_REGIONS*USER_REGION_SIZE*BLOCK_SIZE*ITEM_WIDTH;
     constant MFB_SOFP_WIDTH : natural := USER_REGIONS*max(1,log2(USER_REGION_SIZE));
     constant MFB_EOFP_WIDTH : natural := USER_REGIONS*max(1,log2(USER_REGION_SIZE*BLOCK_SIZE));
-
-    constant F_TILE_DEVICE  : boolean := (BOARD = "400G1" or BOARD = "DK-DEV-AGI027RES");
 
     -- =========================================================================
     --                                FUNCTIONS
@@ -400,7 +400,7 @@ begin
             TX_REGION_SIZE  => USER_REGION_SIZE,
             TX_BLOCK_SIZE   => BLOCK_SIZE      ,
             TX_ITEM_WIDTH   => ITEM_WIDTH      ,
-            RESIZE_BUFFER   => F_TILE_DEVICE   ,
+            RESIZE_BUFFER   => RESIZE_BUFFER   ,
             NETWORK_PORT_ID => ETH_PORT_ID*ETH_PORT_CHAN+ch, -- no support different number of channels for each port
             CRC_IS_RECEIVED => false           ,
             CRC_CHECK_EN    => false           ,

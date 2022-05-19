@@ -55,7 +55,7 @@ architecture FULL of NETWORK_MOD is
     constant MFB_EOFP_WIDTH_CORE : natural := REGIONS_CORE*max(1,log2(REGION_SIZE_CORE*BLOCK_SIZE));
 
     constant FPC202_INIT_EN : boolean := (BOARD = "DK-DEV-1SDX-P" or BOARD = "DK-DEV-AGI027RES");
-    constant F_TILE_DEVICE  : boolean := (BOARD = "400G1" or BOARD = "DK-DEV-AGI027RES");
+    constant RESIZE_BUFFER  : boolean := (BOARD = "400G1" or BOARD = "DK-DEV-AGI027RES" or (BOARD = "DK-DEV-1SDX-P" and ETH_CHANNELS = 4));
 
     -- =========================================================================
     --                                FUNCTIONS
@@ -314,6 +314,7 @@ begin
             -- Other
             RESET_USER_WIDTH => RESET_WIDTH     ,
             RESET_CORE_WIDTH => RESET_REPLICAS-2,
+            RESIZE_BUFFER    => RESIZE_BUFFER   ,
             DEVICE           => DEVICE          ,
             BOARD            => BOARD
         )
