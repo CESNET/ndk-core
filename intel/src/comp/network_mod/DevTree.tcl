@@ -30,6 +30,8 @@ proc dts_network_mod { base_mac base_pcs base_pmd ports ETH_PORT_SPEED ETH_PORT_
 
     set QSFP_I2C_ADDR(0) "0xA0"
     set QSFP_I2C_ADDR(1) "0xA0"
+    set QSFP_I2C_ADDR(2) "0xA0"
+    set QSFP_I2C_ADDR(3) "0xA0"
     if {$card_name == "DK-DEV-1SDX-P"} {
         set QSFP_I2C_ADDR(0) "0xF0"
         set QSFP_I2C_ADDR(1) "0xF8"
