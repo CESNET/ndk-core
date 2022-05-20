@@ -53,7 +53,10 @@ generic (
     MEM_ADDR_WIDTH          : integer := 27;
     MEM_DATA_WIDTH          : integer := 512;
     MEM_BURST_WIDTH         : integer := 7;
-    AMM_FREQ_KHZ            : integer := 266660;
+    MEM_REFR_PERIOD_WIDTH   : integer := 32;
+    MEM_DEF_REFR_PERIOD     : slv_array_t(MEM_PORTS - 1 downto 0)(MEM_REFR_PERIOD_WIDTH - 1 downto 0)
+        := (others => (others => '0'));
+    AMM_FREQ_KHZ            : integer;
     
     STATUS_LEDS             : integer := 2;
     MISC_IN_WIDTH           : integer := 0;
@@ -138,11 +141,17 @@ port (
     MEM_AVMM_READDATA       : in  slv_array_t(MEM_PORTS-1 downto 0)(MEM_DATA_WIDTH-1 downto 0) := (others => (others => '0'));
     MEM_AVMM_READDATAVALID  : in  std_logic_vector(MEM_PORTS-1 downto 0) := (others => '0');
 
+    MEM_REFR_PERIOD         : out slv_array_t(MEM_PORTS - 1 downto 0)(MEM_REFR_PERIOD_WIDTH - 1 downto 0)
+        := MEM_DEF_REFR_PERIOD;
+    MEM_REFR_REQ            : out std_logic_vector(MEM_PORTS - 1 downto 0);
+    MEM_REFR_ACK            : in std_logic_vector(MEM_PORTS - 1 downto 0) := (others => '0');
+
     EMIF_RST_REQ            : out std_logic_vector(MEM_PORTS-1 downto 0);
     EMIF_RST_DONE           : in  std_logic_vector(MEM_PORTS-1 downto 0) := (others => '0');
     EMIF_ECC_USR_INT        : in  std_logic_vector(MEM_PORTS-1 downto 0) := (others => '0');
     EMIF_CAL_SUCCESS        : in  std_logic_vector(MEM_PORTS-1 downto 0) := (others => '0');
     EMIF_CAL_FAIL           : in  std_logic_vector(MEM_PORTS-1 downto 0) := (others => '0');
+    EMIF_AUTO_PRECHARGE     : out std_logic_vector(MEM_PORTS-1 downto 0);
 
     STATUS_LED_G            : out   std_logic_vector(STATUS_LEDS-1 downto 0);
     STATUS_LED_R            : out   std_logic_vector(STATUS_LEDS-1 downto 0);
@@ -874,6 +883,9 @@ begin
         MEM_ADDR_WIDTH     => MEM_ADDR_WIDTH,
         MEM_BURST_WIDTH    => MEM_BURST_WIDTH,
         MEM_DATA_WIDTH     => MEM_DATA_WIDTH,
+        MEM_REFR_PERIOD_WIDTH   => MEM_REFR_PERIOD_WIDTH,
+        MEM_DEF_REFR_PERIOD     => MEM_DEF_REFR_PERIOD,
+        AMM_FREQ_KHZ       => AMM_FREQ_KHZ,
         MI_DATA_WIDTH      => MI_DATA_WIDTH,
         MI_ADDR_WIDTH      => MI_ADDR_WIDTH,
         RESET_WIDTH        => RESET_WIDTH,
@@ -969,12 +981,17 @@ begin
         MEM_AVMM_WRITEDATA     => MEM_AVMM_WRITEDATA,
         MEM_AVMM_READDATA      => MEM_AVMM_READDATA,
         MEM_AVMM_READDATAVALID => MEM_AVMM_READDATAVALID,
-                               
+
+        MEM_REFR_PERIOD        => MEM_REFR_PERIOD,
+        MEM_REFR_REQ           => MEM_REFR_REQ,
+        MEM_REFR_ACK           => MEM_REFR_ACK,
+    
         EMIF_RST_REQ           => EMIF_RST_REQ,
         EMIF_RST_DONE          => EMIF_RST_DONE,
         EMIF_ECC_USR_INT       => EMIF_ECC_USR_INT,
         EMIF_CAL_SUCCESS       => EMIF_CAL_SUCCESS,
         EMIF_CAL_FAIL          => EMIF_CAL_FAIL,
+        EMIF_AUTO_PRECHARGE    => EMIF_AUTO_PRECHARGE,
 
         MI_DWR             => mi_adc_dwr(MI_ADC_PORT_USERAPP),
         MI_ADDR            => mi_adc_addr(MI_ADC_PORT_USERAPP),
