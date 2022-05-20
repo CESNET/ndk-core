@@ -6,13 +6,14 @@ proc dts_build_netcope {} {
     set ADDR_TEST_SPACE "0x00000000"
     set ADDR_SENSOR     "0x00001000"
     set ADDR_SDM_CTRL   "0x00002000"
+    set ADDR_ETH_PMD    "0x00003000"
     set ADDR_TSU        "0x00004000"
     set ADDR_GEN_LOOP   "0x00005000"
-    set ADDR_NET_MOD    "0x00008000"
+    set ADDR_ETH_MAC    "0x00008000"
     set ADDR_DMA_MOD    "0x01000000"
     #set ADDR_MSIX_MOD   "0x01400000"
     set ADDR_DDR_MOD    "0x00010000"
-    set ADDR_ETH_MOD    "0x00800000"
+    set ADDR_ETH_PCS    "0x00800000"
     set ADDR_USERAPP    "0x02000000"
 
     # =========================================================================
@@ -56,7 +57,7 @@ proc dts_build_netcope {} {
     # Network module
     global ETH_ENABLE ETH_PORTS ETH_PORT_SPEED ETH_PORT_CHAN
     if {$ETH_ENABLE} {
-        append ret [dts_network_mod $ADDR_NET_MOD $ETH_PORTS ETH_PORT_SPEED ETH_PORT_CHAN $CARD_NAME]
+        append ret [dts_network_mod $ADDR_ETH_MAC $ADDR_ETH_PCS $ADDR_ETH_PMD $ETH_PORTS ETH_PORT_SPEED ETH_PORT_CHAN $CARD_NAME]
     }
 
     # Gen Loop Switch debug modules
