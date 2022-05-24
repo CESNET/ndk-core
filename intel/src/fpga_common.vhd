@@ -168,11 +168,12 @@ architecture FULL of FPGA_COMMON is
         end if;
     end function;
 
-    constant CLK_COUNT      : natural := 4+ETH_PORTS;
-    constant ETH_CHANNELS   : natural := ETH_PORT_CHAN(0);
-    constant ETH_STREAMS    : natural := ETH_PORTS;
-    constant ETH_MFB_REGION : natural := f_eth_mfb_region;
-    constant DMA_STREAMS    : natural := DMA_MODULES;
+    constant HEARTBEAT_CNT_W : natural := 27;
+    constant CLK_COUNT       : natural := 4+ETH_PORTS;
+    constant ETH_CHANNELS    : natural := ETH_PORT_CHAN(0);
+    constant ETH_STREAMS     : natural := ETH_PORTS;
+    constant ETH_MFB_REGION  : natural := f_eth_mfb_region;
+    constant DMA_STREAMS     : natural := DMA_MODULES;
 
     constant PCIE_MPS     : natural := 256;
     constant PCIE_MRRS    : natural := 512;
@@ -215,6 +216,7 @@ architecture FULL of FPGA_COMMON is
     constant DMA_CROX_EQ_DMA     : boolean := (DMA_CROX_CLK_SEL=1);
     constant DMA_CROX_DOUBLE_DMA : boolean := (DMA_CROX_CLK_SEL=0);
 
+    signal heartbeat_cnt                 : unsigned(HEARTBEAT_CNT_W-1 downto 0);
     signal init_done_n                   : std_logic;
     signal pll_locked                    : std_logic;
     signal global_reset                  : std_logic;
@@ -1155,10 +1157,19 @@ begin
     -- =========================================================================
     --  STATUS LEDs
     -- =========================================================================
-    
-    STATUS_LED_G(0) <= app_pcie_link_up(0);  
-    pcie_link_up1_g: if (PCIE_ENDPOINTS > 1) generate
-        STATUS_LED_G(1) <= app_pcie_link_up(1);
-    end generate;
+
+    process (clk_usr_x1)
+    begin
+        if rising_edge(clk_usr_x1) then
+            if (rst_usr_x1(0) = '1') then
+                heartbeat_cnt <= (others => '0');
+            else
+                heartbeat_cnt <= heartbeat_cnt + 1;
+            end if;
+            STATUS_LED_R(0) <= heartbeat_cnt(HEARTBEAT_CNT_W-1);
+        end if;
+    end process;
+
+    STATUS_LED_G(0) <= (or app_pcie_link_up);
 
 end architecture;
