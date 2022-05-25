@@ -1011,6 +1011,8 @@ begin
         MI_DATA_WIDTH_PHY => 32             ,
         MI_ADDR_WIDTH_PHY => 32             ,
 
+        LANE_RX_POLARITY  => ETH_LANE_RXPOLARITY,
+        LANE_TX_POLARITY  => ETH_LANE_TXPOLARITY,
         RESET_WIDTH       => 1              ,
         DEVICE            => DEVICE         ,
         BOARD             => BOARD
@@ -1022,6 +1024,7 @@ begin
         RESET_ETH       => rst_eth_phy,
 
         QSFP_REFCLK_P   => ETH_REFCLK_P,
+        QSFP_REFCLK_N   => ETH_REFCLK_N,
         QSFP_RX_P       => ETH_RX_P,
         QSFP_RX_N       => ETH_RX_N,
         QSFP_TX_P       => ETH_TX_P,

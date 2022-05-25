@@ -60,6 +60,9 @@ generic(
     -- =====================================================================
     -- Other configuration:
     -- =====================================================================
+    -- Ethernet lanes polarity
+    LANE_RX_POLARITY  : std_logic_vector(ETH_PORTS*LANES-1 downto 0) := (others => '0');
+    LANE_TX_POLARITY  : std_logic_vector(ETH_PORTS*LANES-1 downto 0) := (others => '0');
     -- Number of user resets.
     RESET_WIDTH       : natural := 8;
     -- Select correct FPGA device.
@@ -79,7 +82,8 @@ port(
     -- =====================================================================
     -- QSFP INTERFACES
     -- =====================================================================
-    QSFP_REFCLK_P   : in  std_logic_vector(ETH_PORTS-1 downto 0);       -- LVDS - 644.53125MHz
+    QSFP_REFCLK_P   : in  std_logic_vector(ETH_PORTS-1 downto 0);
+    QSFP_REFCLK_N   : in  std_logic_vector(ETH_PORTS-1 downto 0);
     QSFP_RX_P       : in  std_logic_vector(ETH_PORTS*LANES-1 downto 0); -- QSFP XCVR RX Data
     QSFP_RX_N       : in  std_logic_vector(ETH_PORTS*LANES-1 downto 0); -- QSFP XCVR RX Data
     QSFP_TX_P       : out std_logic_vector(ETH_PORTS*LANES-1 downto 0); -- QSFP XCVR TX Data

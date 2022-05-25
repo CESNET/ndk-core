@@ -73,7 +73,7 @@ architecture FULL of NETWORK_MOD is
                 when 10     => return 1;
                 when others => return 0;
             end case;
-        elsif (BOARD = "DK-DEV-1SDX-P") then
+        elsif (BOARD = "DK-DEV-1SDX-P" or BOARD = "FB4CGG3" or BOARD = "FB2CGG3") then
             case ETH_PORT_SPEED(0) is
                 when 100    => return 8;
                 when 25     => return 1;
@@ -399,6 +399,8 @@ begin
             ITEM_WIDTH        => ITEM_WIDTH       ,
             MI_DATA_WIDTH_PHY => MI_DATA_WIDTH_PHY,
             MI_ADDR_WIDTH_PHY => MI_ADDR_WIDTH_PHY,
+            LANE_RX_POLARITY  => LANE_RX_POLARITY(p*LANES+LANES-1 downto p*LANES),
+            LANE_TX_POLARITY  => LANE_TX_POLARITY(p*LANES+LANES-1 downto p*LANES),
             DEVICE            => DEVICE
         )
         port map (
@@ -406,7 +408,8 @@ begin
             CLK_ETH         => CLK_ETH(p),
             RESET_ETH       => repl_rst_arr(p)(0),
             -- QSFP interface
-            QSFP_REFCLK_P   => QSFP_REFCLK_P(p)                         ,
+            QSFP_REFCLK_P   => QSFP_REFCLK_P(p),
+            QSFP_REFCLK_N   => QSFP_REFCLK_N(p),
             QSFP_RX_P       => QSFP_RX_P(p*LANES+LANES-1 downto p*LANES),
             QSFP_RX_N       => QSFP_RX_N(p*LANES+LANES-1 downto p*LANES),
             QSFP_TX_P       => QSFP_TX_P(p*LANES+LANES-1 downto p*LANES),
@@ -508,27 +511,28 @@ begin
     -- =====================================================================
     -- QSFP control
     -- =====================================================================
+
     qsfp_ctrl_i : entity work.QSFP_CTRL
     generic map (
-       QSFP_PORTS          => ETH_PORTS,
-       QSFP_I2C_PORTS      => QSFP_I2C_PORTS,
-       FPC202_INIT_EN      => FPC202_INIT_EN
+       QSFP_PORTS     => ETH_PORTS,
+       QSFP_I2C_PORTS => QSFP_I2C_PORTS,
+       FPC202_INIT_EN => FPC202_INIT_EN
     )
     port map (
-       RST            => MI_RESET_PMD   ,
+       RST            => MI_RESET_PMD,
        --
        TX_READY       => (others => '1'),
        -- QSFP control/status
-       QSFP_MODSEL_N  => open           ,
-       QSFP_LPMODE    => open           ,
-       QSFP_RESET_N   => open           ,
-       QSFP_MODPRS_N  => (others => '0'),
-       QSFP_INT_N     => (others => '0'),
-       QSFP_I2C_SCL   => QSFP_I2C_SCL   ,
-       QSFP_I2C_SDA   => QSFP_I2C_SDA   ,
-       QSFP_I2C_DIR   => open           ,
+       QSFP_MODSEL_N  => QSFP_MODSEL_N,
+       QSFP_LPMODE    => QSFP_LPMODE,
+       QSFP_RESET_N   => QSFP_RESET_N,
+       QSFP_MODPRS_N  => QSFP_MODPRS_N,
+       QSFP_INT_N     => QSFP_INT_N,
+       QSFP_I2C_SCL   => QSFP_I2C_SCL,
+       QSFP_I2C_SDA   => QSFP_I2C_SDA,
+       QSFP_I2C_DIR   => open,
        -- Select which QSFP port is targetting during MI read/writes
-       MI_QSFP_SEL    => (others => '0'),
+       MI_QSFP_SEL    => MI_ADDR_PMD(8+max(log2(ETH_PORTS),1)-1 downto 8),
        -- MI interface
        MI_CLK_PHY     => MI_CLK_PMD  ,
        MI_RESET_PHY   => MI_RESET_PMD,

@@ -80,7 +80,7 @@ architecture full of qsfp_ctrl is
     signal sleep_timer           : std_logic_vector(25-1 downto 0);
       
     signal trans_ctrl            : std_logic_vector(3*QSFP_PORTS-1 downto 0);
-    signal qsfp_modsel_r         : std_logic_vector(QSFP_PORTS-1 downto 0) := (0 => '1', others => '1');
+    signal qsfp_modsel_r         : std_logic_vector(QSFP_PORTS-1 downto 0) := (0 => '1', others => '0');
     signal qsfp_i2c_scl_i        : std_logic;
     signal qsfp_i2c_sda_i        : std_logic;
     signal qsfp_status           : std_logic_vector(6*QSFP_PORTS-1 downto 0); 
@@ -149,8 +149,8 @@ begin
             end if;
             
             -- Turn on module select on targeted QSFP
-            qsfp_modsel_r <= (others => '1');
-            qsfp_modsel_r(qsfp_mi_sel_i) <= '0';
+            qsfp_modsel_r <= (others => '0');
+            qsfp_modsel_r(qsfp_mi_sel_i) <= '1';
          end if;
          
          if RST = '1' then
