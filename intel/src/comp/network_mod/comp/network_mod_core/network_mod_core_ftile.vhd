@@ -837,6 +837,7 @@ architecture FULL of NETWORK_MOD_CORE is
     constant MI_ADDR_BASES_PHY      : natural := ETH_PORT_CHAN;
     constant MGMT_OFF               : std_logic_vector(MI_ADDR_WIDTH_PHY-1 downto 0) := X"0004_0000";
     constant SPEED_CAP              : std_logic_vector(16-1 downto 0) := speed_cap_f;
+    constant RX_LINK_CNT_W          : natural := 27;
 
     function mi_addr_base_init_phy_f return slv_array_t is
         variable mi_addr_base_var : slv_array_t(MI_ADDR_BASES_PHY-1 downto 0)(MI_ADDR_WIDTH_PHY-1 downto 0);
@@ -911,6 +912,11 @@ architecture FULL of NETWORK_MOD_CORE is
     signal ftile_rx_mac_fcs_error : slv_array_t     (ETH_PORT_CHAN-1 downto 0)(RX_MAC_FCS_ERROR_WIDTH-1 downto 0);
     signal ftile_rx_mac_error     : slv_array_t     (ETH_PORT_CHAN-1 downto 0)(RX_MAC_ERROR_WIDTH    -1 downto 0);
     signal ftile_rx_mac_status    : slv_array_t     (ETH_PORT_CHAN-1 downto 0)(RX_MAC_STATUS_WIDTH   -1 downto 0);
+
+    signal rx_link_cnt        : u_array_t(ETH_PORT_CHAN-1 downto 0)(RX_LINK_CNT_W-1 downto 0);
+    signal rx_link_rst        : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
+    signal ftile_rx_rst_n     : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
+    signal ftile_rx_rst_ack_n : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
 
     signal mgmt_pcs_reset : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
     signal mgmt_pma_reset : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
@@ -1010,6 +1016,34 @@ begin
             PMA_POSTCURSOR=> open,
             PMA_DRIVE     => open              
         );
+
+        -- monitoring RX link state
+        process(ftile_clk_out)
+        begin
+            if rising_edge(ftile_clk_out) then
+                if (ftile_rx_pcs_ready(i) = '1') or (rx_link_rst(i) = '1') then
+                    -- link is up, clear the counter
+                    rx_link_cnt(i) <= (others => '0');
+                else
+                    -- link is down, increase the counter
+                    rx_link_cnt(i) <= rx_link_cnt(i) + 1;
+                end if;
+
+                -- when its last bit (~100ms) is set, reset the link
+                if (rx_link_cnt(i)(RX_LINK_CNT_W-1) = '1') then
+                    rx_link_rst(i) <= '1';
+                elsif (ftile_rx_rst_ack_n(i) = '0' and rx_link_rst(i) = '1') then
+                    rx_link_rst(i) <= '0';
+                end if;
+
+                if (RESET_ETH = '1') then
+                    rx_link_cnt(i) <= (others => '0');
+                    rx_link_rst(i) <= '0';
+                end if;
+            end if;
+        end process;
+
+        ftile_rx_rst_n(i) <= not rx_link_rst(i);
     end generate;
 
     -- =========================================================================
@@ -1083,12 +1117,12 @@ begin
                 o_clk_tx_div                    => open,
                 o_clk_rec_div64                 => open,
                 o_clk_rec_div                   => open,
-                i_tx_rst_n                      => not RESET_ETH,
-                i_rx_rst_n                      => not RESET_ETH,
+                i_tx_rst_n                      => '1',
+                i_rx_rst_n                      => ftile_rx_rst_n(0),
                 i_rst_n                         => not RESET_ETH,
                 o_rst_ack_n                     => open,
                 o_tx_rst_ack_n                  => open,
-                o_rx_rst_ack_n                  => open,
+                o_rx_rst_ack_n                  => ftile_rx_rst_ack_n(0),
                 i_reconfig_clk                  => MI_CLK_PHY,
                 i_reconfig_reset                => MI_RESET_PHY,
                 o_cdr_lock                      => open,
@@ -1333,12 +1367,12 @@ begin
                     o_clk_tx_div                    => open,
                     o_clk_rec_div64                 => open,
                     o_clk_rec_div                   => open,
-                    i_tx_rst_n                      => not RESET_ETH,
-                    i_rx_rst_n                      => not RESET_ETH,
+                    i_tx_rst_n                      => '1',
+                    i_rx_rst_n                      => ftile_rx_rst_n(i),
                     i_rst_n                         => not RESET_ETH,
                     o_rst_ack_n                     => open,
                     o_tx_rst_ack_n                  => open,
-                    o_rx_rst_ack_n                  => open,
+                    o_rx_rst_ack_n                  => ftile_rx_rst_ack_n(i),
                     i_reconfig_clk                  => MI_CLK_PHY,
                     i_reconfig_reset                => MI_RESET_PHY,
                     o_cdr_lock                      => open,
@@ -1553,12 +1587,12 @@ begin
                     o_clk_tx_div                    => open,
                     o_clk_rec_div64                 => open,
                     o_clk_rec_div                   => open,
-                    i_tx_rst_n                      => not RESET_ETH,
-                    i_rx_rst_n                      => not RESET_ETH,
+                    i_tx_rst_n                      => '1',
+                    i_rx_rst_n                      => ftile_rx_rst_n(i),
                     i_rst_n                         => not RESET_ETH,
                     o_rst_ack_n                     => open,
                     o_tx_rst_ack_n                  => open,
-                    o_rx_rst_ack_n                  => open,
+                    o_rx_rst_ack_n                  => ftile_rx_rst_ack_n(i),
                     i_reconfig_clk                  => MI_CLK_PHY,
                     i_reconfig_reset                => MI_RESET_PHY,
                     o_cdr_lock                      => open,
@@ -1731,12 +1765,12 @@ begin
                     o_clk_tx_div                    => open,
                     o_clk_rec_div64                 => open,
                     o_clk_rec_div                   => open,
-                    i_tx_rst_n                      => not RESET_ETH,
-                    i_rx_rst_n                      => not RESET_ETH,
+                    i_tx_rst_n                      => '1',
+                    i_rx_rst_n                      => ftile_rx_rst_n(i),
                     i_rst_n                         => not RESET_ETH,
                     o_rst_ack_n                     => open,
                     o_tx_rst_ack_n                  => open,
-                    o_rx_rst_ack_n                  => open,
+                    o_rx_rst_ack_n                  => ftile_rx_rst_ack_n(i),
                     i_reconfig_clk                  => MI_CLK_PHY,
                     i_reconfig_reset                => MI_RESET_PHY,
                     o_cdr_lock                      => open,
@@ -1907,12 +1941,12 @@ begin
                     o_clk_tx_div                    => open,
                     o_clk_rec_div64                 => open,
                     o_clk_rec_div                   => open,
-                    i_tx_rst_n                      => not RESET_ETH,
-                    i_rx_rst_n                      => not RESET_ETH,
+                    i_tx_rst_n                      => '1',
+                    i_rx_rst_n                      => ftile_rx_rst_n(i),
                     i_rst_n                         => not RESET_ETH,
                     o_rst_ack_n                     => open,
                     o_tx_rst_ack_n                  => open,
-                    o_rx_rst_ack_n                  => open,
+                    o_rx_rst_ack_n                  => ftile_rx_rst_ack_n(i),
                     i_reconfig_clk                  => MI_CLK_PHY,
                     i_reconfig_reset                => MI_RESET_PHY,
                     o_cdr_lock                      => open,
@@ -2107,12 +2141,12 @@ begin
                     o_clk_tx_div                    => open,
                     o_clk_rec_div64                 => open,
                     o_clk_rec_div                   => open,
-                    i_tx_rst_n                      => not RESET_ETH,
-                    i_rx_rst_n                      => not RESET_ETH,
+                    i_tx_rst_n                      => '1',
+                    i_rx_rst_n                      => ftile_rx_rst_n(i),
                     i_rst_n                         => not RESET_ETH,
                     o_rst_ack_n                     => open,
                     o_tx_rst_ack_n                  => open,
-                    o_rx_rst_ack_n                  => open,
+                    o_rx_rst_ack_n                  => ftile_rx_rst_ack_n(i),
                     i_reconfig_clk                  => MI_CLK_PHY,
                     i_reconfig_reset                => MI_RESET_PHY,
                     o_cdr_lock                      => open,
@@ -2283,12 +2317,12 @@ begin
                     o_clk_tx_div                    => open,
                     o_clk_rec_div64                 => open,
                     o_clk_rec_div                   => open,
-                    i_tx_rst_n                      => not RESET_ETH,
-                    i_rx_rst_n                      => not RESET_ETH,
+                    i_tx_rst_n                      => '1',
+                    i_rx_rst_n                      => ftile_rx_rst_n(i),
                     i_rst_n                         => not RESET_ETH,
                     o_rst_ack_n                     => open,
                     o_tx_rst_ack_n                  => open,
-                    o_rx_rst_ack_n                  => open,
+                    o_rx_rst_ack_n                  => ftile_rx_rst_ack_n(i),
                     i_reconfig_clk                  => MI_CLK_PHY,
                     i_reconfig_reset                => MI_RESET_PHY,
                     o_cdr_lock                      => open,
