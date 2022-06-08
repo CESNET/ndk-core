@@ -876,6 +876,7 @@ begin
         MEM_ADDR_WIDTH     => MEM_ADDR_WIDTH,
         MEM_BURST_WIDTH    => MEM_BURST_WIDTH,
         MEM_DATA_WIDTH     => MEM_DATA_WIDTH,
+        AMM_FREQ_KHZ       => AMM_FREQ_KHZ,
         MI_DATA_WIDTH      => MI_DATA_WIDTH,
         MI_ADDR_WIDTH      => MI_ADDR_WIDTH,
         RESET_WIDTH        => RESET_WIDTH,
@@ -1173,6 +1174,9 @@ begin
         end if;
     end process;
 
-    STATUS_LED_G(0) <= (or app_pcie_link_up);
+    STATUS_LED_G(0) <= (and app_pcie_link_up);
+
+    STATUS_LED_R(1) <= (or EMIF_CAL_FAIL);
+    STATUS_LED_G(1) <= (and EMIF_CAL_SUCCESS);
 
 end architecture;
