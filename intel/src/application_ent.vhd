@@ -51,6 +51,10 @@ generic (
     MEM_BURST_WIDTH    : natural := 7;
     -- MEM parameters: width of AVMM data signals
     MEM_DATA_WIDTH     : natural := 512;
+    -- MEM parameters: width of user refresh period
+    MEM_REFR_PERIOD_WIDTH: natural := 32;
+    -- MEM parameters: default refresh periods for each interface
+    MEM_DEF_REFR_PERIOD: slv_array_t(MEM_PORTS - 1 downto 0)(MEM_REFR_PERIOD_WIDTH - 1 downto 0);
     -- Freq of the AMM bus with EMIF
     AMM_FREQ_KHZ       : integer := 266660;
     -- MI parameters: width of data signals
@@ -259,7 +263,7 @@ port (
     MEM_AVMM_READ          : out std_logic_vector(MEM_PORTS-1 downto 0);
     -- MEM Avalon-MM: write request
     MEM_AVMM_WRITE         : out std_logic_vector(MEM_PORTS-1 downto 0);
-
+    -- MEM Avalon-MM: address of r/w request
     MEM_AVMM_ADDRESS       : out slv_array_t(MEM_PORTS-1 downto 0)(MEM_ADDR_WIDTH-1 downto 0);
     -- MEM Avalon-MM: burst count of read/write request
     MEM_AVMM_BURSTCOUNT    : out slv_array_t(MEM_PORTS-1 downto 0)(MEM_BURST_WIDTH-1 downto 0);
@@ -269,6 +273,14 @@ port (
     MEM_AVMM_READDATA      : in  slv_array_t(MEM_PORTS-1 downto 0)(MEM_DATA_WIDTH-1 downto 0);
     -- MEM Avalon-MM: read data valid flag
     MEM_AVMM_READDATAVALID : in  std_logic_vector(MEM_PORTS-1 downto 0);
+
+    -- MEM parameter: user refresh period
+    MEM_REFR_PERIOD         : out slv_array_t(MEM_PORTS - 1 downto 0)(MEM_REFR_PERIOD_WIDTH - 1 downto 0)
+        := MEM_DEF_REFR_PERIOD;
+    -- MEM parameter: user refresh request
+    MEM_REFR_REQ            : out std_logic_vector(MEM_PORTS - 1 downto 0);
+    -- MEM parameter: user refresh ack
+    MEM_REFR_ACK            : in std_logic_vector(MEM_PORTS - 1 downto 0);
 
     -- EMIF local reset request
     EMIF_RST_REQ           : out std_logic_vector(MEM_PORTS-1 downto 0);
@@ -280,6 +292,8 @@ port (
     EMIF_CAL_SUCCESS       : in  std_logic_vector(MEM_PORTS-1 downto 0);
     -- EMIF calibration fail flag
     EMIF_CAL_FAIL          : in  std_logic_vector(MEM_PORTS-1 downto 0);
+    -- EMIF auto precharge request
+    EMIF_AUTO_PRECHARGE    : out std_logic_vector(MEM_PORTS-1 downto 0);
 
     -- =========================================================================
     --  MI INTERFACE (clocked at MI_CLK)
