@@ -177,11 +177,12 @@ architecture FULL of FPGA_COMMON is
         end if;
     end function;
 
-    constant CLK_COUNT      : natural := 4+ETH_PORTS;
-    constant ETH_CHANNELS   : natural := ETH_PORT_CHAN(0);
-    constant ETH_STREAMS    : natural := ETH_PORTS;
-    constant ETH_MFB_REGION : natural := f_eth_mfb_region;
-    constant DMA_STREAMS    : natural := DMA_MODULES;
+    constant HEARTBEAT_CNT_W : natural := 27;
+    constant CLK_COUNT       : natural := 4+ETH_PORTS;
+    constant ETH_CHANNELS    : natural := ETH_PORT_CHAN(0);
+    constant ETH_STREAMS     : natural := ETH_PORTS;
+    constant ETH_MFB_REGION  : natural := f_eth_mfb_region;
+    constant DMA_STREAMS     : natural := DMA_MODULES;
 
     constant PCIE_MPS     : natural := 256;
     constant PCIE_MRRS    : natural := 512;
@@ -224,6 +225,7 @@ architecture FULL of FPGA_COMMON is
     constant DMA_CROX_EQ_DMA     : boolean := (DMA_CROX_CLK_SEL=1);
     constant DMA_CROX_DOUBLE_DMA : boolean := (DMA_CROX_CLK_SEL=0);
 
+    signal heartbeat_cnt                 : unsigned(HEARTBEAT_CNT_W-1 downto 0);
     signal init_done_n                   : std_logic;
     signal pll_locked                    : std_logic;
     signal global_reset                  : std_logic;
@@ -1026,6 +1028,8 @@ begin
         MI_DATA_WIDTH_PHY => 32             ,
         MI_ADDR_WIDTH_PHY => 32             ,
 
+        LANE_RX_POLARITY  => ETH_LANE_RXPOLARITY,
+        LANE_TX_POLARITY  => ETH_LANE_TXPOLARITY,
         RESET_WIDTH       => 1              ,
         DEVICE            => DEVICE         ,
         BOARD             => BOARD
@@ -1037,6 +1041,7 @@ begin
         RESET_ETH       => rst_eth_phy,
 
         QSFP_REFCLK_P   => ETH_REFCLK_P,
+        QSFP_REFCLK_N   => ETH_REFCLK_N,
         QSFP_RX_P       => ETH_RX_P,
         QSFP_RX_N       => ETH_RX_N,
         QSFP_TX_P       => ETH_TX_P,
@@ -1100,6 +1105,17 @@ begin
         MI_ARDY_PHY     => mi_adc_ardy(MI_ADC_PORT_ETHMOD),
         MI_DRDY_PHY     => mi_adc_drdy(MI_ADC_PORT_ETHMOD),
 
+        MI_CLK_PMD      => clk_mi,
+        MI_RESET_PMD    => rst_mi(6),
+        MI_DWR_PMD      => mi_adc_dwr(MI_ADC_PORT_ETHPMD),
+        MI_ADDR_PMD     => mi_adc_addr(MI_ADC_PORT_ETHPMD),
+        MI_RD_PMD       => mi_adc_rd(MI_ADC_PORT_ETHPMD),
+        MI_WR_PMD       => mi_adc_wr(MI_ADC_PORT_ETHPMD),
+        MI_BE_PMD       => mi_adc_be(MI_ADC_PORT_ETHPMD),
+        MI_DRD_PMD      => mi_adc_drd(MI_ADC_PORT_ETHPMD),
+        MI_ARDY_PMD     => mi_adc_ardy(MI_ADC_PORT_ETHPMD),
+        MI_DRDY_PMD     => mi_adc_drdy(MI_ADC_PORT_ETHPMD),
+
         TSU_CLK         => tsu_clk,
         TSU_RST         => tsu_rst,
         TSU_TS_NS       => tsu_ns,
@@ -1161,10 +1177,22 @@ begin
     -- =========================================================================
     --  STATUS LEDs
     -- =========================================================================
-    
-    STATUS_LED_G(0) <= app_pcie_link_up(0);  
-    pcie_link_up1_g: if (PCIE_ENDPOINTS > 1) generate
-        STATUS_LED_G(1) <= app_pcie_link_up(1);
-    end generate;
+
+    process (clk_usr_x1)
+    begin
+        if rising_edge(clk_usr_x1) then
+            if (rst_usr_x1(0) = '1') then
+                heartbeat_cnt <= (others => '0');
+            else
+                heartbeat_cnt <= heartbeat_cnt + 1;
+            end if;
+            STATUS_LED_R(0) <= heartbeat_cnt(HEARTBEAT_CNT_W-1);
+        end if;
+    end process;
+
+    STATUS_LED_G(0) <= (and app_pcie_link_up);
+
+    STATUS_LED_R(1) <= (or EMIF_CAL_FAIL);
+    STATUS_LED_G(1) <= (and EMIF_CAL_SUCCESS);
 
 end architecture;

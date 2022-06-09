@@ -60,6 +60,9 @@ generic(
     -- =====================================================================
     -- Other configuration:
     -- =====================================================================
+    -- Ethernet lanes polarity
+    LANE_RX_POLARITY  : std_logic_vector(ETH_PORTS*LANES-1 downto 0) := (others => '0');
+    LANE_TX_POLARITY  : std_logic_vector(ETH_PORTS*LANES-1 downto 0) := (others => '0');
     -- Number of user resets.
     RESET_WIDTH       : natural := 8;
     -- Select correct FPGA device.
@@ -79,7 +82,8 @@ port(
     -- =====================================================================
     -- QSFP INTERFACES
     -- =====================================================================
-    QSFP_REFCLK_P   : in  std_logic_vector(ETH_PORTS-1 downto 0);       -- LVDS - 644.53125MHz
+    QSFP_REFCLK_P   : in  std_logic_vector(ETH_PORTS-1 downto 0);
+    QSFP_REFCLK_N   : in  std_logic_vector(ETH_PORTS-1 downto 0);
     QSFP_RX_P       : in  std_logic_vector(ETH_PORTS*LANES-1 downto 0); -- QSFP XCVR RX Data
     QSFP_RX_N       : in  std_logic_vector(ETH_PORTS*LANES-1 downto 0); -- QSFP XCVR RX Data
     QSFP_TX_P       : out std_logic_vector(ETH_PORTS*LANES-1 downto 0); -- QSFP XCVR TX Data
@@ -148,7 +152,7 @@ port(
     MI_DRDY         : out std_logic;
 
     -- =====================================================================
-    -- MI interface - ETH PCS/PMA/QSFP
+    -- MI interface - ETH PCS/PMA
     -- =====================================================================
     MI_CLK_PHY      : in  std_logic;
     MI_RESET_PHY    : in  std_logic;
@@ -160,6 +164,20 @@ port(
     MI_DRD_PHY      : out std_logic_vector(MI_DATA_WIDTH-1 downto 0);
     MI_ARDY_PHY     : out std_logic;
     MI_DRDY_PHY     : out std_logic;
+
+    -- =====================================================================
+    -- MI interface - ETH PMD (QSFP)
+    -- =====================================================================
+    MI_CLK_PMD      : in  std_logic;
+    MI_RESET_PMD    : in  std_logic;
+    MI_DWR_PMD      : in  std_logic_vector(MI_DATA_WIDTH-1 downto 0);
+    MI_ADDR_PMD     : in  std_logic_vector(MI_ADDR_WIDTH-1 downto 0);
+    MI_RD_PMD       : in  std_logic;
+    MI_WR_PMD       : in  std_logic;
+    MI_BE_PMD       : in  std_logic_vector(MI_DATA_WIDTH/8-1 downto 0);
+    MI_DRD_PMD      : out std_logic_vector(MI_DATA_WIDTH-1 downto 0);
+    MI_ARDY_PMD     : out std_logic;
+    MI_DRDY_PMD     : out std_logic;
 
     -- =====================================================================
     -- TSU interface

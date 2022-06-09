@@ -54,6 +54,13 @@ generic(
     -- =====================================================================
     -- Other configuration:
     -- =====================================================================
+    -- GTY TX equalization bits: 59:40 - precursor,
+    --                           39:20 - postcursor,
+    --                           19:0  - drive (swing)
+    GTY_TX_EQ         : std_logic_vector(3*20-1 downto 0) := X"0000000000C6318";
+    -- Ethernet lanes polarity
+    LANE_RX_POLARITY  : std_logic_vector(LANES-1 downto 0) := (others => '0');
+    LANE_TX_POLARITY  : std_logic_vector(LANES-1 downto 0) := (others => '0');
     -- Select correct FPGA device.
     -- "AGILEX", "STRATIX10", "ULTRASCALE", ...
     DEVICE            : string  := "STRATIX10"
@@ -68,7 +75,8 @@ port(
     -- =====================================================================
     -- QSFP interface
     -- =====================================================================
-    QSFP_REFCLK_P   : in  std_logic;                          -- LVDS - 644.53125MHz
+    QSFP_REFCLK_P   : in  std_logic;
+    QSFP_REFCLK_N   : in  std_logic;
     QSFP_RX_P       : in  std_logic_vector(LANES-1 downto 0); -- QSFP XCVR RX Data
     QSFP_RX_N       : in  std_logic_vector(LANES-1 downto 0); -- QSFP XCVR RX Data
     QSFP_TX_P       : out std_logic_vector(LANES-1 downto 0); -- QSFP XCVR TX Data
