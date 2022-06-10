@@ -54,9 +54,8 @@ generic (
     MEM_DATA_WIDTH          : integer := 512;
     MEM_BURST_WIDTH         : integer := 7;
     MEM_REFR_PERIOD_WIDTH   : integer := 32;
-    MEM_DEF_REFR_PERIOD     : slv_array_t(MEM_PORTS - 1 downto 0)(MEM_REFR_PERIOD_WIDTH - 1 downto 0)
-        := (others => (others => '0'));
-    AMM_FREQ_KHZ            : integer;
+    MEM_DEF_REFR_PERIOD     : slv_array_t(MEM_PORTS-1 downto 0)(MEM_REFR_PERIOD_WIDTH-1 downto 0) := (others => (others => '0'));
+    AMM_FREQ_KHZ            : integer := 0;
     
     STATUS_LEDS             : integer := 2;
     MISC_IN_WIDTH           : integer := 0;
