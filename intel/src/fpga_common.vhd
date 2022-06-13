@@ -187,6 +187,7 @@ architecture FULL of FPGA_COMMON is
     constant PCIE_MRRS    : natural := 512;
     constant ETH_PKT_MTU  : natural := 2**12;
     constant RESET_WIDTH  : natural := 10;
+    constant TSU_USE_DSP  : boolean := (DEVICE="ULTRASCALE");
 
     constant MI_DATA_WIDTH      : integer := 32;
     constant MI_ADDR_WIDTH      : integer := 32;
@@ -1144,9 +1145,9 @@ begin
 
     tsu_gen_i: entity work.tsu_gen
     generic map (
-        TS_MULT_SMART_DSP => false,
-        TS_MULT_USE_DSP   => false,
-        PPS_SEL_WIDTH     => 0    ,
+        TS_MULT_SMART_DSP => TSU_USE_DSP,
+        TS_MULT_USE_DSP   => TSU_USE_DSP,
+        PPS_SEL_WIDTH     => 0,
         CLK_SEL_WIDTH     => 0
     )
     port map (
