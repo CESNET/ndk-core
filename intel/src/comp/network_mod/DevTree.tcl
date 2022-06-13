@@ -3,11 +3,12 @@
 # 2. base_pmd   - base address of PMD/I2C layer
 # 3. ports      - number of ethernet ports
 # 4. port_speed - array of strings, speed (and number of channels) for all ports
-proc dts_network_mod { base_mac base_pcs base_pmd ports ETH_PORT_SPEED ETH_PORT_CHAN card_name} {
+proc dts_network_mod { base_mac base_pcs base_pmd ports ETH_PORT_SPEED ETH_PORT_CHAN ETH_PORT_LANES card_name} {
 
     # use upvar to pass an array
     upvar $ETH_PORT_SPEED port_speed
     upvar $ETH_PORT_CHAN  port_chan
+    upvar $ETH_PORT_LANES port_lanes
 
     set MTUI 16383
     set MTUO 16383
@@ -45,14 +46,19 @@ proc dts_network_mod { base_mac base_pcs base_pmd ports ETH_PORT_SPEED ETH_PORT_
 
     for {set p 0} {$p < $ports} {incr p} {
         append ret "i2c$p:" [dts_i2c $p [expr $base_pmd + $PMD_PORT_OFF * $p + 0x10]]
-	    append ret "pmdctrl$p:" [dts_pmd_ctrl $p [expr $base_pmd + $PMD_PORT_OFF * $p + 0x1c]]
-        append ret "pmd$p:" [dts_eth_transciever $p "QSFP" "i2c$p" $QSFP_I2C_ADDR($p)]
+        append ret "pmdctrl$p:" [dts_pmd_ctrl $p [expr $base_pmd + $PMD_PORT_OFF * $p + 0x1c]]
+        append ret "pmd$p:" [dts_eth_transciever $p "QSFP" "pmdctrl$p" "i2c$p" $QSFP_I2C_ADDR($p)]
+        set channel_lanes [expr $port_lanes($p)/$port_chan($p)]
         for {set ch 0} {$ch < $port_chan($p)} {incr ch} {
+            set    eth_lanes ""
+            for {set lan 0} {$lan < $channel_lanes} {incr lan} {
+                append eth_lanes "[expr $ch * $channel_lanes + $lan] "
+            }
             append ret "regarr$ei:" [dts_pcs_regs $ei [expr $base_pcs + $MGMT_PORT_OFF * $p + $MGMT_CHAN_OFF * $ch]]
-			append ret "pcspma$ei:" [dts_mgmt $ei "$port_speed($p)G" "regarr$ei" ""]
+            append ret "pcspma$ei:" [dts_mgmt $ei "$port_speed($p)G" "regarr$ei" ""]
             append ret "txmac$ei:" [dts_tx_mac_lite $ei $port_speed($p) [expr $base_mac + $p * $PORTS_OFF + $ch * $CHAN_OFF + $TX_RX_MAC_OFF * 0] $MTUO]
             append ret "rxmac$ei:" [dts_rx_mac_lite $ei $port_speed($p) [expr $base_mac + $p * $PORTS_OFF + $ch * $CHAN_OFF + $TX_RX_MAC_OFF * 1] $MTUI]
-            append ret [dts_eth_channel $ei $p $ei $ei $ei]
+            append ret [dts_eth_channel $ei $p $ei $ei $ei $eth_lanes]
             incr ei
         }
     }
@@ -62,43 +68,47 @@ proc dts_network_mod { base_mac base_pcs base_pmd ports ETH_PORT_SPEED ETH_PORT_
 
 # 1. no            - node index
 # 2. type          - QSFP,...
-# 3. control       - name of control module node
-# 3. qsfp_i2c_addr - PMD I2C address
-proc dts_eth_transciever {no type control qsfp_i2c_addr} {
-	set    ret ""
-	append ret "pmd$no {"
-	append ret "compatible = \"netcope,transceiver\";"
-	append ret "type = \"$type\";"
-    append ret "control = <&$control>;"
+# 3. pmd_ctrl      - name of PMD control register node
+# 4. i2c_ctrl      - name of I2C control module node
+# 5. qsfp_i2c_addr - PMD I2C address
+proc dts_eth_transciever {no type pmd_ctrl i2c_ctrl qsfp_i2c_addr} {
+    set    ret ""
+    append ret "pmd$no {"
+    append ret "compatible = \"netcope,transceiver\";"
+    append ret "type = \"$type\";"
+    append ret "status-reg = <&$pmd_ctrl>;"
+    append ret "control = <&$i2c_ctrl>;"
     append ret "control-param{i2c-addr=<$qsfp_i2c_addr>;};"
-	append ret "};"
-	return $ret
+    append ret "};"
+    return $ret
 }
 
 # 1. no   - node index
 # 2. base - base address
 proc dts_pmd_ctrl {no base} {
-	set ret ""
-	append ret "pmdctrl$no {"
-	append ret "reg = <$base 1>;"
-	append ret "version = <0x00010000>;"
-	append ret "};"
-	return $ret;
+    set ret ""
+    append ret "pmdctrl$no {"
+    append ret "reg = <$base 1>;"
+    append ret "version = <0x00010000>;"
+    append ret "};"
+    return $ret;
 }
 
 # 1. no        - node index
 # 2. pmd       - number of transciever used by channel
 # 3. rxmac_num - number of rxmac used by channel
 # 4. txmac_num - number of txmac used by channel
-# 5. phy_num   - number of PCS/PMS used by channel
-proc dts_eth_channel {no pmd rxmac_num txmac_num phy_num} {
-	set    ret ""
-	append ret "eth$no {"
-	append ret "compatible = \"netcope,eth\";"
-	append ret "pmd = <&pmd$pmd>;"
-	if {$phy_num   != -1} {append ret "pcspma = <&pcspma$phy_num>;"}
-	if {$rxmac_num != -1} {append ret "rxmac = <&rxmac$rxmac_num>;"}
-	if {$txmac_num != -1} {append ret "txmac = <&txmac$txmac_num>;"}
-	append ret "};"
-	return $ret;
+# 5. phy_num   - number of PCS/PMA used by channel
+# 6. lines     - indexes of serial lines used by channel
+proc dts_eth_channel {no pmd rxmac_num txmac_num phy_num lines} {
+    set    ret ""
+    append ret "eth$no {"
+    append ret "compatible = \"netcope,eth\";"
+    append ret "pmd = <&pmd$pmd>;"
+    if {$phy_num   != -1} {append ret "pcspma = <&pcspma$phy_num>;"}
+    if {$rxmac_num != -1} {append ret "rxmac = <&rxmac$rxmac_num>;"}
+    if {$txmac_num != -1} {append ret "txmac = <&txmac$txmac_num>;"}
+    append ret "pmd-params {lines = <$lines>;};"
+    append ret "};"
+    return $ret;
 }
