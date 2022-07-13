@@ -45,7 +45,7 @@ if {$ARCHGRP == "DK-DEV-1SDX-P"} {
     lappend MOD "$ENTITY_BASE/pcie_crdt_dw_fsm.vhd"
     lappend MOD "$ENTITY_BASE/pcie_crdt_logic.vhd"
     lappend MOD "$ENTITY_BASE/pcie_core_rtile.vhd"
-} elseif {$ARCHGRP == "FB4CGG3"} {
+} elseif {$ARCHGRP == "FB4CGG3" || $ARCHGRP == "FB2CGHH"} {
     lappend MOD "$ENTITY_BASE/pcie_core_usp.vhd"
 } else {
     lappend MOD "$ENTITY_BASE/pcie_core_empty.vhd"

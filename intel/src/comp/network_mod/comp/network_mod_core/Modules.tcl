@@ -85,8 +85,8 @@ if { $ARCHGRP == "DK-DEV-1SDX-P"} {
     # Source files for implemented component
     lappend MOD "$ENTITY_BASE/network_mod_core_etile.vhd"
 }
-
-if { $ARCHGRP == "FB4CGG3" || $ARCHGRP == "FB2CGG3"} {
+ 
+if { $ARCHGRP == "FB4CGG3" || $ARCHGRP == "FB2CGG3" || $ARCHGRP == "FB2CGHH"} {
     lappend COMPONENTS [list "ASYNC_RESET"     "$ASYNC_BASE/reset"     "FULL"]
     lappend COMPONENTS [list "ASYNC_OPEN_LOOP" "$ASYNC_BASE/open_loop" "FULL"]
     lappend COMPONENTS [list "TX_LBUS_ADAPTER" "$TX_ADAPTER_BASE/lbus" "FULL"]
