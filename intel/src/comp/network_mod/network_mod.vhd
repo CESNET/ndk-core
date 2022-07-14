@@ -73,7 +73,7 @@ architecture FULL of NETWORK_MOD is
                 when 10     => return 1;
                 when others => return 0;
             end case;
-        elsif (BOARD = "DK-DEV-1SDX-P" or BOARD = "FB4CGG3" or BOARD = "FB2CGG3") then
+        elsif (BOARD = "DK-DEV-1SDX-P" or BOARD = "FB4CGG3" or BOARD = "FB2CGG3" or BOARD = "IA-420F") then
             case ETH_PORT_SPEED(0) is
                 when 100    => return 8;
                 when 25     => return 1;
