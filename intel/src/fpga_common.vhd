@@ -387,6 +387,15 @@ architecture FULL of FPGA_COMMON is
     signal flash_wr_en                   : std_logic;
     signal flash_rd_data                 : std_logic_vector(64-1 downto 0);
 
+    signal axi_mi_addr_s                 : std_logic_vector(8 - 1 downto 0);           
+    signal axi_mi_dwr_s                  : std_logic_vector(32 - 1 downto 0);         
+    signal axi_mi_wr_s                   : std_logic;        
+    signal axi_mi_rd_s                   : std_logic;        
+    signal axi_mi_be_s                   : std_logic_vector((32/8)-1 downto 0) := (others => '0');
+    signal axi_mi_ardy_s                 : std_logic;          
+    signal axi_mi_drd_s                  : std_logic_vector(32 - 1 downto 0);         
+    signal axi_mi_drdy_s                 : std_logic;
+
 begin
 
     -- =========================================================================
@@ -419,7 +428,7 @@ begin
         REPLICAS => 1
     )
     port map (
-        CLK        => SYSCLK,
+        CLK        => ref_clk_in,
         ASYNC_RST  => not pll_locked,
         OUT_RST(0) => global_reset
     );
@@ -430,7 +439,7 @@ begin
         RST_REPLICAS => RESET_WIDTH
     )
     port map (
-        STABLE_CLK   => SYSCLK,
+        STABLE_CLK   => ref_clk_in,
         GLOBAL_RESET => global_reset,
         CLK_VECTOR   => clk_vector,
         RST_VECTOR   => rst_vector
@@ -638,10 +647,67 @@ begin
             FLASH_WR_DATA => flash_wr_data,
             FLASH_WR_EN   => flash_wr_en,
             FLASH_RD_DATA => flash_rd_data
-        );
+        ); 
 
         flash_rd_data <= MISC_IN;
         MISC_OUT <= flash_wr_data & flash_wr_en & rst_pci(0) & clk_pci(0);
+
+    elsif BOARD = "FB2CGHH" generate
+        boot_ctrl_i : entity work.BOOT_CTRL
+        generic map(
+            DEVICE => DEVICE
+        )
+        port map(
+            MI_CLK        => clk_mi,
+            MI_RESET      => rst_mi(1),
+            MI_DWR        => mi_adc_dwr (MI_ADC_PORT_BOOT),
+            MI_ADDR       => mi_adc_addr(MI_ADC_PORT_BOOT),
+            MI_BE         => mi_adc_be  (MI_ADC_PORT_BOOT),
+            MI_RD         => mi_adc_rd  (MI_ADC_PORT_BOOT),
+            MI_WR         => mi_adc_wr  (MI_ADC_PORT_BOOT),
+            MI_ARDY       => mi_adc_ardy(MI_ADC_PORT_BOOT),
+            MI_DRD        => mi_adc_drd (MI_ADC_PORT_BOOT),
+            MI_DRDY       => mi_adc_drdy(MI_ADC_PORT_BOOT),
+
+            BOOT_CLK      => clk_usr_x2,
+            BOOT_RESET    => rst_usr_x2(0),
+
+            BOOT_REQUEST  => open,
+            BOOT_IMAGE    => open,
+
+            --BMC 
+            FLASH_WR_DATA => flash_wr_data,
+            FLASH_WR_EN   => flash_wr_en,
+            FLASH_RD_DATA => flash_rd_data,
+            
+            --AXI Quad SPI
+            AXI_MI_ADDR   => axi_mi_addr_s,
+            AXI_MI_DWR    => axi_mi_dwr_s, 
+            AXI_MI_WR     => axi_mi_wr_s,
+            AXI_MI_RD     => axi_mi_rd_s,
+            AXI_MI_BE     => axi_mi_be_s,
+            AXI_MI_ARDY   => axi_mi_ardy_s,
+            AXI_MI_DRD    => axi_mi_drd_s,
+            AXI_MI_DRDY   => axi_mi_drdy_s
+        );
+
+        flash_rd_data <= MISC_IN(64-1    downto  0);
+        axi_mi_drd_s  <= MISC_IN(32+64-1 downto 64);
+        axi_mi_drdy_s <= MISC_IN(96);
+        axi_mi_ardy_s <= MISC_IN(97);
+
+        MISC_OUT(0)                     <= clk_usr_x1;  -- 100 MHz
+        MISC_OUT(1)                     <= clk_usr_x2;  -- 200 MHz
+        MISC_OUT(2)                     <= rst_usr_x2(0);
+        MISC_OUT(3)                     <= flash_wr_en;
+        MISC_OUT(64+ 4-1 downto   4)    <= flash_wr_data;
+        MISC_OUT(32+68-1 downto  68)    <= axi_mi_dwr_s;
+        MISC_OUT(8+100-1 downto 100)    <= axi_mi_addr_s;
+        MISC_OUT(4+108-1 downto 108)    <= axi_mi_be_s;
+        MISC_OUT(112)                   <= axi_mi_wr_s;
+        MISC_OUT(113)                   <= axi_mi_rd_s;
+
+
     else generate
         mi_adc_ardy(MI_ADC_PORT_BOOT) <= '1';
         mi_adc_drdy(MI_ADC_PORT_BOOT) <= '0';
