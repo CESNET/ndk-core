@@ -424,7 +424,7 @@ begin
                 PCIE_LINK_UP(i)  <= cfg_phy_link_status(i)(0) and cfg_phy_link_status(i)(1);
                 PCIE_RCB_SIZE(i) <= cfg_rcb_status(i)(0);
                 PCIE_MRRS(i)     <= cfg_max_read_req(i);
-                PCIE_MPS(i)      <= cfg_max_payload(i);
+                PCIE_MPS(i)      <= '0' & cfg_max_payload(i);
             end if;
         end process;
         PCIE_EXT_TAG_EN(i)     <= '1';

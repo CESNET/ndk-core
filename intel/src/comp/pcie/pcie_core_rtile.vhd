@@ -446,28 +446,28 @@ architecture RTILE of PCIE_CORE is
     signal pcie_rst                 : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(RESET_WIDTH+1-1 downto 0);
     signal pcie_slow_rst            : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
 
-    signal pcie_avst_down_data      : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS*256-1 downto 0);
-    signal pcie_avst_down_hdr       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS*128-1 downto 0);
-    signal pcie_avst_down_prefix    : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS*32-1 downto 0);
-    signal pcie_avst_down_sop       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS-1 downto 0);
-    signal pcie_avst_down_eop       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS-1 downto 0);
-    signal pcie_avst_down_empty     : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS*3-1 downto 0);
-    signal pcie_avst_down_bar_range : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS*3-1 downto 0);
-    signal pcie_avst_down_valid     : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS-1 downto 0);
-    signal pcie_avst_down_dvalid    : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS-1 downto 0);
-    signal pcie_avst_down_hvalid    : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS-1 downto 0);
+    signal pcie_avst_down_data      : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS*256-1 downto 0);
+    signal pcie_avst_down_hdr       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS*128-1 downto 0);
+    signal pcie_avst_down_prefix    : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS*32-1 downto 0);
+    signal pcie_avst_down_sop       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS-1 downto 0);
+    signal pcie_avst_down_eop       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS-1 downto 0);
+    signal pcie_avst_down_empty     : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS*3-1 downto 0);
+    signal pcie_avst_down_bar_range : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS*3-1 downto 0);
+    signal pcie_avst_down_valid     : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS-1 downto 0);
+    signal pcie_avst_down_dvalid    : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS-1 downto 0);
+    signal pcie_avst_down_hvalid    : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS-1 downto 0);
     signal pcie_avst_down_ready     : std_logic_vector(PCIE_ENDPOINTS-1 downto 0) := (others => '1');
-    signal pcie_avst_up_data        : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS*256-1 downto 0);
-    signal pcie_avst_up_hdr         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS*128-1 downto 0);
-    signal pcie_avst_up_prefix      : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS*32-1 downto 0);
-    signal pcie_avst_up_sop         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS-1 downto 0);
-    signal pcie_avst_up_eop         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS-1 downto 0);
-    signal pcie_avst_up_error       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS-1 downto 0);
-    signal pcie_avst_up_valid       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS-1 downto 0) := (others => (others => '0'));
-    signal pcie_avst_up_dvalid      : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS-1 downto 0) := (others => (others => '0'));
-    signal pcie_avst_up_hvalid      : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS-1 downto 0) := (others => (others => '0'));
+    signal pcie_avst_up_data        : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS*256-1 downto 0);
+    signal pcie_avst_up_hdr         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS*128-1 downto 0);
+    signal pcie_avst_up_prefix      : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS*32-1 downto 0);
+    signal pcie_avst_up_sop         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS-1 downto 0);
+    signal pcie_avst_up_eop         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS-1 downto 0);
+    signal pcie_avst_up_error       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS-1 downto 0);
+    signal pcie_avst_up_valid       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS-1 downto 0) := (others => (others => '0'));
+    signal pcie_avst_up_dvalid      : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS-1 downto 0) := (others => (others => '0'));
+    signal pcie_avst_up_hvalid      : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS-1 downto 0) := (others => (others => '0'));
     signal pcie_avst_up_ready       : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
-    signal pcie_avst_up_payload_lv  : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS downto 0);
+    signal pcie_avst_up_payload_lv  : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS downto 0);
 
     signal pcie_hcrdt_up_init       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(2 downto 0);
     signal pcie_hcrdt_up_update     : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(2 downto 0);
@@ -999,11 +999,11 @@ begin
         process (pcie_clk(i))
         begin
             if (rising_edge(pcie_clk(i))) then
-                pcie_avst_up_payload_lv(i)(0) <= pcie_avst_up_payload_lv(i)(AVST_REGIONS);
+                pcie_avst_up_payload_lv(i)(0) <= pcie_avst_up_payload_lv(i)(PCIE_UP_REGIONS);
             end if;
         end process;
 
-        pcie_avst_g : for r in 0 to AVST_REGIONS-1 generate
+        pcie_avst_g : for r in 0 to PCIE_UP_REGIONS-1 generate
             process (all)
             begin
                 if (AVST_UP_VALID(i)(r) = '1' and AVST_UP_SOP(i)(r) = '1') then
