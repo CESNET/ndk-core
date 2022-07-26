@@ -211,12 +211,12 @@ architecture FULL of FPGA_COMMON is
     constant DMA_UP_MFB_ITEM_WIDTH   : integer := 32;  -- Width of one item in bits
 
     -- DMA MVB DOWN parameters
-    constant DMA_DOWN_MVB_ITEMS        : integer := 2;  -- Number of items (headers) in word
+    constant DMA_DOWN_MVB_ITEMS        : integer := tsel(DEVICE="ULTRASCALE",4,2);  -- Number of items (headers) in word
     constant DMA_DOWN_MVB_ITEM_WIDTH   : integer := DMA_DOWNHDR_WIDTH; -- Width of one item (header) in bits
     -- DMA MFB DOWN parameters
-    constant DMA_DOWN_MFB_REGIONS      : integer := 2;  -- Number of regions in word
+    constant DMA_DOWN_MFB_REGIONS      : integer := tsel(DEVICE="ULTRASCALE",4,2);  -- Number of regions in word
     constant DMA_DOWN_MFB_REGION_SIZE  : integer := 1;  -- Number of blocks in region
-    constant DMA_DOWN_MFB_BLOCK_SIZE   : integer := 8;  -- Number of items in block
+    constant DMA_DOWN_MFB_BLOCK_SIZE   : integer := tsel(DEVICE="ULTRASCALE",4,8);  -- Number of items in block
     constant DMA_DOWN_MFB_ITEM_WIDTH   : integer := 32;  -- Width of one item in bits
 
     -- DMA CrossbarX clock selection

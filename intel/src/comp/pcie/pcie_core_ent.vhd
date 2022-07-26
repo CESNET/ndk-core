@@ -13,18 +13,14 @@ use work.type_pack.all;
 
 entity PCIE_CORE is
     generic(
-        -- Number of AVST regions
-            -- When ENDPOINT_MODE = 0: 2
-            -- When ENDPOINT_MODE = 1: 1
-        AVST_REGIONS     : natural := 2;
+        PCIE_UP_REGIONS   : natural := 2;
+        PCIE_DOWN_REGIONS : natural := 2;
         -- AXI configuration
         AXI_DATA_WIDTH   : natural := 512;
         AXI_CQUSER_WIDTH : natural := 183;
         AXI_CCUSER_WIDTH : natural := 81;
         AXI_RQUSER_WIDTH : natural := 137;
         AXI_RCUSER_WIDTH : natural := 161;
-        -- Number of items (headers) in UP word
-        MVB_UP_ITEMS     : natural := 2;
         -- P-Tile endpoint (EP) mode: 0 = one EPx16 lanes, 1 = two EPx8 lanes
         ENDPOINT_MODE    : natural := 0;
         -- Number of instantiated PCIe endpoints
@@ -132,23 +128,23 @@ entity PCIE_CORE is
         --  User DOWN/UP Avalon-ST streams per endpoint (PCIE_USER_CLK)
         -- =====================================================================
         -- DOWN stream
-        AVST_DOWN_DATA      : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS*256-1 downto 0);
-        AVST_DOWN_HDR       : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS*128-1 downto 0);
-        AVST_DOWN_PREFIX    : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS*32-1 downto 0);
-        AVST_DOWN_SOP       : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS-1 downto 0);
-        AVST_DOWN_EOP       : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS-1 downto 0);
-        AVST_DOWN_EMPTY     : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS*3-1 downto 0);
-        AVST_DOWN_BAR_RANGE : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS*3-1 downto 0);
-        AVST_DOWN_VALID     : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS-1 downto 0) := (others => (others => '0'));
+        AVST_DOWN_DATA      : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS*256-1 downto 0);
+        AVST_DOWN_HDR       : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS*128-1 downto 0);
+        AVST_DOWN_PREFIX    : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS*32-1 downto 0);
+        AVST_DOWN_SOP       : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS-1 downto 0);
+        AVST_DOWN_EOP       : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS-1 downto 0);
+        AVST_DOWN_EMPTY     : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS*3-1 downto 0);
+        AVST_DOWN_BAR_RANGE : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS*3-1 downto 0);
+        AVST_DOWN_VALID     : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS-1 downto 0) := (others => (others => '0'));
         AVST_DOWN_READY     : in  std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
         -- UP stream
-        AVST_UP_DATA        : in  slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS*256-1 downto 0);
-        AVST_UP_HDR         : in  slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS*128-1 downto 0);
-        AVST_UP_PREFIX      : in  slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS*32-1 downto 0);
-        AVST_UP_SOP         : in  slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS-1 downto 0);
-        AVST_UP_EOP         : in  slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS-1 downto 0);
-        AVST_UP_ERROR       : in  slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS-1 downto 0);
-        AVST_UP_VALID       : in  slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AVST_REGIONS-1 downto 0);
+        AVST_UP_DATA        : in  slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS*256-1 downto 0);
+        AVST_UP_HDR         : in  slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS*128-1 downto 0);
+        AVST_UP_PREFIX      : in  slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS*32-1 downto 0);
+        AVST_UP_SOP         : in  slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS-1 downto 0);
+        AVST_UP_EOP         : in  slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS-1 downto 0);
+        AVST_UP_ERROR       : in  slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS-1 downto 0);
+        AVST_UP_VALID       : in  slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS-1 downto 0);
         AVST_UP_READY       : out std_logic_vector(PCIE_ENDPOINTS-1 downto 0) := (others => '0');
 
         -- =====================================================================
@@ -247,8 +243,8 @@ entity PCIE_CORE is
         --  PCIe tags interface - Xilinx FPGA Only
         -- =====================================================================
         -- PCIe tag assigned to send transaction
-        TAG_ASSIGN        : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(MVB_UP_ITEMS*8-1 downto 0);
+        TAG_ASSIGN        : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS*8-1 downto 0);
         -- Valid bit for assigned tags
-        TAG_ASSIGN_VLD    : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(MVB_UP_ITEMS-1 downto 0) := (others => (others => '0'))
+        TAG_ASSIGN_VLD    : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS-1 downto 0) := (others => (others => '0'))
     );
 end entity;

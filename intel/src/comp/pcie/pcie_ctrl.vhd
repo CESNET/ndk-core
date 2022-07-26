@@ -119,21 +119,21 @@ entity PCIE_CTRL is
         AVST_DOWN_DATA      : in  std_logic_vector(MFB_DOWN_REGIONS*256-1 downto 0);
         AVST_DOWN_HDR       : in  std_logic_vector(MFB_DOWN_REGIONS*128-1 downto 0);
         AVST_DOWN_PREFIX    : in  std_logic_vector(MFB_DOWN_REGIONS*32-1 downto 0);
-		AVST_DOWN_SOP       : in  std_logic_vector(MFB_DOWN_REGIONS-1 downto 0);
-		AVST_DOWN_EOP       : in  std_logic_vector(MFB_DOWN_REGIONS-1 downto 0);
+        AVST_DOWN_SOP       : in  std_logic_vector(MFB_DOWN_REGIONS-1 downto 0);
+        AVST_DOWN_EOP       : in  std_logic_vector(MFB_DOWN_REGIONS-1 downto 0);
         AVST_DOWN_EMPTY     : in  std_logic_vector(MFB_DOWN_REGIONS*3-1 downto 0);
         AVST_DOWN_BAR_RANGE : in  std_logic_vector(MFB_DOWN_REGIONS*3-1 downto 0);
         AVST_DOWN_VALID     : in  std_logic_vector(MFB_DOWN_REGIONS-1 downto 0);
-		AVST_DOWN_READY     : out std_logic;
+        AVST_DOWN_READY     : out std_logic;
         -- UP stream
         AVST_UP_DATA        : out std_logic_vector(MFB_UP_REGIONS*256-1 downto 0);
         AVST_UP_HDR         : out std_logic_vector(MFB_UP_REGIONS*128-1 downto 0);
         AVST_UP_PREFIX      : out std_logic_vector(MFB_UP_REGIONS*32-1 downto 0);
-		AVST_UP_SOP         : out std_logic_vector(MFB_UP_REGIONS-1 downto 0);
-		AVST_UP_EOP         : out std_logic_vector(MFB_UP_REGIONS-1 downto 0);
+        AVST_UP_SOP         : out std_logic_vector(MFB_UP_REGIONS-1 downto 0);
+        AVST_UP_EOP         : out std_logic_vector(MFB_UP_REGIONS-1 downto 0);
         AVST_UP_ERROR       : out std_logic_vector(MFB_UP_REGIONS-1 downto 0);
         AVST_UP_VALID       : out std_logic_vector(MFB_UP_REGIONS-1 downto 0);
-		AVST_UP_READY       : in  std_logic;
+        AVST_UP_READY       : in  std_logic;
 
         -- =====================================================================
         --  AXI Completer Request Interfaces (CQ) - Xilinx FPGA Only (PCIE_CLK)
@@ -302,11 +302,11 @@ architecture FULL of PCIE_CTRL is
 
     signal ptc_down_mfb_data       : std_logic_vector(MFB_DOWN_REGIONS*MFB_DOWN_REG_SIZE*MFB_DOWN_BLOCK_SIZE*MFB_DOWN_ITEM_WIDTH-1 downto 0);
     signal ptc_down_mfb_meta       : std_logic_vector(MFB_DOWN_REGIONS*MFB_DOWN_META_WIDTH-1 downto 0);
-    signal ptc_down_mfb_meta_arr   : slv_array_t(MFB_UP_REGIONS-1 downto 0)(MFB_DOWN_META_WIDTH-1 downto 0);
-    signal ptc_down_mfb_hdr_arr    : slv_array_t(MFB_UP_REGIONS-1 downto 0)(PCI_CHDR_W-1 downto 0);
-    signal ptc_down_mfb_prefix_arr : slv_array_t(MFB_UP_REGIONS-1 downto 0)(PCI_PREFIX_W-1 downto 0);
-    signal ptc_down_mfb_hdr        : std_logic_vector(MFB_UP_REGIONS*PCI_CHDR_W-1 downto 0);
-    signal ptc_down_mfb_prefix     : std_logic_vector(MFB_UP_REGIONS*PCI_PREFIX_W-1 downto 0);
+    signal ptc_down_mfb_meta_arr   : slv_array_t(MFB_DOWN_REGIONS-1 downto 0)(MFB_DOWN_META_WIDTH-1 downto 0);
+    signal ptc_down_mfb_hdr_arr    : slv_array_t(MFB_DOWN_REGIONS-1 downto 0)(PCI_CHDR_W-1 downto 0);
+    signal ptc_down_mfb_prefix_arr : slv_array_t(MFB_DOWN_REGIONS-1 downto 0)(PCI_PREFIX_W-1 downto 0);
+    signal ptc_down_mfb_hdr        : std_logic_vector(MFB_DOWN_REGIONS*PCI_CHDR_W-1 downto 0);
+    signal ptc_down_mfb_prefix     : std_logic_vector(MFB_DOWN_REGIONS*PCI_PREFIX_W-1 downto 0);
     signal ptc_down_mfb_sof        : std_logic_vector(MFB_DOWN_REGIONS-1 downto 0);
     signal ptc_down_mfb_eof        : std_logic_vector(MFB_DOWN_REGIONS-1 downto 0);
     signal ptc_down_mfb_sof_pos    : std_logic_vector(MFB_DOWN_REGIONS*max(1,log2(MFB_DOWN_REG_SIZE))-1 downto 0);
@@ -323,12 +323,12 @@ architecture FULL of PCIE_CTRL is
     signal mtc_up_mfb_src_rdy      : std_logic;
     signal mtc_up_mfb_dst_rdy      : std_logic;
 
-    signal mtc_down_mfb_data       : std_logic_vector(MFB_DOWN_REGIONS*MFB_DOWN_REG_SIZE*MFB_DOWN_BLOCK_SIZE*MFB_DOWN_ITEM_WIDTH-1 downto 0);
-    signal mtc_down_mfb_meta       : std_logic_vector(MFB_DOWN_REGIONS*MFB_DOWN_META_WIDTH-1 downto 0);
-    signal mtc_down_mfb_sof        : std_logic_vector(MFB_DOWN_REGIONS-1 downto 0);
-    signal mtc_down_mfb_eof        : std_logic_vector(MFB_DOWN_REGIONS-1 downto 0);
-    signal mtc_down_mfb_sof_pos    : std_logic_vector(MFB_DOWN_REGIONS*max(1,log2(MFB_DOWN_REG_SIZE))-1 downto 0);
-    signal mtc_down_mfb_eof_pos    : std_logic_vector(MFB_DOWN_REGIONS*max(1,log2(MFB_DOWN_REG_SIZE*MFB_DOWN_BLOCK_SIZE))-1 downto 0);
+    signal mtc_down_mfb_data       : std_logic_vector(MFB_UP_REGIONS*MFB_UP_REG_SIZE*MFB_UP_BLOCK_SIZE*MFB_UP_ITEM_WIDTH-1 downto 0);
+    signal mtc_down_mfb_meta       : std_logic_vector(MFB_UP_REGIONS*MFB_DOWN_META_WIDTH-1 downto 0);
+    signal mtc_down_mfb_sof        : std_logic_vector(MFB_UP_REGIONS-1 downto 0);
+    signal mtc_down_mfb_eof        : std_logic_vector(MFB_UP_REGIONS-1 downto 0);
+    signal mtc_down_mfb_sof_pos    : std_logic_vector(MFB_UP_REGIONS*max(1,log2(MFB_UP_REG_SIZE))-1 downto 0);
+    signal mtc_down_mfb_eof_pos    : std_logic_vector(MFB_UP_REGIONS*max(1,log2(MFB_UP_REG_SIZE*MFB_UP_BLOCK_SIZE))-1 downto 0);
     signal mtc_down_mfb_src_rdy    : std_logic;
     signal mtc_down_mfb_dst_rdy    : std_logic;
 
@@ -358,104 +358,114 @@ begin
     -- PCIE CONNECTION BLOCK
     -- =========================================================================
 
-    pcie_connection_block_i : entity work.PCIE_CONNECTION_BLOCK
-    generic map (
-        MFB_REGIONS         => MFB_UP_REGIONS,
-        MFB_REGION_SIZE     => MFB_UP_REG_SIZE,
-        MFB_BLOCK_SIZE      => MFB_UP_BLOCK_SIZE,
-        MFB_ITEM_WIDTH      => MFB_UP_ITEM_WIDTH,
-        MFB_UP_META_WIDTH   => MFB_UP_META_WIDTH,
-        MFB_DOWN_META_WIDTH => MFB_DOWN_META_WIDTH,
-        MTC_FIFO_DEPTH      => MTC_FIFO_ITEMS,
-        ENDPOINT_TYPE       => ENDPOINT_TYPE,
-        DEVICE              => DEVICE
-    )
-    port map (
-        CLK               => PCIE_CLK,
-        RESET             => PCIE_RESET(1),
-        -- =====================================================================
-        -- TO/FROM PCIE IP CORE
-        -- =====================================================================
-        -- DOWN stream
-        RX_AVST_DATA      => AVST_DOWN_DATA,
-        RX_AVST_HDR       => AVST_DOWN_HDR,
-        RX_AVST_PREFIX    => AVST_DOWN_PREFIX,
-        RX_AVST_BAR_RANGE => AVST_DOWN_BAR_RANGE,
-		RX_AVST_SOP       => AVST_DOWN_SOP,
-		RX_AVST_EOP       => AVST_DOWN_EOP,
-        RX_AVST_EMPTY     => AVST_DOWN_EMPTY,
-        RX_AVST_VALID     => AVST_DOWN_VALID,
-		RX_AVST_READY     => AVST_DOWN_READY,
-        -- UP stream
-        TX_AVST_DATA      => AVST_UP_DATA,
-        TX_AVST_HDR       => AVST_UP_HDR,
-        TX_AVST_PREFIX    => AVST_UP_PREFIX,
-        TX_AVST_SOP       => AVST_UP_SOP,
-        TX_AVST_EOP       => AVST_UP_EOP, 
-        TX_AVST_ERROR     => AVST_UP_ERROR, 
-        TX_AVST_VALID     => AVST_UP_VALID,
-        TX_AVST_READY     => AVST_UP_READY,
-        -- DOWN stream credits - R-TILE only
-        CRDT_DOWN_INIT_DONE => CRDT_DOWN_INIT_DONE,
-        CRDT_DOWN_UPDATE    => CRDT_DOWN_UPDATE,
-        CRDT_DOWN_CNT_PH    => CRDT_DOWN_CNT_PH,
-        CRDT_DOWN_CNT_NPH   => CRDT_DOWN_CNT_NPH,
-        CRDT_DOWN_CNT_CPLH  => CRDT_DOWN_CNT_CPLH,
-        CRDT_DOWN_CNT_PD    => CRDT_DOWN_CNT_PD,
-        CRDT_DOWN_CNT_NPD   => CRDT_DOWN_CNT_NPD,
-        CRDT_DOWN_CNT_CPLD  => CRDT_DOWN_CNT_CPLD,
-        -- UP stream credits - R-TILE only
-        CRDT_UP_INIT_DONE => CRDT_UP_INIT_DONE,
-        CRDT_UP_UPDATE    => CRDT_UP_UPDATE,
-        CRDT_UP_CNT_PH    => CRDT_UP_CNT_PH,
-        CRDT_UP_CNT_NPH   => CRDT_UP_CNT_NPH,
-        CRDT_UP_CNT_CPLH  => CRDT_UP_CNT_CPLH,
-        CRDT_UP_CNT_PD    => CRDT_UP_CNT_PD,
-        CRDT_UP_CNT_NPD   => CRDT_UP_CNT_NPD,
-        CRDT_UP_CNT_CPLD  => CRDT_UP_CNT_CPLD,
-        -- =====================================================================
-        -- TO/FROM PCIE TRANSACTION CONTROLER (PTC)
-        -- =====================================================================
-        -- UP stream
-        RQ_MFB_DATA       => ptc_up_mfb_data,
-        RQ_MFB_META       => ptc_up_mfb_meta,
-        RQ_MFB_SOF        => ptc_up_mfb_sof,
-        RQ_MFB_EOF        => ptc_up_mfb_eof,
-        RQ_MFB_SOF_POS    => ptc_up_mfb_sof_pos,
-        RQ_MFB_EOF_POS    => ptc_up_mfb_eof_pos,
-        RQ_MFB_SRC_RDY    => ptc_up_mfb_src_rdy,
-        RQ_MFB_DST_RDY    => ptc_up_mfb_dst_rdy,
-        -- DOWN stream
-        RC_MFB_DATA       => ptc_down_mfb_data,
-        RC_MFB_META       => ptc_down_mfb_meta,
-        RC_MFB_SOF        => ptc_down_mfb_sof,
-        RC_MFB_EOF        => ptc_down_mfb_eof,
-        RC_MFB_SOF_POS    => ptc_down_mfb_sof_pos,
-        RC_MFB_EOF_POS    => ptc_down_mfb_eof_pos,
-        RC_MFB_SRC_RDY    => ptc_down_mfb_src_rdy,
-        RC_MFB_DST_RDY    => ptc_down_mfb_dst_rdy,
-        -- =====================================================================
-        -- TO/FROM MI32 TRANSACTION CONTROLER (MTC)
-        -- =====================================================================
-        -- UP stream
-        CC_MFB_DATA       => mtc_up_mfb_data,
-        CC_MFB_META       => mtc_up_mfb_meta,
-        CC_MFB_SOF        => mtc_up_mfb_sof,
-        CC_MFB_EOF        => mtc_up_mfb_eof,
-        CC_MFB_SOF_POS    => mtc_up_mfb_sof_pos,
-        CC_MFB_EOF_POS    => mtc_up_mfb_eof_pos,
-        CC_MFB_SRC_RDY    => mtc_up_mfb_src_rdy,
-        CC_MFB_DST_RDY    => mtc_up_mfb_dst_rdy,
-        -- DOWN stream
-        CQ_MFB_DATA       => mtc_down_mfb_data,
-        CQ_MFB_META       => mtc_down_mfb_meta,
-        CQ_MFB_SOF        => mtc_down_mfb_sof,
-        CQ_MFB_EOF        => mtc_down_mfb_eof,
-        CQ_MFB_SOF_POS    => mtc_down_mfb_sof_pos,
-        CQ_MFB_EOF_POS    => mtc_down_mfb_eof_pos,
-        CQ_MFB_SRC_RDY    => mtc_down_mfb_src_rdy,
-        CQ_MFB_DST_RDY    => mtc_down_mfb_dst_rdy
-    );
+    pcie_cb_g: if DEVICE/="ULTRASCALE" generate
+        pcie_cb_i : entity work.PCIE_CONNECTION_BLOCK
+        generic map (
+            MFB_REGIONS         => MFB_UP_REGIONS,
+            MFB_REGION_SIZE     => MFB_UP_REG_SIZE,
+            MFB_BLOCK_SIZE      => MFB_UP_BLOCK_SIZE,
+            MFB_ITEM_WIDTH      => MFB_UP_ITEM_WIDTH,
+            MFB_UP_META_WIDTH   => MFB_UP_META_WIDTH,
+            MFB_DOWN_META_WIDTH => MFB_DOWN_META_WIDTH,
+            MTC_FIFO_DEPTH      => MTC_FIFO_ITEMS,
+            ENDPOINT_TYPE       => ENDPOINT_TYPE,
+            DEVICE              => DEVICE
+        )
+        port map (
+            CLK               => PCIE_CLK,
+            RESET             => PCIE_RESET(1),
+            -- =====================================================================
+            -- TO/FROM PCIE IP CORE
+            -- =====================================================================
+            -- DOWN stream
+            RX_AVST_DATA      => AVST_DOWN_DATA,
+            RX_AVST_HDR       => AVST_DOWN_HDR,
+            RX_AVST_PREFIX    => AVST_DOWN_PREFIX,
+            RX_AVST_BAR_RANGE => AVST_DOWN_BAR_RANGE,
+            RX_AVST_SOP       => AVST_DOWN_SOP,
+            RX_AVST_EOP       => AVST_DOWN_EOP,
+            RX_AVST_EMPTY     => AVST_DOWN_EMPTY,
+            RX_AVST_VALID     => AVST_DOWN_VALID,
+            RX_AVST_READY     => AVST_DOWN_READY,
+            -- UP stream
+            TX_AVST_DATA      => AVST_UP_DATA,
+            TX_AVST_HDR       => AVST_UP_HDR,
+            TX_AVST_PREFIX    => AVST_UP_PREFIX,
+            TX_AVST_SOP       => AVST_UP_SOP,
+            TX_AVST_EOP       => AVST_UP_EOP, 
+            TX_AVST_ERROR     => AVST_UP_ERROR, 
+            TX_AVST_VALID     => AVST_UP_VALID,
+            TX_AVST_READY     => AVST_UP_READY,
+            -- DOWN stream credits - R-TILE only
+            CRDT_DOWN_INIT_DONE => CRDT_DOWN_INIT_DONE,
+            CRDT_DOWN_UPDATE    => CRDT_DOWN_UPDATE,
+            CRDT_DOWN_CNT_PH    => CRDT_DOWN_CNT_PH,
+            CRDT_DOWN_CNT_NPH   => CRDT_DOWN_CNT_NPH,
+            CRDT_DOWN_CNT_CPLH  => CRDT_DOWN_CNT_CPLH,
+            CRDT_DOWN_CNT_PD    => CRDT_DOWN_CNT_PD,
+            CRDT_DOWN_CNT_NPD   => CRDT_DOWN_CNT_NPD,
+            CRDT_DOWN_CNT_CPLD  => CRDT_DOWN_CNT_CPLD,
+            -- UP stream credits - R-TILE only
+            CRDT_UP_INIT_DONE => CRDT_UP_INIT_DONE,
+            CRDT_UP_UPDATE    => CRDT_UP_UPDATE,
+            CRDT_UP_CNT_PH    => CRDT_UP_CNT_PH,
+            CRDT_UP_CNT_NPH   => CRDT_UP_CNT_NPH,
+            CRDT_UP_CNT_CPLH  => CRDT_UP_CNT_CPLH,
+            CRDT_UP_CNT_PD    => CRDT_UP_CNT_PD,
+            CRDT_UP_CNT_NPD   => CRDT_UP_CNT_NPD,
+            CRDT_UP_CNT_CPLD  => CRDT_UP_CNT_CPLD,
+            -- =====================================================================
+            -- TO/FROM PCIE TRANSACTION CONTROLER (PTC)
+            -- =====================================================================
+            -- UP stream
+            RQ_MFB_DATA       => ptc_up_mfb_data,
+            RQ_MFB_META       => ptc_up_mfb_meta,
+            RQ_MFB_SOF        => ptc_up_mfb_sof,
+            RQ_MFB_EOF        => ptc_up_mfb_eof,
+            RQ_MFB_SOF_POS    => ptc_up_mfb_sof_pos,
+            RQ_MFB_EOF_POS    => ptc_up_mfb_eof_pos,
+            RQ_MFB_SRC_RDY    => ptc_up_mfb_src_rdy,
+            RQ_MFB_DST_RDY    => ptc_up_mfb_dst_rdy,
+            -- DOWN stream
+            RC_MFB_DATA       => ptc_down_mfb_data,
+            RC_MFB_META       => ptc_down_mfb_meta,
+            RC_MFB_SOF        => ptc_down_mfb_sof,
+            RC_MFB_EOF        => ptc_down_mfb_eof,
+            RC_MFB_SOF_POS    => ptc_down_mfb_sof_pos,
+            RC_MFB_EOF_POS    => ptc_down_mfb_eof_pos,
+            RC_MFB_SRC_RDY    => ptc_down_mfb_src_rdy,
+            RC_MFB_DST_RDY    => ptc_down_mfb_dst_rdy,
+            -- =====================================================================
+            -- TO/FROM MI32 TRANSACTION CONTROLER (MTC)
+            -- =====================================================================
+            -- UP stream
+            CC_MFB_DATA       => mtc_up_mfb_data,
+            CC_MFB_META       => mtc_up_mfb_meta,
+            CC_MFB_SOF        => mtc_up_mfb_sof,
+            CC_MFB_EOF        => mtc_up_mfb_eof,
+            CC_MFB_SOF_POS    => mtc_up_mfb_sof_pos,
+            CC_MFB_EOF_POS    => mtc_up_mfb_eof_pos,
+            CC_MFB_SRC_RDY    => mtc_up_mfb_src_rdy,
+            CC_MFB_DST_RDY    => mtc_up_mfb_dst_rdy,
+            -- DOWN stream
+            CQ_MFB_DATA       => mtc_down_mfb_data,
+            CQ_MFB_META       => mtc_down_mfb_meta,
+            CQ_MFB_SOF        => mtc_down_mfb_sof,
+            CQ_MFB_EOF        => mtc_down_mfb_eof,
+            CQ_MFB_SOF_POS    => mtc_down_mfb_sof_pos,
+            CQ_MFB_EOF_POS    => mtc_down_mfb_eof_pos,
+            CQ_MFB_SRC_RDY    => mtc_down_mfb_src_rdy,
+            CQ_MFB_DST_RDY    => mtc_down_mfb_dst_rdy
+        );
+    else generate
+        CRDT_DOWN_UPDATE     <= (others => '0');
+        AVST_DOWN_READY      <= '0';
+        AVST_UP_VALID        <= (others => '0');
+        ptc_up_mfb_dst_rdy   <= '0';
+        ptc_down_mfb_src_rdy <= '0';
+        mtc_up_mfb_dst_rdy   <= '0';
+        mtc_down_mfb_src_rdy <= '0';
+    end generate;
 
     -- =========================================================================
     --  PCIE TRANSACTION CTRL
