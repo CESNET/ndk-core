@@ -24,6 +24,7 @@ generic (
     --  Board static constants
     -- =========================================================================
     -- System clock frequency in MHz
+    -- PCIE clock frequency in Mhz if USE_PCIE_CLK is used
     SYSCLK_FREQ             : natural := 100;
     -- Number of PCIe connectors present on board
     PCIE_CONS               : integer := 1;
@@ -45,6 +46,8 @@ generic (
     ETH_LANE_RXPOLARITY     : std_logic_vector(ETH_PORTS*ETH_LANES-1 downto 0) := (others => '0');
     ETH_LANE_TXPOLARITY     : std_logic_vector(ETH_PORTS*ETH_LANES-1 downto 0) := (others => '0');
     ETH_PORT_LEDS           : integer := 2;
+    -- Switch CLK_GEN ref clock to clk_pci, default SYSCLK 
+    USE_PCIE_CLK            : boolean := false; 
 
     QSFP_PORTS              : integer := 2;
     QSFP_I2C_PORTS          : integer := 1;
@@ -396,11 +399,23 @@ architecture FULL of FPGA_COMMON is
     signal axi_mi_drd_s                  : std_logic_vector(32 - 1 downto 0);         
     signal axi_mi_drdy_s                 : std_logic;
 
+    -- clk_gen reference clock
+    signal ref_clk_in                    : std_logic;
+    signal ref_rst_in                    : std_logic;
+
 begin
 
     -- =========================================================================
     --  CLOCK AND RESET GENERATOR
     -- =========================================================================
+
+    clk_gen_g: if USE_PCIE_CLK = true generate
+        ref_clk_in <= clk_pci(0);
+        ref_rst_in <= rst_pci(0);
+    else generate
+        ref_clk_in <= SYSCLK;
+        ref_rst_in <= SYSRST;
+    end generate;
 
     clk_gen_i : entity work.COMMON_CLK_GEN
     generic map(
@@ -409,8 +424,8 @@ begin
         DEVICE             => DEVICE
     )
     port map (
-        REFCLK      => SYSCLK,
-        ASYNC_RESET => SYSRST,
+        REFCLK      => ref_clk_in,
+        ASYNC_RESET => ref_rst_in,
         LOCKED      => pll_locked,
         INIT_DONE_N => init_done_n,
         OUTCLK_0    => clk_usr_x4, -- 400 MHz
