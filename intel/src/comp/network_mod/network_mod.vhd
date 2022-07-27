@@ -26,6 +26,31 @@ architecture FULL of NETWORK_MOD is
     -- =========================================================================
     function region_size_core_f  return natural;
 
+    function region_size_core_f return natural is
+    begin
+        if (BOARD = "400G1" or BOARD = "DK-DEV-AGI027RES") then
+            case ETH_PORT_SPEED(0) is
+                when 400    => return 8;
+                when 200    => return 8;
+                when 100    => return 4;
+                when 50     => return 2;
+                when 40     => return 2;
+                when 25     => return 1;
+                when 10     => return 1;
+                when others => return 0;
+            end case;
+        elsif (BOARD = "DK-DEV-1SDX-P" or BOARD = "FB4CGG3" or BOARD = "FB2CGG3" or BOARD = "IA-420F" or BOARD = "FB2CGHH") then
+            case ETH_PORT_SPEED(0) is
+                when 100    => return 8;
+                when 25     => return 1;
+                when 10     => return 1;
+                when others => return 0;
+            end case;
+        else
+            return 0;
+        end if;
+    end function;
+
     -- =========================================================================
     --                               CONSTANTS
     -- =========================================================================
@@ -60,30 +85,6 @@ architecture FULL of NETWORK_MOD is
     -- =========================================================================
     --                                FUNCTIONS
     -- =========================================================================
-    function region_size_core_f return natural is
-    begin
-        if (BOARD = "400G1" or BOARD = "DK-DEV-AGI027RES") then
-            case ETH_PORT_SPEED(0) is
-                when 400    => return 8;
-                when 200    => return 8;
-                when 100    => return 4;
-                when 50     => return 2;
-                when 40     => return 2;
-                when 25     => return 1;
-                when 10     => return 1;
-                when others => return 0;
-            end case;
-        elsif (BOARD = "DK-DEV-1SDX-P" or BOARD = "FB4CGG3" or BOARD = "FB2CGG3" or BOARD = "IA-420F") then
-            case ETH_PORT_SPEED(0) is
-                when 100    => return 8;
-                when 25     => return 1;
-                when 10     => return 1;
-                when others => return 0;
-            end case;
-        else
-            return 0;
-        end if;
-    end function;
 
     function mi_addr_base_init_f return slv_array_t is
         variable mi_addr_base_var : slv_array_t(MI_ADDR_BASES-1 downto 0)(MI_ADDR_WIDTH-1 downto 0);
