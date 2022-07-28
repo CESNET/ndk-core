@@ -10,11 +10,6 @@ set BUILD_UID  [format "%d" [exec id -u]]
 
 VhdlPkgProjectText $PROJECT_NAME
 
-VhdlPkgInt    USER_GENERIC0   $USER_GENERIC0
-VhdlPkgInt    USER_GENERIC1   $USER_GENERIC1
-VhdlPkgInt    USER_GENERIC2   $USER_GENERIC2
-VhdlPkgInt    USER_GENERIC3   $USER_GENERIC3
-
 VhdlPkgBool   ETH_ENABLE      $ETH_ENABLE
 VhdlPkgInt    ETH_PORTS       $ETH_PORTS
 VhdlPkgIntArr ETH_PORT_SPEED  $ETH_PORTS

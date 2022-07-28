@@ -62,11 +62,6 @@ generic (
     MISC_OUT_WIDTH          : integer := 0;
     SYSCLK_PERIOD           : real := 8.0;
 
-    USER_GENERIC0           : integer := 0;
-    USER_GENERIC1           : integer := 0;
-    USER_GENERIC2           : integer := 0;
-    USER_GENERIC3           : integer := 0;
-
     DEVICE                  : string := "STRATIX10";
     BOARD                   : string := "400G1";
 

@@ -7,12 +7,6 @@
 # Mandatory project parameters
 set PROJECT_NAME ""
 
-# User-defined generics
-set USER_GENERIC0 0
-set USER_GENERIC1 0
-set USER_GENERIC2 0
-set USER_GENERIC3 0
-
 # ETH parameters:
 # ===============
 set ETH_ENABLE         false
