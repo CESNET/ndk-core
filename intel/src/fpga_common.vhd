@@ -386,6 +386,8 @@ architecture FULL of FPGA_COMMON is
     signal flash_wr_data                 : std_logic_vector(64-1 downto 0);
     signal flash_wr_en                   : std_logic;
     signal flash_rd_data                 : std_logic_vector(64-1 downto 0);
+    signal boot_request                  : std_logic;
+    signal boot_image                    : std_logic;
 
 begin
 
@@ -612,7 +614,7 @@ begin
         TX_DRDY    => mi_adc_drdy
     );
 
-    boot_ctrl_g: if BOARD = "FB4CGG3" generate
+    boot_ctrl_g: if (BOARD = "FB4CGG3") or (BOARD = "400G1") generate
         boot_ctrl_i : entity work.BOOT_CTRL
         generic map(
             DEVICE => DEVICE
@@ -632,20 +634,36 @@ begin
             BOOT_CLK      => clk_pci(0),
             BOOT_RESET    => rst_pci(0),
 
-            BOOT_REQUEST  => open,
-            BOOT_IMAGE    => open,
+            BOOT_REQUEST  => boot_request,
+            BOOT_IMAGE    => boot_image,
 
             FLASH_WR_DATA => flash_wr_data,
             FLASH_WR_EN   => flash_wr_en,
             FLASH_RD_DATA => flash_rd_data
         );
-
         flash_rd_data <= MISC_IN;
-        MISC_OUT <= flash_wr_data & flash_wr_en & rst_pci(0) & clk_pci(0);
     else generate
         mi_adc_ardy(MI_ADC_PORT_BOOT) <= '1';
         mi_adc_drdy(MI_ADC_PORT_BOOT) <= '0';
         mi_adc_drd (MI_ADC_PORT_BOOT) <= (others => '0');
+    end generate;
+
+    -- MISC_OUT port mappings for FB4CGG3 card
+    misc_fb4cgg2_g: if (BOARD = "FB4CGG3") generate
+        MISC_OUT(0) <= clk_pci(0);
+        MISC_OUT(1) <= rst_pci(0);
+        MISC_OUT(2) <= flash_wr_en;
+        MISC_OUT(64+3-1 downto 3) <= flash_wr_data;
+    end generate;
+
+    -- MISC_OUT port mappings for 400G1 card
+    misc_400g1_g: if (BOARD = "400G1") generate
+        MISC_OUT(0) <= clk_pci(0);
+        MISC_OUT(1) <= rst_pci(0);
+        MISC_OUT(2) <= boot_request;
+        MISC_OUT(3) <= boot_image;
+        MISC_OUT(4) <= flash_wr_en;
+        MISC_OUT(64+5-1 downto 5) <= flash_wr_data;
     end generate;
 
     -- unused MI ports
