@@ -44,7 +44,7 @@ proc dts_build_netcope {} {
     append ret "width = <0x20>;"
 
     # BOOT component
-    if {$CARD_NAME == "FB4CGG3" || $CARD_NAME == "FB2CGG3"} {
+    if {$CARD_NAME == "FB4CGG3" || $CARD_NAME == "FB2CGG3" || $CARD_NAME == "400G1"} {
         append ret "boot:" [dts_boot_controller $ADDR_SDM_CTRL]
     }
 
