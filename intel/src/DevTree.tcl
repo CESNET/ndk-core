@@ -72,9 +72,10 @@ proc dts_build_netcope {} {
     #    append ret [dts_gen_loop_switch $i [expr $ADDR_GEN_LOOP + $gls_offset]]
     #}
 
-    # FPGA Temp Sensors
-    if {$CARD_NAME == "DK-DEV-1SDX-P"} {
-        append ret [dts_stratix_adc_sensors $ADDR_SENSOR]
+    # Intel FPGA SDM controller
+    if {$CARD_NAME == "400G1" || $CARD_NAME == "DK-DEV-1SDX-P" || $CARD_NAME == "DK-DEV-AGI027RES"} {
+        set boot_active_serial 0
+        append ret [dts_sdm_controller $ADDR_SENSOR $boot_active_serial]
     }
 
     # Populate application, if exists
