@@ -151,12 +151,14 @@ end entity;
 
 architecture FULL of PCIE is
 
-    constant DMA_PORTS_PER_EP : natural := DMA_ENDPOINTS/PCIE_ENDPOINTS;
-    constant RTILE_DEVICE     : boolean := (DEVICE="AGILEX" and ENDPOINT_TYPE="R_TILE");
-    constant PCIEX8_REGIONS   : natural := tsel(RTILE_DEVICE,MFB_UP_REGIONS,MFB_UP_REGIONS/2);
-    constant PCIE_MFB_REGIONS : natural := tsel((ENDPOINT_MODE=1),PCIEX8_REGIONS,2*PCIEX8_REGIONS);
-    constant RESET_WIDTH      : natural := 6;
-    constant MAX_PAYLOAD_SIZE : natural := 512;
+    constant DMA_PORTS_PER_EP    : natural := DMA_ENDPOINTS/PCIE_ENDPOINTS;
+    constant RTILE_DEVICE        : boolean := (DEVICE="AGILEX" and ENDPOINT_TYPE="R_TILE");
+    constant PCIEX8_UP_REGIONS   : natural := tsel(RTILE_DEVICE,MFB_UP_REGIONS,MFB_UP_REGIONS/2);
+    constant PCIE_UP_REGIONS     : natural := tsel((ENDPOINT_MODE=1),PCIEX8_UP_REGIONS,2*PCIEX8_UP_REGIONS);
+    constant PCIEX8_DOWN_REGIONS : natural := tsel(RTILE_DEVICE,MFB_DOWN_REGIONS,MFB_DOWN_REGIONS/2);
+    constant PCIE_DOWN_REGIONS   : natural := tsel((ENDPOINT_MODE=1),PCIEX8_DOWN_REGIONS,2*PCIEX8_DOWN_REGIONS);
+    constant RESET_WIDTH         : natural := 6;
+    constant MAX_PAYLOAD_SIZE    : natural := 512;
     -- MPS_CODE:
     -- 000b: 128 bytes maximum payload size
     -- 001b: 256 bytes maximum payload size
@@ -165,11 +167,11 @@ architecture FULL of PCIE is
     constant MPS_CODE         : std_logic_vector(2 downto 0) := std_logic_vector(to_unsigned((log2(MAX_PAYLOAD_SIZE)-7),3));
     constant BAR_APERTURE     : natural := 26;
     -- 1credit = 16B = 128b = 4DW
-    constant AVST_WORD_CRDT   : natural := (PCIE_MFB_REGIONS*MFB_DOWN_REG_SIZE*MFB_DOWN_BLOCK_SIZE*MFB_DOWN_ITEM_WIDTH)/128;
+    constant AVST_WORD_CRDT   : natural := (PCIE_DOWN_REGIONS*MFB_DOWN_REG_SIZE*MFB_DOWN_BLOCK_SIZE*MFB_DOWN_ITEM_WIDTH)/128;
     constant MTC_FIFO_ITEMS   : natural := 512;
     constant MTC_FIFO_CRDT    : natural := MTC_FIFO_ITEMS*AVST_WORD_CRDT;
     constant CRDT_TOTAL_XPH   : natural := MTC_FIFO_CRDT/(MAX_PAYLOAD_SIZE/16);
-    constant AXI_DATA_WIDTH   : natural := PCIE_MFB_REGIONS*256;
+    constant AXI_DATA_WIDTH   : natural := PCIE_UP_REGIONS*256;
     constant AXI_CQUSER_WIDTH : natural := 183;
     constant AXI_CCUSER_WIDTH : natural := 81;
     constant AXI_RQUSER_WIDTH : natural := 137;
@@ -202,23 +204,23 @@ architecture FULL of PCIE is
     signal crdt_down_cnt_npd        : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(4-1 downto 0);
     signal crdt_down_cnt_cpld       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(4-1 downto 0);
 
-    signal pcie_avst_down_data      : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_MFB_REGIONS*256-1 downto 0);
-    signal pcie_avst_down_hdr       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_MFB_REGIONS*128-1 downto 0);
-    signal pcie_avst_down_prefix    : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_MFB_REGIONS*32-1 downto 0);
-	signal pcie_avst_down_sop       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_MFB_REGIONS-1 downto 0);
-	signal pcie_avst_down_eop       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_MFB_REGIONS-1 downto 0);
-    signal pcie_avst_down_empty     : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_MFB_REGIONS*3-1 downto 0);
-    signal pcie_avst_down_bar_range : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_MFB_REGIONS*3-1 downto 0);
-    signal pcie_avst_down_valid     : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_MFB_REGIONS-1 downto 0);
+    signal pcie_avst_down_data      : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS*256-1 downto 0);
+    signal pcie_avst_down_hdr       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS*128-1 downto 0);
+    signal pcie_avst_down_prefix    : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS*32-1 downto 0);
+	signal pcie_avst_down_sop       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS-1 downto 0);
+	signal pcie_avst_down_eop       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS-1 downto 0);
+    signal pcie_avst_down_empty     : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS*3-1 downto 0);
+    signal pcie_avst_down_bar_range : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS*3-1 downto 0);
+    signal pcie_avst_down_valid     : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS-1 downto 0);
 	signal pcie_avst_down_ready     : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
 
-    signal pcie_avst_up_data        : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_MFB_REGIONS*256-1 downto 0);
-    signal pcie_avst_up_hdr         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_MFB_REGIONS*128-1 downto 0);
-    signal pcie_avst_up_prefix      : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_MFB_REGIONS*32-1 downto 0);
-	signal pcie_avst_up_sop         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_MFB_REGIONS-1 downto 0);
-	signal pcie_avst_up_eop         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_MFB_REGIONS-1 downto 0);
-    signal pcie_avst_up_error       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_MFB_REGIONS-1 downto 0);
-    signal pcie_avst_up_valid       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_MFB_REGIONS-1 downto 0);
+    signal pcie_avst_up_data        : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS*256-1 downto 0);
+    signal pcie_avst_up_hdr         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS*128-1 downto 0);
+    signal pcie_avst_up_prefix      : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS*32-1 downto 0);
+	signal pcie_avst_up_sop         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS-1 downto 0);
+	signal pcie_avst_up_eop         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS-1 downto 0);
+    signal pcie_avst_up_error       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS-1 downto 0);
+    signal pcie_avst_up_valid       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS-1 downto 0);
 	signal pcie_avst_up_ready       : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
 
     signal pcie_cq_axi_data         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_DATA_WIDTH-1 downto 0);
@@ -249,8 +251,8 @@ architecture FULL of PCIE is
     signal pcie_rc_axi_valid        : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
     signal pcie_rc_axi_ready        : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
 
-    signal pcie_tag_assign          : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_MFB_REGIONS*8-1 downto 0);
-    signal pcie_tag_assign_vld      : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_MFB_REGIONS-1 downto 0);
+    signal pcie_tag_assign          : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS*8-1 downto 0);
+    signal pcie_tag_assign_vld      : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS-1 downto 0);
 
 begin
 
@@ -261,32 +263,32 @@ begin
     -- the architecture depends on the selected board, see Modules.tcl
     pcie_core_i : entity work.PCIE_CORE
     generic map (
-        AVST_REGIONS     => PCIE_MFB_REGIONS,
-        AXI_DATA_WIDTH   => AXI_DATA_WIDTH,
-        AXI_CQUSER_WIDTH => AXI_CQUSER_WIDTH,
-        AXI_CCUSER_WIDTH => AXI_CCUSER_WIDTH,
-        AXI_RQUSER_WIDTH => AXI_RQUSER_WIDTH,
-        AXI_RCUSER_WIDTH => AXI_RCUSER_WIDTH,
-        MVB_UP_ITEMS     => PCIE_MFB_REGIONS,
-        ENDPOINT_MODE    => ENDPOINT_MODE,
-        PCIE_ENDPOINTS   => PCIE_ENDPOINTS,
-        PCIE_CLKS        => PCIE_CLKS,
-        PCIE_CONS        => PCIE_CONS,
-        PCIE_LANES       => PCIE_LANES,
-        VENDOR_ID        => VENDOR_ID,
-        DEVICE_ID        => DEVICE_ID,
-        SUBVENDOR_ID     => SUBVENDOR_ID,
-        SUBDEVICE_ID     => SUBDEVICE_ID,
-        XVC_ENABLE       => XVC_ENABLE,
-        PF0_TOTAL_VF     => PF0_TOTAL_VF,
-        CRDT_TOTAL_PH    => CRDT_TOTAL_XPH/2,
-        CRDT_TOTAL_NPH   => CRDT_TOTAL_XPH/2,
-        CRDT_TOTAL_CPLH  => 0,
-        CRDT_TOTAL_PD    => MTC_FIFO_CRDT/2,
-        CRDT_TOTAL_NPD   => MTC_FIFO_CRDT/2,
-        CRDT_TOTAL_CPLD  => 0,
-        RESET_WIDTH      => RESET_WIDTH,
-        DEVICE           => DEVICE
+        PCIE_UP_REGIONS   => PCIE_UP_REGIONS,
+        PCIE_DOWN_REGIONS => PCIE_DOWN_REGIONS,
+        AXI_DATA_WIDTH    => AXI_DATA_WIDTH,
+        AXI_CQUSER_WIDTH  => AXI_CQUSER_WIDTH,
+        AXI_CCUSER_WIDTH  => AXI_CCUSER_WIDTH,
+        AXI_RQUSER_WIDTH  => AXI_RQUSER_WIDTH,
+        AXI_RCUSER_WIDTH  => AXI_RCUSER_WIDTH,
+        ENDPOINT_MODE     => ENDPOINT_MODE,
+        PCIE_ENDPOINTS    => PCIE_ENDPOINTS,
+        PCIE_CLKS         => PCIE_CLKS,
+        PCIE_CONS         => PCIE_CONS,
+        PCIE_LANES        => PCIE_LANES,
+        VENDOR_ID         => VENDOR_ID,
+        DEVICE_ID         => DEVICE_ID,
+        SUBVENDOR_ID      => SUBVENDOR_ID,
+        SUBDEVICE_ID      => SUBDEVICE_ID,
+        XVC_ENABLE        => XVC_ENABLE,
+        PF0_TOTAL_VF      => PF0_TOTAL_VF,
+        CRDT_TOTAL_PH     => CRDT_TOTAL_XPH/2,
+        CRDT_TOTAL_NPH    => CRDT_TOTAL_XPH/2,
+        CRDT_TOTAL_CPLH   => 0,
+        CRDT_TOTAL_PD     => MTC_FIFO_CRDT/2,
+        CRDT_TOTAL_NPD    => MTC_FIFO_CRDT/2,
+        CRDT_TOTAL_CPLD   => 0,
+        RESET_WIDTH       => RESET_WIDTH,
+        DEVICE            => DEVICE
     )
     port map (
         PCIE_SYSCLK_P       => PCIE_SYSCLK_P,
@@ -412,19 +414,19 @@ begin
 
             DMA_PORTS            => DMA_PORTS_PER_EP,
     
-            MVB_UP_ITEMS         => PCIE_MFB_REGIONS,
+            MVB_UP_ITEMS         => PCIE_UP_REGIONS,
             DMA_MVB_UP_ITEMS     => MVB_UP_ITEMS,
             MVB_UP_ITEM_WIDTH    => DMA_UPHDR_WIDTH,
-            MFB_UP_REGIONS       => PCIE_MFB_REGIONS,
+            MFB_UP_REGIONS       => PCIE_UP_REGIONS,
             DMA_MFB_UP_REGIONS   => MFB_UP_REGIONS,
             MFB_UP_REG_SIZE      => MFB_UP_REG_SIZE,
             MFB_UP_BLOCK_SIZE    => MFB_UP_BLOCK_SIZE,
             MFB_UP_ITEM_WIDTH    => MFB_UP_ITEM_WIDTH,
 
-            MVB_DOWN_ITEMS       => PCIE_MFB_REGIONS,
+            MVB_DOWN_ITEMS       => PCIE_DOWN_REGIONS,
             DMA_MVB_DOWN_ITEMS   => MVB_DOWN_ITEMS,
             MVB_DOWN_ITEM_WIDTH  => DMA_DOWNHDR_WIDTH,
-            MFB_DOWN_REGIONS     => PCIE_MFB_REGIONS,
+            MFB_DOWN_REGIONS     => PCIE_DOWN_REGIONS,
             DMA_MFB_DOWN_REGIONS => MFB_DOWN_REGIONS,
             MFB_DOWN_REG_SIZE    => MFB_DOWN_REG_SIZE,
             MFB_DOWN_BLOCK_SIZE  => MFB_DOWN_BLOCK_SIZE,

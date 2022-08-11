@@ -72,7 +72,7 @@ if { $ARCHGRP == "400G1" || $ARCHGRP == "DK-DEV-AGI027RES"} {
     lappend MOD "$ENTITY_BASE/network_mod_core_ftile.vhd"
 }
 
-if { $ARCHGRP == "DK-DEV-1SDX-P"} {
+if { $ARCHGRP == "DK-DEV-1SDX-P" || $ARCHGRP == "IA-420F"} {
     lappend COMPONENTS [list "TX_ETILE_ADAPTER" "$TX_ADAPTER_BASE/avst_100g" "FULL"]
     lappend COMPONENTS [list "RX_ETILE_ADAPTER" "$RX_ADAPTER_BASE/eth_avst"  "FULL"]
 

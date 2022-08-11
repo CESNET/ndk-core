@@ -35,7 +35,7 @@ if {$ARCHGRP == "EMPTY"} {
     lappend COMPONENTS [list "ASFIFOX"              $ASFIFOX_BASE          "FULL"  ]
 
     # Source files for implemented component
-    set MOD "$MOD $ENTITY_BASE/network_mod.vhd"
     set MOD "$MOD $ENTITY_BASE/qsfp_ctrl.vhd"
+    set MOD "$MOD $ENTITY_BASE/network_mod.vhd"
     set MOD "$MOD $ENTITY_BASE/DevTree.tcl"
 }

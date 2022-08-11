@@ -21,11 +21,17 @@ proc dts_build_netcope {} {
     # =========================================================================
     set    ret ""
 
-    global CARD_NAME DT_PROJECT_TEXT
+    global CARD_NAME DT_PROJECT_TEXT PROJECT_VARIANT PROJECT_VERSION
 
     append ret "card-name = \"$CARD_NAME\";"
     if { [info exists DT_PROJECT_TEXT] } {
         append ret "project-name = \"$DT_PROJECT_TEXT\";"
+    }
+    if { [info exists PROJECT_VARIANT] } {
+        append ret "project-variant = \"$PROJECT_VARIANT\";"
+    }
+    if { [info exists PROJECT_VERSION] } {
+        append ret "project-version = \"$PROJECT_VERSION\";"
     }
 
     # Create MI bus node
@@ -42,7 +48,7 @@ proc dts_build_netcope {} {
     if {$CARD_NAME == "FB2CGHH"} {
         set BOOT_TYPE 3
     }
-    if {$CARD_NAME == "FB4CGG3" || $CARD_NAME == "FB2CGG3" || $CARD_NAME == "FB2CGHH"} {
+    if {$CARD_NAME == "FB4CGG3" || $CARD_NAME == "FB2CGG3" || $CARD_NAME == "FB2CGHH" || $CARD_NAME == "400G1"} {
         append ret "boot:" [dts_boot_controller $ADDR_SDM_CTRL $BOOT_TYPE]
     }
 
