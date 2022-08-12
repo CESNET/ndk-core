@@ -1,4 +1,4 @@
--- fpga_common.vhd: Common top level architecture for boards with S10
+-- fpga_common.vhd: Common top level architecture
 -- Copyright (C) 2019 CESNET z. s. p. o.
 -- Author(s): Jakub Cabal <cabal@cesnet.cz>
 --
@@ -20,77 +20,73 @@ use work.mi_addr_space_pack.all;
 
 entity FPGA_COMMON is
 generic (
-    -- =========================================================================
-    --  Board static constants
-    -- =========================================================================
     -- System clock frequency in MHz
     -- PCIE clock frequency in Mhz if USE_PCIE_CLK is used
     SYSCLK_FREQ             : natural := 100;
+    -- Switch CLK_GEN ref clock to clk_pci, default SYSCLK 
+    USE_PCIE_CLK            : boolean := false; 
+
     -- Number of PCIe connectors present on board
-    PCIE_CONS               : integer := 1;
+    PCIE_CONS               : natural := 1;
     -- Number of PCIe lanes per connector
-    PCIE_LANES              : integer := 16;
+    PCIE_LANES              : natural := 16;
     -- Number of PCIe clocks per connector (useful for bifurcation)
-    PCIE_CLKS               : integer := 1;
+    PCIE_CLKS               : natural := 1;
     -- PCI device identification (not applicable when using XCI PCIe cores)
     PCI_VENDOR_ID           : std_logic_vector(15 downto 0) := X"18EC";
     PCI_DEVICE_ID           : std_logic_vector(15 downto 0) := X"C400";
     PCI_SUBVENDOR_ID        : std_logic_vector(15 downto 0) := X"0000";
     PCI_SUBDEVICE_ID        : std_logic_vector(15 downto 0) := X"0000";
-    -- Number of Ethernet ports present on board
-    ETH_PORTS               : integer := 1;
-    -- Number of lanes per Ethernet port
-    ETH_LANES               : integer := 8;
-    -- Logical indexes and polarities of Ethernet lanes
-    ETH_LANE_MAP            : integer_vector(ETH_PORTS*ETH_LANES-1 downto 0) := (others => 0);
-    ETH_LANE_RXPOLARITY     : std_logic_vector(ETH_PORTS*ETH_LANES-1 downto 0) := (others => '0');
-    ETH_LANE_TXPOLARITY     : std_logic_vector(ETH_PORTS*ETH_LANES-1 downto 0) := (others => '0');
-    ETH_PORT_LEDS           : integer := 2;
-    -- Switch CLK_GEN ref clock to clk_pci, default SYSCLK 
-    USE_PCIE_CLK            : boolean := false; 
-
-    QSFP_PORTS              : integer := 2;
-    QSFP_I2C_PORTS          : integer := 1;
-
-    MEM_PORTS               : integer := 2;
-    MEM_ADDR_WIDTH          : integer := 27;
-    MEM_DATA_WIDTH          : integer := 512;
-    MEM_BURST_WIDTH         : integer := 7;
-    MEM_REFR_PERIOD_WIDTH   : integer := 32;
-    MEM_DEF_REFR_PERIOD     : slv_array_t(MEM_PORTS-1 downto 0)(MEM_REFR_PERIOD_WIDTH-1 downto 0) := (others => (others => '0'));
-    AMM_FREQ_KHZ            : integer := 0;
-    
-    STATUS_LEDS             : integer := 2;
-    MISC_IN_WIDTH           : integer := 0;
-    MISC_OUT_WIDTH          : integer := 0;
-    SYSCLK_PERIOD           : real := 8.0;
-
-    DEVICE                  : string := "STRATIX10";
-    BOARD                   : string := "400G1";
-
-    -- =========================================================================
-    --  User configurable generics
-    -- =========================================================================
     -- Number of instantiated PCIe endpoints
-    PCIE_ENDPOINTS          : integer := 1;
-    -- Connected PCIe endpoint type ("H_TILE" or "P_TILE")
-    PCIE_ENDPOINT_TYPE      : string  := "P_TILE";
+    PCIE_ENDPOINTS          : natural := 1;
+    -- Connected PCIe endpoint type: P_TILE, R_TILE, USP
+    PCIE_ENDPOINT_TYPE      : string  := "R_TILE";
     -- Connected PCIe endpoint mode: 0 = 1x16 lanes, 1 = 2x8 lanes
     PCIE_ENDPOINT_MODE      : natural := 0;
+
+    -- Number of instantiated DMA modules
+    DMA_MODULES             : natural := 1;
+    -- Total number of DMA endpoints (one or two DMA endpoints per PCIe endpoint)
+    DMA_ENDPOINTS           : natural := 1;
+    -- Number of DMA channels per DMA module
+    DMA_RX_CHANNELS         : natural := 4;
+    DMA_TX_CHANNELS         : natural := 4;
+    -- DMA debug parameters
+    DMA_400G_DEMO           : boolean := false;
+    DMA_GEN_LOOP_EN         : boolean := false;
+
+    -- Ethernet core architecture: E_TILE, F_TILE, CMAC
+    ETH_CORE_ARCH           : string := "F_TILE";
+    -- Number of Ethernet ports present on board
+    ETH_PORTS               : natural := 1;
     -- Speed for all Ethernet ports
     ETH_PORT_SPEED          : integer_vector(ETH_PORTS-1 downto 0) := (others => 0);
     -- Number of channels for all Ethernet ports
     ETH_PORT_CHAN           : integer_vector(ETH_PORTS-1 downto 0) := (others => 0);
-    -- Number of instantiated DMA modules
-    DMA_MODULES             : integer := 1;
-    -- Total number of DMA endpoints (one or two DMA endpoints per PCIe endpoint)
-    DMA_ENDPOINTS           : integer := 1;
-    -- Number of DMA channels per DMA module
-    DMA_RX_CHANNELS         : integer := 4;
-    DMA_TX_CHANNELS         : integer := 4;
-    -- DMA debug parameters
-    DMA_400G_DEMO           : boolean := false;
-    DMA_GEN_LOOP_EN         : boolean := false
+    -- Number of lanes per Ethernet port
+    ETH_LANES               : natural := 8;
+    -- Logical indexes and polarities of Ethernet lanes
+    ETH_LANE_MAP            : integer_vector(ETH_PORTS*ETH_LANES-1 downto 0) := (others => 0);
+    ETH_LANE_RXPOLARITY     : std_logic_vector(ETH_PORTS*ETH_LANES-1 downto 0) := (others => '0');
+    ETH_LANE_TXPOLARITY     : std_logic_vector(ETH_PORTS*ETH_LANES-1 downto 0) := (others => '0');
+    ETH_PORT_LEDS           : natural := 2;
+    QSFP_PORTS              : natural := 2;
+    QSFP_I2C_PORTS          : natural := 1;
+
+    MEM_PORTS               : natural := 2;
+    MEM_ADDR_WIDTH          : natural := 27;
+    MEM_DATA_WIDTH          : natural := 512;
+    MEM_BURST_WIDTH         : natural := 7;
+    MEM_REFR_PERIOD_WIDTH   : natural := 32;
+    MEM_DEF_REFR_PERIOD     : slv_array_t(MEM_PORTS-1 downto 0)(MEM_REFR_PERIOD_WIDTH-1 downto 0) := (others => (others => '0'));
+    AMM_FREQ_KHZ            : natural := 0;
+    
+    STATUS_LEDS             : natural := 2;
+    MISC_IN_WIDTH           : natural := 0;
+    MISC_OUT_WIDTH          : natural := 0;
+
+    DEVICE                  : string := "AGILEX";
+    BOARD                   : string := "400G1"
 );
 port (
     SYSCLK                  : in    std_logic;
@@ -138,8 +134,7 @@ port (
     MEM_AVMM_READDATA       : in  slv_array_t(MEM_PORTS-1 downto 0)(MEM_DATA_WIDTH-1 downto 0) := (others => (others => '0'));
     MEM_AVMM_READDATAVALID  : in  std_logic_vector(MEM_PORTS-1 downto 0) := (others => '0');
 
-    MEM_REFR_PERIOD         : out slv_array_t(MEM_PORTS - 1 downto 0)(MEM_REFR_PERIOD_WIDTH - 1 downto 0)
-        := MEM_DEF_REFR_PERIOD;
+    MEM_REFR_PERIOD         : out slv_array_t(MEM_PORTS - 1 downto 0)(MEM_REFR_PERIOD_WIDTH - 1 downto 0) := MEM_DEF_REFR_PERIOD;
     MEM_REFR_REQ            : out std_logic_vector(MEM_PORTS - 1 downto 0);
     MEM_REFR_ACK            : in std_logic_vector(MEM_PORTS - 1 downto 0) := (others => '0');
 
@@ -165,20 +160,11 @@ end entity;
 
 architecture FULL of FPGA_COMMON is
 
-    function f_eth_mfb_region return natural is
-    begin
-        if BOARD = "400G1" or BOARD = "DK-DEV-AGI027RES" then
-            return 4;
-        else --DK-DEV-1SDX-P
-            return 1;
-        end if;
-    end function;
-
     constant HEARTBEAT_CNT_W : natural := 27;
     constant CLK_COUNT       : natural := 4+ETH_PORTS;
     constant ETH_CHANNELS    : natural := ETH_PORT_CHAN(0);
     constant ETH_STREAMS     : natural := ETH_PORTS;
-    constant ETH_MFB_REGION  : natural := f_eth_mfb_region;
+    constant ETH_MFB_REGION  : natural := tsel(ETH_CORE_ARCH="F_TILE",4,1);
     constant DMA_STREAMS     : natural := DMA_MODULES;
 
     constant PCIE_MPS     : natural := 256;
@@ -1102,7 +1088,8 @@ begin
     -- =========================================================================
 
     network_mod_i : entity work.NETWORK_MOD
-    generic map (  
+    generic map (
+        ETH_CORE_ARCH     => ETH_CORE_ARCH  ,
         ETH_PORTS         => ETH_PORTS      ,
         ETH_PORT_SPEED    => ETH_PORT_SPEED ,
         ETH_PORT_CHAN     => ETH_PORT_CHAN  ,

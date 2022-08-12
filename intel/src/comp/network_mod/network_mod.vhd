@@ -28,7 +28,7 @@ architecture FULL of NETWORK_MOD is
 
     function region_size_core_f return natural is
     begin
-        if (BOARD = "400G1" or BOARD = "DK-DEV-AGI027RES") then
+        if (ETH_CORE_ARCH = "F_TILE") then
             case ETH_PORT_SPEED(0) is
                 when 400    => return 8;
                 when 200    => return 8;
@@ -39,7 +39,7 @@ architecture FULL of NETWORK_MOD is
                 when 10     => return 1;
                 when others => return 0;
             end case;
-        elsif (BOARD = "DK-DEV-1SDX-P" or BOARD = "FB4CGG3" or BOARD = "FB2CGG3" or BOARD = "IA-420F" or BOARD = "FB2CGHH") then
+        elsif (ETH_CORE_ARCH = "E_TILE" or ETH_CORE_ARCH = "CMAC") then
             case ETH_PORT_SPEED(0) is
                 when 100    => return 8;
                 when 25     => return 1;
@@ -80,7 +80,7 @@ architecture FULL of NETWORK_MOD is
     constant MFB_EOFP_WIDTH_CORE : natural := REGIONS_CORE*max(1,log2(REGION_SIZE_CORE*BLOCK_SIZE));
 
     constant FPC202_INIT_EN : boolean := (BOARD = "DK-DEV-1SDX-P" or BOARD = "DK-DEV-AGI027RES");
-    constant RESIZE_BUFFER  : boolean := (BOARD = "400G1" or BOARD = "DK-DEV-AGI027RES" or (BOARD = "DK-DEV-1SDX-P" and ETH_CHANNELS = 4));
+    constant RESIZE_BUFFER  : boolean := (ETH_CORE_ARCH = "F_TILE" or (ETH_CORE_ARCH = "E_TILE" and ETH_CHANNELS = 4));
 
     -- =========================================================================
     --                                FUNCTIONS

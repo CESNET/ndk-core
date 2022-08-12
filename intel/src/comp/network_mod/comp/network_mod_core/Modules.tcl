@@ -30,7 +30,7 @@ lappend COMPONENTS [list "MGMT"                  $MGMT_BASE                     
 
 lappend MOD "$ENTITY_BASE/network_mod_core_ent.vhd"
 
-if { $ARCHGRP == "400G1" || $ARCHGRP == "DK-DEV-AGI027RES"} {
+if { $ARCHGRP == "F_TILE"} {
     lappend COMPONENTS [list "TX_FTILE_ADAPTER" "$TX_ADAPTER_BASE/mac_seg" "FULL"]
     lappend COMPONENTS [list "RX_FTILE_ADAPTER" "$RX_ADAPTER_BASE/mac_seg" "FULL"]
 
@@ -72,7 +72,7 @@ if { $ARCHGRP == "400G1" || $ARCHGRP == "DK-DEV-AGI027RES"} {
     lappend MOD "$ENTITY_BASE/network_mod_core_ftile.vhd"
 }
 
-if { $ARCHGRP == "DK-DEV-1SDX-P" || $ARCHGRP == "IA-420F"} {
+if { $ARCHGRP == "E_TILE"} {
     lappend COMPONENTS [list "TX_ETILE_ADAPTER" "$TX_ADAPTER_BASE/avst_100g" "FULL"]
     lappend COMPONENTS [list "RX_ETILE_ADAPTER" "$RX_ADAPTER_BASE/eth_avst"  "FULL"]
 
@@ -86,7 +86,7 @@ if { $ARCHGRP == "DK-DEV-1SDX-P" || $ARCHGRP == "IA-420F"} {
     lappend MOD "$ENTITY_BASE/network_mod_core_etile.vhd"
 }
  
-if { $ARCHGRP == "FB4CGG3" || $ARCHGRP == "FB2CGG3" || $ARCHGRP == "FB2CGHH"} {
+if { $ARCHGRP == "CMAC"} {
     lappend COMPONENTS [list "ASYNC_RESET"     "$ASYNC_BASE/reset"     "FULL"]
     lappend COMPONENTS [list "ASYNC_OPEN_LOOP" "$ASYNC_BASE/open_loop" "FULL"]
     lappend COMPONENTS [list "TX_LBUS_ADAPTER" "$TX_ADAPTER_BASE/lbus" "FULL"]
