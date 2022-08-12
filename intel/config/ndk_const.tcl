@@ -10,7 +10,9 @@ set BUILD_UID  [format "%d" [exec id -u]]
 
 VhdlPkgProjectText $PROJECT_NAME
 
-VhdlPkgBool   ETH_ENABLE      $ETH_ENABLE
+VhdlPkgStr PCIE_MOD_ARCH $PCIE_MOD_ARCH
+VhdlPkgStr NET_MOD_ARCH  $NET_MOD_ARCH
+
 VhdlPkgInt    ETH_PORTS       $ETH_PORTS
 VhdlPkgIntArr ETH_PORT_SPEED  $ETH_PORTS
 VhdlPkgIntArr ETH_PORT_CHAN   $ETH_PORTS

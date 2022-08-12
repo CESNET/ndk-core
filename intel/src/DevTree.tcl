@@ -65,8 +65,8 @@ proc dts_build_netcope {} {
     }
 
     # Network module
-    global ETH_ENABLE ETH_PORTS ETH_PORT_SPEED ETH_PORT_CHAN ETH_PORT_LANES
-    if {$ETH_ENABLE} {
+    global NET_MOD_ARCH ETH_PORTS ETH_PORT_SPEED ETH_PORT_CHAN ETH_PORT_LANES
+    if {$NET_MOD_ARCH != "EMPTY"} {
         append ret [dts_network_mod $ADDR_ETH_MAC $ADDR_ETH_PCS $ADDR_ETH_PMD $ETH_PORTS ETH_PORT_SPEED ETH_PORT_CHAN ETH_PORT_LANES $CARD_NAME]
     }
 

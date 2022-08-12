@@ -14,8 +14,8 @@ set I2C_BASE                  "$OFM_PATH/comp/ctrls/i2c_hw"
 set ASFIFOX_BASE              "$OFM_PATH/comp/base/fifo/asfifox"
 
 # uncomment only for local synthesis
-# options: 400G1, DK-DEV-AGI027RES, DK-DEV-1SDX-P
-# set ARCHGRP  "DK-DEV-AGI027RES"
+# options: F_TILE, E_TILE, CMAC
+# set ARCHGRP  "F_TILE"
 
 # Packages
 set PACKAGES "$PACKAGES $OFM_PATH/comp/base/pkg/math_pack.vhd"

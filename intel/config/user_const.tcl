@@ -9,7 +9,6 @@ set PROJECT_NAME ""
 
 # ETH parameters:
 # ===============
-set ETH_ENABLE         false
 # Number of Ethernet ports, must match number of items in list ETH_PORTS_SPEED!
 set ETH_PORTS          1
 # Speed for each one of the ETH_PORTS
@@ -59,5 +58,3 @@ set DMA_RX_BLOCKING_MODE  true
 set TSU_ENABLE false
 # Generic value must be replaced for each card
 set TSU_FREQUENCY 161132812
-# Clock generator achitecture (INTEL or USP)
-set CLOCK_GEN_ARCH "INTEL"
