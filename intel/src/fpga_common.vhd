@@ -669,25 +669,26 @@ begin
         MI_DRDY => mi_adc_drdy(MI_ADC_PORT_TEST)
     );
 
-    sdm_ctrl_i: entity work.SDM_CTRL
-    Generic map (
-        DATA_WIDTH => 32,
-        ADDR_WIDTH => 32,
-        DEVICE     => DEVICE
-    )
-    Port map (
-        CLK     => clk_mi,
-        RESET   => rst_mi(2),
-        MI_DWR  => mi_adc_dwr(MI_ADC_PORT_SENSOR),
-        MI_ADDR => mi_adc_addr(MI_ADC_PORT_SENSOR),
-        MI_RD   => mi_adc_rd(MI_ADC_PORT_SENSOR),
-        MI_WR   => mi_adc_wr(MI_ADC_PORT_SENSOR),
-        MI_BE   => mi_adc_be(MI_ADC_PORT_SENSOR),
-        MI_DRD  => mi_adc_drd(MI_ADC_PORT_SENSOR),
-        MI_ARDY => mi_adc_ardy(MI_ADC_PORT_SENSOR),
-        MI_DRDY => mi_adc_drdy(MI_ADC_PORT_SENSOR)
-    );
-
+    sdm_ctrl_g: if (DEVICE = "STRATIX10" or DEVICE = "AGILEX") generate
+        sdm_ctrl_i: entity work.SDM_CTRL
+        Generic map (
+            DATA_WIDTH => 32,
+            ADDR_WIDTH => 32,
+            DEVICE     => DEVICE
+        )
+        Port map (
+            CLK     => clk_mi,
+            RESET   => rst_mi(2),
+            MI_DWR  => mi_adc_dwr(MI_ADC_PORT_SENSOR),
+            MI_ADDR => mi_adc_addr(MI_ADC_PORT_SENSOR),
+            MI_RD   => mi_adc_rd(MI_ADC_PORT_SENSOR),
+            MI_WR   => mi_adc_wr(MI_ADC_PORT_SENSOR),
+            MI_BE   => mi_adc_be(MI_ADC_PORT_SENSOR),
+            MI_DRD  => mi_adc_drd(MI_ADC_PORT_SENSOR),
+            MI_ARDY => mi_adc_ardy(MI_ADC_PORT_SENSOR),
+            MI_DRDY => mi_adc_drdy(MI_ADC_PORT_SENSOR)
+        );
+    end generate;
 
     -- =========================================================================
     --  DMA MODULE
