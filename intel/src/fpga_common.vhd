@@ -1,4 +1,4 @@
--- fpga_common.vhd: Common top level architecture for boards with S10
+-- fpga_common.vhd: Common top level architecture
 -- Copyright (C) 2019 CESNET z. s. p. o.
 -- Author(s): Jakub Cabal <cabal@cesnet.cz>
 --
@@ -20,74 +20,73 @@ use work.mi_addr_space_pack.all;
 
 entity FPGA_COMMON is
 generic (
-    -- =========================================================================
-    --  Board static constants
-    -- =========================================================================
     -- System clock frequency in MHz
+    -- PCIE clock frequency in Mhz if USE_PCIE_CLK is used
     SYSCLK_FREQ             : natural := 100;
+    -- Switch CLK_GEN ref clock to clk_pci, default SYSCLK 
+    USE_PCIE_CLK            : boolean := false; 
+
     -- Number of PCIe connectors present on board
-    PCIE_CONS               : integer := 1;
+    PCIE_CONS               : natural := 1;
     -- Number of PCIe lanes per connector
-    PCIE_LANES              : integer := 16;
+    PCIE_LANES              : natural := 16;
     -- Number of PCIe clocks per connector (useful for bifurcation)
-    PCIE_CLKS               : integer := 1;
+    PCIE_CLKS               : natural := 1;
     -- PCI device identification (not applicable when using XCI PCIe cores)
     PCI_VENDOR_ID           : std_logic_vector(15 downto 0) := X"18EC";
     PCI_DEVICE_ID           : std_logic_vector(15 downto 0) := X"C400";
     PCI_SUBVENDOR_ID        : std_logic_vector(15 downto 0) := X"0000";
     PCI_SUBDEVICE_ID        : std_logic_vector(15 downto 0) := X"0000";
-    -- Number of Ethernet ports present on board
-    ETH_PORTS               : integer := 1;
-    -- Number of lanes per Ethernet port
-    ETH_LANES               : integer := 8;
-    -- Logical indexes and polarities of Ethernet lanes
-    ETH_LANE_MAP            : integer_vector(ETH_PORTS*ETH_LANES-1 downto 0) := (others => 0);
-    ETH_LANE_RXPOLARITY     : std_logic_vector(ETH_PORTS*ETH_LANES-1 downto 0) := (others => '0');
-    ETH_LANE_TXPOLARITY     : std_logic_vector(ETH_PORTS*ETH_LANES-1 downto 0) := (others => '0');
-    ETH_PORT_LEDS           : integer := 2;
-
-    QSFP_PORTS              : integer := 2;
-    QSFP_I2C_PORTS          : integer := 1;
-
-    MEM_PORTS               : integer := 2;
-    MEM_ADDR_WIDTH          : integer := 27;
-    MEM_DATA_WIDTH          : integer := 512;
-    MEM_BURST_WIDTH         : integer := 7;
-    MEM_REFR_PERIOD_WIDTH   : integer := 32;
-    MEM_DEF_REFR_PERIOD     : slv_array_t(MEM_PORTS-1 downto 0)(MEM_REFR_PERIOD_WIDTH-1 downto 0) := (others => (others => '0'));
-    AMM_FREQ_KHZ            : integer := 0;
-    
-    STATUS_LEDS             : integer := 2;
-    MISC_IN_WIDTH           : integer := 0;
-    MISC_OUT_WIDTH          : integer := 0;
-    SYSCLK_PERIOD           : real := 8.0;
-
-    DEVICE                  : string := "STRATIX10";
-    BOARD                   : string := "400G1";
-
-    -- =========================================================================
-    --  User configurable generics
-    -- =========================================================================
     -- Number of instantiated PCIe endpoints
-    PCIE_ENDPOINTS          : integer := 1;
-    -- Connected PCIe endpoint type ("H_TILE" or "P_TILE")
-    PCIE_ENDPOINT_TYPE      : string  := "P_TILE";
+    PCIE_ENDPOINTS          : natural := 1;
+    -- Connected PCIe endpoint type: P_TILE, R_TILE, USP
+    PCIE_ENDPOINT_TYPE      : string  := "R_TILE";
     -- Connected PCIe endpoint mode: 0 = 1x16 lanes, 1 = 2x8 lanes
     PCIE_ENDPOINT_MODE      : natural := 0;
+
+    -- Number of instantiated DMA modules
+    DMA_MODULES             : natural := 1;
+    -- Total number of DMA endpoints (one or two DMA endpoints per PCIe endpoint)
+    DMA_ENDPOINTS           : natural := 1;
+    -- Number of DMA channels per DMA module
+    DMA_RX_CHANNELS         : natural := 4;
+    DMA_TX_CHANNELS         : natural := 4;
+    -- DMA debug parameters
+    DMA_400G_DEMO           : boolean := false;
+    DMA_GEN_LOOP_EN         : boolean := false;
+
+    -- Ethernet core architecture: E_TILE, F_TILE, CMAC
+    ETH_CORE_ARCH           : string := "F_TILE";
+    -- Number of Ethernet ports present on board
+    ETH_PORTS               : natural := 1;
     -- Speed for all Ethernet ports
     ETH_PORT_SPEED          : integer_vector(ETH_PORTS-1 downto 0) := (others => 0);
     -- Number of channels for all Ethernet ports
     ETH_PORT_CHAN           : integer_vector(ETH_PORTS-1 downto 0) := (others => 0);
-    -- Number of instantiated DMA modules
-    DMA_MODULES             : integer := 1;
-    -- Total number of DMA endpoints (one or two DMA endpoints per PCIe endpoint)
-    DMA_ENDPOINTS           : integer := 1;
-    -- Number of DMA channels per DMA module
-    DMA_RX_CHANNELS         : integer := 4;
-    DMA_TX_CHANNELS         : integer := 4;
-    -- DMA debug parameters
-    DMA_400G_DEMO           : boolean := false;
-    DMA_GEN_LOOP_EN         : boolean := false
+    -- Number of lanes per Ethernet port
+    ETH_LANES               : natural := 8;
+    -- Logical indexes and polarities of Ethernet lanes
+    ETH_LANE_MAP            : integer_vector(ETH_PORTS*ETH_LANES-1 downto 0) := (others => 0);
+    ETH_LANE_RXPOLARITY     : std_logic_vector(ETH_PORTS*ETH_LANES-1 downto 0) := (others => '0');
+    ETH_LANE_TXPOLARITY     : std_logic_vector(ETH_PORTS*ETH_LANES-1 downto 0) := (others => '0');
+    ETH_PORT_LEDS           : natural := 2;
+    QSFP_PORTS              : natural := 2;
+    QSFP_I2C_PORTS          : natural := 1;
+
+    MEM_PORTS               : natural := 2;
+    MEM_ADDR_WIDTH          : natural := 27;
+    MEM_DATA_WIDTH          : natural := 512;
+    MEM_BURST_WIDTH         : natural := 7;
+    MEM_REFR_PERIOD_WIDTH   : natural := 32;
+    MEM_DEF_REFR_PERIOD     : slv_array_t(MEM_PORTS-1 downto 0)(MEM_REFR_PERIOD_WIDTH-1 downto 0) := (others => (others => '0'));
+    AMM_FREQ_KHZ            : natural := 0;
+    
+    STATUS_LEDS             : natural := 2;
+    MISC_IN_WIDTH           : natural := 0;
+    MISC_OUT_WIDTH          : natural := 0;
+
+    DEVICE                  : string := "AGILEX";
+    BOARD                   : string := "400G1"
 );
 port (
     SYSCLK                  : in    std_logic;
@@ -135,8 +134,7 @@ port (
     MEM_AVMM_READDATA       : in  slv_array_t(MEM_PORTS-1 downto 0)(MEM_DATA_WIDTH-1 downto 0) := (others => (others => '0'));
     MEM_AVMM_READDATAVALID  : in  std_logic_vector(MEM_PORTS-1 downto 0) := (others => '0');
 
-    MEM_REFR_PERIOD         : out slv_array_t(MEM_PORTS - 1 downto 0)(MEM_REFR_PERIOD_WIDTH - 1 downto 0)
-        := MEM_DEF_REFR_PERIOD;
+    MEM_REFR_PERIOD         : out slv_array_t(MEM_PORTS - 1 downto 0)(MEM_REFR_PERIOD_WIDTH - 1 downto 0) := MEM_DEF_REFR_PERIOD;
     MEM_REFR_REQ            : out std_logic_vector(MEM_PORTS - 1 downto 0);
     MEM_REFR_ACK            : in std_logic_vector(MEM_PORTS - 1 downto 0) := (others => '0');
 
@@ -162,20 +160,11 @@ end entity;
 
 architecture FULL of FPGA_COMMON is
 
-    function f_eth_mfb_region return natural is
-    begin
-        if BOARD = "400G1" or BOARD = "DK-DEV-AGI027RES" then
-            return 4;
-        else --DK-DEV-1SDX-P
-            return 1;
-        end if;
-    end function;
-
     constant HEARTBEAT_CNT_W : natural := 27;
     constant CLK_COUNT       : natural := 4+ETH_PORTS;
     constant ETH_CHANNELS    : natural := ETH_PORT_CHAN(0);
     constant ETH_STREAMS     : natural := ETH_PORTS;
-    constant ETH_MFB_REGION  : natural := f_eth_mfb_region;
+    constant ETH_MFB_REGION  : natural := tsel(ETH_CORE_ARCH="F_TILE",4,1);
     constant DMA_STREAMS     : natural := DMA_MODULES;
 
     constant PCIE_MPS     : natural := 256;
@@ -381,12 +370,35 @@ architecture FULL of FPGA_COMMON is
     signal flash_wr_data                 : std_logic_vector(64-1 downto 0);
     signal flash_wr_en                   : std_logic;
     signal flash_rd_data                 : std_logic_vector(64-1 downto 0);
+    signal boot_request                  : std_logic;
+    signal boot_image                    : std_logic;
+
+    signal axi_mi_addr_s                 : std_logic_vector(8 - 1 downto 0);           
+    signal axi_mi_dwr_s                  : std_logic_vector(32 - 1 downto 0);         
+    signal axi_mi_wr_s                   : std_logic;        
+    signal axi_mi_rd_s                   : std_logic;        
+    signal axi_mi_be_s                   : std_logic_vector((32/8)-1 downto 0) := (others => '0');
+    signal axi_mi_ardy_s                 : std_logic;          
+    signal axi_mi_drd_s                  : std_logic_vector(32 - 1 downto 0);         
+    signal axi_mi_drdy_s                 : std_logic;
+
+    -- clk_gen reference clock
+    signal ref_clk_in                    : std_logic;
+    signal ref_rst_in                    : std_logic;
 
 begin
 
     -- =========================================================================
     --  CLOCK AND RESET GENERATOR
     -- =========================================================================
+
+    clk_gen_g: if USE_PCIE_CLK = true generate
+        ref_clk_in <= clk_pci(0);
+        ref_rst_in <= rst_pci(0);
+    else generate
+        ref_clk_in <= SYSCLK;
+        ref_rst_in <= SYSRST;
+    end generate;
 
     clk_gen_i : entity work.COMMON_CLK_GEN
     generic map(
@@ -395,8 +407,8 @@ begin
         DEVICE             => DEVICE
     )
     port map (
-        REFCLK      => SYSCLK,
-        ASYNC_RESET => SYSRST,
+        REFCLK      => ref_clk_in,
+        ASYNC_RESET => ref_rst_in,
         LOCKED      => pll_locked,
         INIT_DONE_N => init_done_n,
         OUTCLK_0    => clk_usr_x4, -- 400 MHz
@@ -414,7 +426,7 @@ begin
         REPLICAS => 1
     )
     port map (
-        CLK        => SYSCLK,
+        CLK        => ref_clk_in,
         ASYNC_RST  => not pll_locked,
         OUT_RST(0) => global_reset
     );
@@ -425,7 +437,7 @@ begin
         RST_REPLICAS => RESET_WIDTH
     )
     port map (
-        STABLE_CLK   => SYSCLK,
+        STABLE_CLK   => ref_clk_in,
         GLOBAL_RESET => global_reset,
         CLK_VECTOR   => clk_vector,
         RST_VECTOR   => rst_vector
@@ -607,7 +619,7 @@ begin
         TX_DRDY    => mi_adc_drdy
     );
 
-    boot_ctrl_g: if BOARD = "FB4CGG3" generate
+    boot_ctrl_g: if (BOARD = "FB4CGG3") or (BOARD = "400G1") generate
         boot_ctrl_i : entity work.BOOT_CTRL
         generic map(
             DEVICE => DEVICE
@@ -627,20 +639,91 @@ begin
             BOOT_CLK      => clk_pci(0),
             BOOT_RESET    => rst_pci(0),
 
-            BOOT_REQUEST  => open,
-            BOOT_IMAGE    => open,
+            BOOT_REQUEST  => boot_request,
+            BOOT_IMAGE    => boot_image,
 
             FLASH_WR_DATA => flash_wr_data,
             FLASH_WR_EN   => flash_wr_en,
             FLASH_RD_DATA => flash_rd_data
+        ); 
+        flash_rd_data <= MISC_IN;
+
+    elsif BOARD = "FB2CGHH" generate
+        boot_ctrl_i : entity work.BOOT_CTRL
+        generic map(
+            DEVICE => DEVICE
+        )
+        port map(
+            MI_CLK        => clk_mi,
+            MI_RESET      => rst_mi(1),
+            MI_DWR        => mi_adc_dwr (MI_ADC_PORT_BOOT),
+            MI_ADDR       => mi_adc_addr(MI_ADC_PORT_BOOT),
+            MI_BE         => mi_adc_be  (MI_ADC_PORT_BOOT),
+            MI_RD         => mi_adc_rd  (MI_ADC_PORT_BOOT),
+            MI_WR         => mi_adc_wr  (MI_ADC_PORT_BOOT),
+            MI_ARDY       => mi_adc_ardy(MI_ADC_PORT_BOOT),
+            MI_DRD        => mi_adc_drd (MI_ADC_PORT_BOOT),
+            MI_DRDY       => mi_adc_drdy(MI_ADC_PORT_BOOT),
+
+            BOOT_CLK      => clk_usr_x2,
+            BOOT_RESET    => rst_usr_x2(0),
+
+            BOOT_REQUEST  => open,
+            BOOT_IMAGE    => open,
+
+            --BMC 
+            FLASH_WR_DATA => flash_wr_data,
+            FLASH_WR_EN   => flash_wr_en,
+            FLASH_RD_DATA => flash_rd_data,
+            
+            --AXI Quad SPI
+            AXI_MI_ADDR   => axi_mi_addr_s,
+            AXI_MI_DWR    => axi_mi_dwr_s, 
+            AXI_MI_WR     => axi_mi_wr_s,
+            AXI_MI_RD     => axi_mi_rd_s,
+            AXI_MI_BE     => axi_mi_be_s,
+            AXI_MI_ARDY   => axi_mi_ardy_s,
+            AXI_MI_DRD    => axi_mi_drd_s,
+            AXI_MI_DRDY   => axi_mi_drdy_s
         );
 
-        flash_rd_data <= MISC_IN;
-        MISC_OUT <= flash_wr_data & flash_wr_en & rst_pci(0) & clk_pci(0);
+        flash_rd_data <= MISC_IN(64-1    downto  0);
+        axi_mi_drd_s  <= MISC_IN(32+64-1 downto 64);
+        axi_mi_drdy_s <= MISC_IN(96);
+        axi_mi_ardy_s <= MISC_IN(97);
+
+        MISC_OUT(0)                     <= clk_usr_x1;  -- 100 MHz
+        MISC_OUT(1)                     <= clk_usr_x2;  -- 200 MHz
+        MISC_OUT(2)                     <= rst_usr_x2(0);
+        MISC_OUT(3)                     <= flash_wr_en;
+        MISC_OUT(64+ 4-1 downto   4)    <= flash_wr_data;
+        MISC_OUT(32+68-1 downto  68)    <= axi_mi_dwr_s;
+        MISC_OUT(8+100-1 downto 100)    <= axi_mi_addr_s;
+        MISC_OUT(4+108-1 downto 108)    <= axi_mi_be_s;
+        MISC_OUT(112)                   <= axi_mi_wr_s;
+        MISC_OUT(113)                   <= axi_mi_rd_s;
     else generate
         mi_adc_ardy(MI_ADC_PORT_BOOT) <= '1';
         mi_adc_drdy(MI_ADC_PORT_BOOT) <= '0';
         mi_adc_drd (MI_ADC_PORT_BOOT) <= (others => '0');
+    end generate;
+
+    -- MISC_OUT port mappings for FB4CGG3 card
+    misc_fb4cgg2_g: if (BOARD = "FB4CGG3") generate
+        MISC_OUT(0) <= clk_pci(0);
+        MISC_OUT(1) <= rst_pci(0);
+        MISC_OUT(2) <= flash_wr_en;
+        MISC_OUT(64+3-1 downto 3) <= flash_wr_data;
+    end generate;
+
+    -- MISC_OUT port mappings for 400G1 card
+    misc_400g1_g: if (BOARD = "400G1") generate
+        MISC_OUT(0) <= clk_pci(0);
+        MISC_OUT(1) <= rst_pci(0);
+        MISC_OUT(2) <= boot_request;
+        MISC_OUT(3) <= boot_image;
+        MISC_OUT(4) <= flash_wr_en;
+        MISC_OUT(64+5-1 downto 5) <= flash_wr_data;
     end generate;
 
     -- unused MI ports
@@ -1008,7 +1091,8 @@ begin
     -- =========================================================================
 
     network_mod_i : entity work.NETWORK_MOD
-    generic map (  
+    generic map (
+        ETH_CORE_ARCH     => ETH_CORE_ARCH  ,
         ETH_PORTS         => ETH_PORTS      ,
         ETH_PORT_SPEED    => ETH_PORT_SPEED ,
         ETH_PORT_CHAN     => ETH_PORT_CHAN  ,

@@ -7,8 +7,9 @@
 # Globally defined variables
 global BOARD
 global DMA_ENABLE
-global ETH_ENABLE
 global CLOCK_GEN_ARCH
+global PCIE_MOD_ARCH
+global NET_MOD_ARCH
 
 # Paths to components
 set ASYNC_RESET_BASE     "$OFM_PATH/comp/base/async/reset"
@@ -38,11 +39,6 @@ if {$DMA_ENABLE} {
   set DMA_BUS_ARCH "FULL"
 }
 
-set NET_MOD_ARCH "EMPTY"
-if {$ETH_ENABLE} {
-  set NET_MOD_ARCH $BOARD 
-}
-
 if { $ARCHGRP == "APPLICATION_CORE_ENTYTY_ONLY" } {
   lappend MOD "$ENTITY_BASE/src/application_ent.vhd"
 } else {
@@ -53,7 +49,7 @@ if { $ARCHGRP == "APPLICATION_CORE_ENTYTY_ONLY" } {
   lappend COMPONENTS [list "ASYNC_OPEN_LOOP" $ASYNC_OPEN_LOOP_BASE "FULL"           ]
   lappend COMPONENTS [list "TSU"             $TSU_BASE             "FULL"           ]
   lappend COMPONENTS [list "RESET_TREE_GEN"  $RESET_TREE_GEN_BASE  "FULL"           ]
-  lappend COMPONENTS [list "PCIE"            $PCIE_BASE            $BOARD           ]
+  lappend COMPONENTS [list "PCIE"            $PCIE_BASE            $PCIE_MOD_ARCH   ]
   lappend COMPONENTS [list "MI_SPLITTER"     $MI_SPLITTER_BASE     "FULL"           ]
   lappend COMPONENTS [list "MI_TEST_SPACE"   $MI_TEST_SPACE_BASE   "FULL"           ]
   lappend COMPONENTS [list "NETWORK_MOD"     $NETWORK_MOD_BASE     $NET_MOD_ARCH    ]

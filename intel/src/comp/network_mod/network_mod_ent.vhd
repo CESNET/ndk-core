@@ -15,24 +15,25 @@ use work.eth_hdr_pack.all;
 
 entity NETWORK_MOD is
 generic(
+    -- Ethernet core architecture: E_TILE, F_TILE, CMAC
+    ETH_CORE_ARCH     : string := "E_TILE";
     -- =====================================================================
     -- Network ports configuration:
     -- =====================================================================    
     ETH_PORTS         : natural := 2; -- max 2 (MI address space limit)
     -- Speed per Ethernet port.
-    -- Options: 400G1            card: 400, 200, 100, 50, 40, 25, 10;
-    --          DK-DEV-AGI027RES card: 400, 200, 100, 50, 40, 25, 10;
-    --          DK-DEV-1SDX-P    card: 100, 25, 10.
+    -- Options: F_TILE core: 400, 200, 100, 50, 40, 25, 10;
+    --          E_TILE core: 100, 25, 10;
+    --          CMAC   core: 100.
     ETH_PORT_SPEED    : integer_vector(ETH_PORTS-1 downto 0) := (others => 25);
     -- Number of channels per Ethernet port.
-    -- Options: 400G1            card: 1, 2, 4, 8;
-    --          DK-DEV-AGI027RES card: 1, 2, 4, 8;
-    --          DK-DEV-1SDX-P    card: 1, 4.
+    -- Options: F_TILE core: 1, 2, 4, 8;
+    --          E_TILE core: 1, 4;
+    --          CMAC   core: 1.
     ETH_PORT_CHAN     : integer_vector(ETH_PORTS-1 downto 0) := (others => 4);
     -- Number of serial lanes.
-    -- Options: 400G1            card: 8;
-    --          DK-DEV-AGI027RES card: 8;
-    --          DK-DEV-1SDX-P    card: 4.
+    -- Options: F_TILE      core: 8;
+    --          E_TILE/CMAC core: 4.
     LANES             : natural := 4;
     QSFP_I2C_PORTS    : natural := 1; -- max 2
 
@@ -40,9 +41,8 @@ generic(
     -- MFB configuration:
     -- =====================================================================
     -- Recommended MFB parameters:
-    --     400G1            card: 4,8,8,8.
-    --     DK-DEV-AGI027RES card: 4,8,8,8.
-    --     DK-DEV-1SDX-P    card: 1,8,8,8.
+    --     F_TILE core: 4,8,8,8.
+    --     E_TILE core: 1,8,8,8.
     REGIONS           : natural := 1;
     REGION_SIZE       : natural := 8;
     BLOCK_SIZE        : natural := 8;

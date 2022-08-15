@@ -36,16 +36,16 @@ set COMPONENTS [concat $COMPONENTS [list \
 lappend MOD "$ENTITY_BASE/pcie_core_ent.vhd"
 
 # Source files for implemented component
-if {$ARCHGRP == "DK-DEV-1SDX-P" || $ARCHGRP == "IA-420F"} {
+if {$ARCHGRP == "P_TILE"} {
     lappend MOD "$ENTITY_BASE/pcie_cii2cfg_ext.vhd"
     lappend MOD "$ENTITY_BASE/pcie_core_ptile.vhd"
-} elseif {$ARCHGRP == "400G1" || $ARCHGRP == "DK-DEV-AGI027RES"} {
+} elseif {$ARCHGRP == "R_TILE"} {
     lappend MOD "$ENTITY_BASE/pcie_cii2cfg_ext.vhd"
     lappend MOD "$ENTITY_BASE/pcie_crdt_up_fsm.vhd"
     lappend MOD "$ENTITY_BASE/pcie_crdt_dw_fsm.vhd"
     lappend MOD "$ENTITY_BASE/pcie_crdt_logic.vhd"
     lappend MOD "$ENTITY_BASE/pcie_core_rtile.vhd"
-} elseif {$ARCHGRP == "FB4CGG3"} {
+} elseif {$ARCHGRP == "USP"} {
     lappend MOD "$ENTITY_BASE/pcie_core_usp.vhd"
 } else {
     lappend MOD "$ENTITY_BASE/pcie_core_empty.vhd"

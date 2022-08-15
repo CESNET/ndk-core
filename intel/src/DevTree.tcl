@@ -44,8 +44,12 @@ proc dts_build_netcope {} {
     append ret "width = <0x20>;"
 
     # BOOT component
-    if {$CARD_NAME == "FB4CGG3" || $CARD_NAME == "FB2CGG3"} {
-        append ret "boot:" [dts_boot_controller $ADDR_SDM_CTRL]
+    set BOOT_TYPE 2
+    if {$CARD_NAME == "FB2CGHH"} {
+        set BOOT_TYPE 3
+    }
+    if {$CARD_NAME == "FB4CGG3" || $CARD_NAME == "FB2CGG3" || $CARD_NAME == "FB2CGHH" || $CARD_NAME == "400G1"} {
+        append ret "boot:" [dts_boot_controller $ADDR_SDM_CTRL $BOOT_TYPE]
     }
 
     # TSU component
@@ -61,8 +65,8 @@ proc dts_build_netcope {} {
     }
 
     # Network module
-    global ETH_ENABLE ETH_PORTS ETH_PORT_SPEED ETH_PORT_CHAN ETH_PORT_LANES
-    if {$ETH_ENABLE} {
+    global NET_MOD_ARCH ETH_PORTS ETH_PORT_SPEED ETH_PORT_CHAN ETH_PORT_LANES
+    if {$NET_MOD_ARCH != "EMPTY"} {
         append ret [dts_network_mod $ADDR_ETH_MAC $ADDR_ETH_PCS $ADDR_ETH_PMD $ETH_PORTS ETH_PORT_SPEED ETH_PORT_CHAN ETH_PORT_LANES $CARD_NAME]
     }
 
