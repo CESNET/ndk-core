@@ -10,6 +10,7 @@ global DMA_ENABLE
 global CLOCK_GEN_ARCH
 global PCIE_MOD_ARCH
 global NET_MOD_ARCH
+global SDM_SYSMON_ARCH
 
 # Paths to components
 set ASYNC_RESET_BASE     "$OFM_PATH/comp/base/async/reset"
@@ -44,7 +45,7 @@ if { $ARCHGRP == "APPLICATION_CORE_ENTYTY_ONLY" } {
 } else {
   lappend COMPONENTS [list "CLOCK_GEN"       $CLOCK_GEN_BASE       $CLOCK_GEN_ARCH  ]
   lappend COMPONENTS [list "BOOT_CTRL"       $BOOT_CTRL_BASE       "FULL"           ]
-  lappend COMPONENTS [list "SDM_CTRL"        $SDM_CTRL_BASE        "FULL"           ]
+  lappend COMPONENTS [list "SDM_CTRL"        $SDM_CTRL_BASE        $SDM_SYSMON_ARCH ]
   lappend COMPONENTS [list "ASYNC_RESET"     $ASYNC_RESET_BASE     "FULL"           ]
   lappend COMPONENTS [list "ASYNC_OPEN_LOOP" $ASYNC_OPEN_LOOP_BASE "FULL"           ]
   lappend COMPONENTS [list "TSU"             $TSU_BASE             "FULL"           ]
