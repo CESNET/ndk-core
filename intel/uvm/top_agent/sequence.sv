@@ -32,18 +32,11 @@ class byte_array_sequence_simple extends uvm_sequence #(uvm_byte_array::sequence
             uvm_byte_array::sequence_item tmp_packet;
 
             //wait to end reset
-            while (p_sequencer.reset_sync.has_been_reset()) begin
-                wait(p_sequencer.reset_sync.is_reset());
-            end
             packet_export.get(tmp_packet);
 
             //generat new packet
             start_item(req);
-            if (p_sequencer.reset_sync.has_been_reset()) begin
-                req.data = {};
-            end else begin
-                req.copy(tmp_packet);
-            end
+            req.copy(tmp_packet);
             finish_item(req);
         end
     endtask
