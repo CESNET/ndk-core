@@ -21,11 +21,14 @@ entity PCIE_CORE is
         AXI_CCUSER_WIDTH : natural := 81;
         AXI_RQUSER_WIDTH : natural := 137;
         AXI_RCUSER_WIDTH : natural := 161;
-        -- P-Tile endpoint (EP) mode: 0 = one EPx16 lanes, 1 = two EPx8 lanes
+        -- P-Tile endpoint (EP) mode:
+        --      0 = one EPx16 lanes,
+        --      1 = two EPx8 lanes ,
+        --      2 = one EPx8 lanes
         ENDPOINT_MODE    : natural := 0;
         -- Number of instantiated PCIe endpoints
-            -- When ENDPOINT_MODE = 0: PCIE_ENDPOINTS=PCIE_CONS
-            -- When ENDPOINT_MODE = 1: PCIE_ENDPOINTS=2*PCIE_CONS
+            -- When ENDPOINT_MODE = 0 or ENDPOINT_MODE = 2 : PCIE_ENDPOINTS=PCIE_CONS
+            -- When ENDPOINT_MODE = 1                      : PCIE_ENDPOINTS=2*PCIE_CONS
         PCIE_ENDPOINTS   : natural := 1;
         PCIE_CLKS        : natural := 1;
         PCIE_CONS        : natural := 1;

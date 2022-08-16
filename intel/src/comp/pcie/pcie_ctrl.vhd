@@ -57,6 +57,9 @@ entity PCIE_CTRL is
         MTC_FIFO_ITEMS       : natural := 512;
         RESET_WIDTH          : natural := 8;
 
+        -- Disables PTC module and replaces it with simple AXI <---> MFB converters
+        PTC_DISABLE         : boolean := false;
+
         -- Enable of MI transaction controller
         ENABLE_MI           : boolean := True;
         -- Connected PCIe endpoint type ("H_TILE" or "P_TILE" or "R_TILE")
@@ -164,19 +167,19 @@ entity PCIE_CTRL is
         -- See Xilinx PG213 (UltraScale+ Devices Integrated Block for PCI Express).
 
         -- CC_AXI: Data word. For detailed specifications, see Xilinx PG213.
-        CC_AXI_DATA       : out std_logic_vector(AXI_DATA_WIDTH-1 downto 0);
+        CC_AXI_DATA       : out std_logic_vector(AXI_DATA_WIDTH-1 downto 0)     := (others => '0');
         -- CC_AXI: Set of signals with sideband information about trasferred
         -- transaction. For detailed specifications, see Xilinx PG213.
-        CC_AXI_USER       : out std_logic_vector(AXI_CCUSER_WIDTH-1 downto 0);
+        CC_AXI_USER       : out std_logic_vector(AXI_CCUSER_WIDTH-1 downto 0)   := (others => '0');
         -- CC_AXI: Indication of the last word of a transaction. For detailed
         -- specifications, see Xilinx PG213.
-        CC_AXI_LAST       : out std_logic;
+        CC_AXI_LAST       : out std_logic                                       := '0';
         -- CC_AXI: Indication of valid data: each bit determines validity of
         -- different Dword. For detailed specifications, see Xilinx PG213.
-        CC_AXI_KEEP       : out std_logic_vector(AXI_DATA_WIDTH/32-1 downto 0);
+        CC_AXI_KEEP       : out std_logic_vector(AXI_DATA_WIDTH/32-1 downto 0)  := (others => '0');
         -- CC_AXI: Indication of valid data: i.e. completer is ready to send a
         -- transaction. For detailed specifications, see Xilinx PG213.
-        CC_AXI_VALID      : out std_logic;
+        CC_AXI_VALID      : out std_logic                                       := '0';
         -- CC_AXI: User application is ready to receive a transaction.
         -- For detailed specifications, see Xilinx PG213.
         CC_AXI_READY      : in  std_logic;
@@ -187,19 +190,19 @@ entity PCIE_CTRL is
         -- See Xilinx PG213 (UltraScale+ Devices Integrated Block for PCI Express).
 
         -- RQ_AXI: Data word. For detailed specifications, see Xilinx PG213.
-        RQ_AXI_DATA       : out std_logic_vector(AXI_DATA_WIDTH-1 downto 0);
+        RQ_AXI_DATA       : out std_logic_vector(AXI_DATA_WIDTH-1 downto 0)     := (others => '0');
         -- RQ_AXI: Set of signals with sideband information about trasferred
         -- transaction. For detailed specifications, see Xilinx PG213.
-        RQ_AXI_USER       : out std_logic_vector(AXI_RQUSER_WIDTH-1 downto 0);
+        RQ_AXI_USER       : out std_logic_vector(AXI_RQUSER_WIDTH-1 downto 0)   := (others => '0');
         -- RQ_AXI: Indication of the last word of a transaction. For detailed
         -- specifications, see Xilinx PG213.
-        RQ_AXI_LAST       : out std_logic;
+        RQ_AXI_LAST       : out std_logic                                       := '0';
         -- RQ_AXI: Indication of valid data: each bit determines validity of
         -- different Dword. For detailed specifications, see Xilinx PG213.
-        RQ_AXI_KEEP       : out std_logic_vector(AXI_DATA_WIDTH/32-1 downto 0);
+        RQ_AXI_KEEP       : out std_logic_vector(AXI_DATA_WIDTH/32-1 downto 0)  := (others => '0') ;
         -- RQ_AXI: Indication of valid data: i.e. completer is ready to send a
         -- transaction. For detailed specifications, see Xilinx PG213.
-        RQ_AXI_VALID      : out std_logic;
+        RQ_AXI_VALID      : out std_logic                                       := '0';
         -- RQ_AXI: User application is ready to receive a transaction.
         -- For detailed specifications, see Xilinx PG213.
         RQ_AXI_READY      : in  std_logic;
@@ -225,7 +228,7 @@ entity PCIE_CTRL is
         RC_AXI_VALID      : in  std_logic;
         -- RC_AXI: User application is ready to receive a transaction.
         -- For detailed specifications, see Xilinx PG213.
-        RC_AXI_READY      : out std_logic;
+        RC_AXI_READY      : out std_logic                                       := '1';
 
         -- =====================================================================
         --  PCIe tags interface - Xilinx FPGA Only (PCIE_CLK)
@@ -242,7 +245,7 @@ entity PCIE_CTRL is
         UP_MVB_DATA      : in  slv_array_t(DMA_PORTS-1 downto 0)(DMA_MVB_UP_ITEMS*MVB_UP_ITEM_WIDTH-1 downto 0);
         UP_MVB_VLD       : in  slv_array_t(DMA_PORTS-1 downto 0)(DMA_MVB_UP_ITEMS                  -1 downto 0);
         UP_MVB_SRC_RDY   : in  std_logic_vector(DMA_PORTS-1 downto 0);
-        UP_MVB_DST_RDY   : out std_logic_vector(DMA_PORTS-1 downto 0);
+        UP_MVB_DST_RDY   : out std_logic_vector(DMA_PORTS-1 downto 0) := (others => '1');
 
         UP_MFB_DATA      : in  slv_array_t(DMA_PORTS-1 downto 0)(DMA_MFB_UP_REGIONS*MFB_UP_REG_SIZE*MFB_UP_BLOCK_SIZE*MFB_UP_ITEM_WIDTH-1 downto 0);
         UP_MFB_SOF       : in  slv_array_t(DMA_PORTS-1 downto 0)(DMA_MFB_UP_REGIONS-1 downto 0);
@@ -250,19 +253,19 @@ entity PCIE_CTRL is
         UP_MFB_SOF_POS   : in  slv_array_t(DMA_PORTS-1 downto 0)(DMA_MFB_UP_REGIONS*max(1,log2(MFB_UP_REG_SIZE))-1 downto 0);
         UP_MFB_EOF_POS   : in  slv_array_t(DMA_PORTS-1 downto 0)(DMA_MFB_UP_REGIONS*max(1,log2(MFB_UP_REG_SIZE*MFB_UP_BLOCK_SIZE))-1 downto 0);
         UP_MFB_SRC_RDY   : in  std_logic_vector(DMA_PORTS-1 downto 0);
-        UP_MFB_DST_RDY   : out std_logic_vector(DMA_PORTS-1 downto 0);
+        UP_MFB_DST_RDY   : out std_logic_vector(DMA_PORTS-1 downto 0) := (others => '1');
 
-        DOWN_MVB_DATA    : out slv_array_t(DMA_PORTS-1 downto 0)(DMA_MVB_DOWN_ITEMS*MVB_DOWN_ITEM_WIDTH-1 downto 0);
-        DOWN_MVB_VLD     : out slv_array_t(DMA_PORTS-1 downto 0)(DMA_MVB_DOWN_ITEMS                    -1 downto 0);
-        DOWN_MVB_SRC_RDY : out std_logic_vector(DMA_PORTS-1 downto 0);
+        DOWN_MVB_DATA    : out slv_array_t(DMA_PORTS-1 downto 0)(DMA_MVB_DOWN_ITEMS*MVB_DOWN_ITEM_WIDTH-1 downto 0) := (others => (others => '0'));
+        DOWN_MVB_VLD     : out slv_array_t(DMA_PORTS-1 downto 0)(DMA_MVB_DOWN_ITEMS                    -1 downto 0) := (others => (others => '0'));
+        DOWN_MVB_SRC_RDY : out std_logic_vector(DMA_PORTS-1 downto 0)                                               := (others =>'0');
         DOWN_MVB_DST_RDY : in  std_logic_vector(DMA_PORTS-1 downto 0);
 
-        DOWN_MFB_DATA    : out slv_array_t(DMA_PORTS-1 downto 0)(DMA_MFB_DOWN_REGIONS*MFB_DOWN_REG_SIZE*MFB_DOWN_BLOCK_SIZE*MFB_DOWN_ITEM_WIDTH-1 downto 0);
-        DOWN_MFB_SOF     : out slv_array_t(DMA_PORTS-1 downto 0)(DMA_MFB_DOWN_REGIONS-1 downto 0);
-        DOWN_MFB_EOF     : out slv_array_t(DMA_PORTS-1 downto 0)(DMA_MFB_DOWN_REGIONS-1 downto 0);
-        DOWN_MFB_SOF_POS : out slv_array_t(DMA_PORTS-1 downto 0)(DMA_MFB_DOWN_REGIONS*max(1,log2(MFB_DOWN_REG_SIZE))-1 downto 0);
-        DOWN_MFB_EOF_POS : out slv_array_t(DMA_PORTS-1 downto 0)(DMA_MFB_DOWN_REGIONS*max(1,log2(MFB_DOWN_REG_SIZE*MFB_DOWN_BLOCK_SIZE))-1 downto 0);
-        DOWN_MFB_SRC_RDY : out std_logic_vector(DMA_PORTS-1 downto 0);
+        DOWN_MFB_DATA    : out slv_array_t(DMA_PORTS-1 downto 0)(DMA_MFB_DOWN_REGIONS*MFB_DOWN_REG_SIZE*MFB_DOWN_BLOCK_SIZE*MFB_DOWN_ITEM_WIDTH-1 downto 0) := (others => (others => '0'));
+        DOWN_MFB_SOF     : out slv_array_t(DMA_PORTS-1 downto 0)(DMA_MFB_DOWN_REGIONS-1 downto 0)                                                           := (others => (others => '0'));
+        DOWN_MFB_EOF     : out slv_array_t(DMA_PORTS-1 downto 0)(DMA_MFB_DOWN_REGIONS-1 downto 0)                                                           := (others => (others => '0'));
+        DOWN_MFB_SOF_POS : out slv_array_t(DMA_PORTS-1 downto 0)(DMA_MFB_DOWN_REGIONS*max(1,log2(MFB_DOWN_REG_SIZE))-1 downto 0)                            := (others => (others => '0'));
+        DOWN_MFB_EOF_POS : out slv_array_t(DMA_PORTS-1 downto 0)(DMA_MFB_DOWN_REGIONS*max(1,log2(MFB_DOWN_REG_SIZE*MFB_DOWN_BLOCK_SIZE))-1 downto 0)        := (others => (others => '0'));
+        DOWN_MFB_SRC_RDY : out std_logic_vector(DMA_PORTS-1 downto 0)                                                                                       := (others => '0');
         DOWN_MFB_DST_RDY : in  std_logic_vector(DMA_PORTS-1 downto 0);
 
         -- =====================================================================
@@ -467,133 +470,191 @@ begin
         mtc_down_mfb_src_rdy <= '0';
     end generate;
 
-    -- =========================================================================
-    --  PCIE TRANSACTION CTRL
-    -- =========================================================================
+    ptc_disable_g: if (not PTC_DISABLE) generate
 
-    ptc_down_mfb_meta_arr <= slv_array_deser(ptc_down_mfb_meta,MFB_DOWN_REGIONS,MFB_DOWN_META_WIDTH);
+        -- =========================================================================
+        --  PCIE TRANSACTION CTRL
+        -- =========================================================================
 
-    ptc_down_mfb_meta_unpack_g : for i in 0 to MFB_DOWN_REGIONS-1 generate
-        ptc_down_mfb_hdr_arr(i)    <= ptc_down_mfb_meta_arr(i)(PCI_CHDR_W-1 downto 0);
-        ptc_down_mfb_prefix_arr(i) <= ptc_down_mfb_meta_arr(i)(PCI_HDR_W+PCI_PREFIX_W-1 downto PCI_HDR_W);
+        ptc_down_mfb_meta_arr <= slv_array_deser(ptc_down_mfb_meta,MFB_DOWN_REGIONS,MFB_DOWN_META_WIDTH);
+
+        ptc_down_mfb_meta_unpack_g : for i in 0 to MFB_DOWN_REGIONS-1 generate
+            ptc_down_mfb_hdr_arr(i)    <= ptc_down_mfb_meta_arr(i)(PCI_CHDR_W-1 downto 0);
+            ptc_down_mfb_prefix_arr(i) <= ptc_down_mfb_meta_arr(i)(PCI_HDR_W+PCI_PREFIX_W-1 downto PCI_HDR_W);
+        end generate;
+
+        ptc_down_mfb_hdr    <= slv_array_ser(ptc_down_mfb_hdr_arr,MFB_DOWN_REGIONS,PCI_CHDR_W);
+        ptc_down_mfb_prefix <= slv_array_ser(ptc_down_mfb_prefix_arr,MFB_DOWN_REGIONS,PCI_PREFIX_W);
+
+        ptc_up_mfb_hdr_arr    <= slv_array_deser(ptc_up_mfb_hdr,MFB_UP_REGIONS,PCI_HDR_W);
+        ptc_up_mfb_prefix_arr <= slv_array_deser(ptc_up_mfb_prefix,MFB_UP_REGIONS,PCI_PREFIX_W);
+
+        ptc_up_mfb_meta_pack_g : for i in 0 to MFB_UP_REGIONS-1 generate
+            ptc_up_mfb_meta_arr(i)(PCI_HDR_W-1 downto 0)                      <= ptc_up_mfb_hdr_arr(i);
+            ptc_up_mfb_meta_arr(i)(PCI_HDR_W+PCI_PREFIX_W-1 downto PCI_HDR_W) <= ptc_up_mfb_prefix_arr(i);
+        end generate;
+
+        ptc_up_mfb_meta <= slv_array_ser(ptc_up_mfb_meta_arr,MFB_UP_REGIONS,MFB_UP_META_WIDTH);
+
+        ptc_i : entity work.PCIE_TRANSACTION_CTRL_WRAPPER
+        generic map(
+            DMA_PORTS            => DMA_PORTS,
+
+            RQ_TUSER_WIDTH       => AXI_RQUSER_WIDTH,
+            RC_TUSER_WIDTH       => AXI_RCUSER_WIDTH,
+
+            MVB_UP_ITEMS         => MVB_UP_ITEMS,
+            DMA_MVB_UP_ITEMS     => DMA_MVB_UP_ITEMS,
+            MFB_UP_REGIONS       => MFB_UP_REGIONS,
+            DMA_MFB_UP_REGIONS   => DMA_MFB_UP_REGIONS,
+            MFB_UP_REG_SIZE      => MFB_UP_REG_SIZE,
+            MFB_UP_BLOCK_SIZE    => MFB_UP_BLOCK_SIZE,
+            MFB_UP_ITEM_WIDTH    => MFB_UP_ITEM_WIDTH,
+
+            MVB_DOWN_ITEMS       => MVB_DOWN_ITEMS,
+            DMA_MVB_DOWN_ITEMS   => DMA_MVB_DOWN_ITEMS,
+            MFB_DOWN_REGIONS     => MFB_DOWN_REGIONS,
+            DMA_MFB_DOWN_REGIONS => DMA_MFB_DOWN_REGIONS,
+            MFB_DOWN_REG_SIZE    => MFB_DOWN_REG_SIZE,
+            MFB_DOWN_BLOCK_SIZE  => MFB_DOWN_BLOCK_SIZE,
+            MFB_DOWN_ITEM_WIDTH  => MFB_DOWN_ITEM_WIDTH,
+
+            DOWN_FIFO_ITEMS      => 1024,
+            AUTO_ASSIGN_TAGS     => true,
+
+            ENDPOINT_TYPE        => ENDPOINT_TYPE,
+            DEVICE               => DEVICE
+        )
+        port map(
+            CLK                => PCIE_CLK,
+            RESET              => PCIE_RESET(2),
+
+            CLK_DMA            => DMA_CLK,
+            RESET_DMA          => DMA_RESET,
+
+            RQ_TDATA           => RQ_AXI_DATA,
+            RQ_TUSER           => RQ_AXI_USER,
+            RQ_TLAST           => RQ_AXI_LAST,
+            RQ_TKEEP           => RQ_AXI_KEEP,
+            RQ_TVALID          => RQ_AXI_VALID,
+            RQ_TREADY          => RQ_AXI_READY,
+
+            RC_TDATA           => RC_AXI_DATA,
+            RC_TUSER           => RC_AXI_USER,
+            RC_TLAST           => RC_AXI_LAST,
+            RC_TKEEP           => RC_AXI_KEEP,
+            RC_TVALID          => RC_AXI_VALID,
+            RC_TREADY          => RC_AXI_READY,
+
+            RQ_MVB_HDR_DATA    => ptc_up_mfb_hdr,
+            RQ_MVB_PREFIX_DATA => ptc_up_mfb_prefix,
+            RQ_MVB_VLD         => open,
+            RQ_MFB_DATA        => ptc_up_mfb_data,
+            RQ_MFB_SOF         => ptc_up_mfb_sof,
+            RQ_MFB_EOF         => ptc_up_mfb_eof,
+            RQ_MFB_SOF_POS     => ptc_up_mfb_sof_pos,
+            RQ_MFB_EOF_POS     => ptc_up_mfb_eof_pos,
+            RQ_MFB_SRC_RDY     => ptc_up_mfb_src_rdy,
+            RQ_MFB_DST_RDY     => ptc_up_mfb_dst_rdy,
+
+            RC_MVB_HDR_DATA    => ptc_down_mfb_hdr,
+            RC_MVB_PREFIX_DATA => ptc_down_mfb_prefix,
+            RC_MVB_VLD         => ptc_down_mfb_sof,
+            RC_MFB_DATA        => ptc_down_mfb_data,
+            RC_MFB_SOF         => ptc_down_mfb_sof,
+            RC_MFB_EOF         => ptc_down_mfb_eof,
+            RC_MFB_SOF_POS     => ptc_down_mfb_sof_pos,
+            RC_MFB_EOF_POS     => ptc_down_mfb_eof_pos,
+            RC_MFB_SRC_RDY     => ptc_down_mfb_src_rdy,
+            RC_MFB_DST_RDY     => ptc_down_mfb_dst_rdy,
+
+            UP_MVB_DATA      => UP_MVB_DATA,
+            UP_MVB_VLD       => UP_MVB_VLD,
+            UP_MVB_SRC_RDY   => UP_MVB_SRC_RDY,
+            UP_MVB_DST_RDY   => UP_MVB_DST_RDY,
+
+            UP_MFB_DATA      => UP_MFB_DATA,
+            UP_MFB_SOF       => UP_MFB_SOF,
+            UP_MFB_EOF       => UP_MFB_EOF,
+            UP_MFB_SOF_POS   => UP_MFB_SOF_POS,
+            UP_MFB_EOF_POS   => UP_MFB_EOF_POS,
+            UP_MFB_SRC_RDY   => UP_MFB_SRC_RDY,
+            UP_MFB_DST_RDY   => UP_MFB_DST_RDY,
+
+            DOWN_MVB_DATA    => DOWN_MVB_DATA,
+            DOWN_MVB_VLD     => DOWN_MVB_VLD,
+            DOWN_MVB_SRC_RDY => DOWN_MVB_SRC_RDY,
+            DOWN_MVB_DST_RDY => DOWN_MVB_DST_RDY,
+
+            DOWN_MFB_DATA    => DOWN_MFB_DATA,
+            DOWN_MFB_SOF     => DOWN_MFB_SOF,
+            DOWN_MFB_EOF     => DOWN_MFB_EOF,
+            DOWN_MFB_SOF_POS => DOWN_MFB_SOF_POS,
+            DOWN_MFB_EOF_POS => DOWN_MFB_EOF_POS,
+            DOWN_MFB_SRC_RDY => DOWN_MFB_SRC_RDY,
+            DOWN_MFB_DST_RDY => DOWN_MFB_DST_RDY,
+
+            RCB_SIZE         => CTL_RCB_SIZE,
+
+            TAG_ASSIGN       => TAG_ASSIGN,
+            TAG_ASSIGN_VLD   => TAG_ASSIGN_VLD
+        );
+
+    else generate
+
+        -- NOTE: These two are made for one DMA_PORT only
+        axis_rc2mfb_i : entity work.PTC_PCIE_AXI2MFB
+            generic map (
+                MFB_REGIONS      => MFB_DOWN_REGIONS,
+                MFB_REG_SIZE     => MFB_DOWN_REG_SIZE,
+                MFB_BLOCK_SIZE   => MFB_DOWN_BLOCK_SIZE,
+                MFB_ITEM_WIDTH   => MFB_DOWN_ITEM_WIDTH,
+
+                AXI_DATA_WIDTH   => AXI_DATA_WIDTH,
+                AXI_RCUSER_WIDTH => AXI_RCUSER_WIDTH)
+            port map (
+                CLK            => PCIE_CLK,
+                RESET          => PCIE_RESET(2),
+
+                RX_AXI_TDATA   => RC_AXI_DATA,
+                RX_AXI_TUSER   => RC_AXI_USER,
+                RX_AXI_TVALID  => RC_AXI_VALID,
+                RX_AXI_TREADY  => RC_AXI_READY,
+
+                TX_MFB_DATA    => DOWN_MFB_DATA(0),
+                TX_MFB_SOF     => DOWN_MFB_SOF(0),
+                TX_MFB_EOF     => DOWN_MFB_EOF(0),
+                TX_MFB_SOF_POS => DOWN_MFB_SOF_POS(0),
+                TX_MFB_EOF_POS => DOWN_MFB_EOF_POS(0),
+                TX_MFB_SRC_RDY => DOWN_MFB_SRC_RDY(0),
+                TX_MFB_DST_RDY => DOWN_MFB_DST_RDY(0));
+
+        mfb2axis_rq_i : entity work.PTC_MFB2PCIE_AXI
+            generic map (
+                MFB_REGIONS      => MFB_UP_REGIONS,
+                MFB_REGION_SIZE  => MFB_UP_REG_SIZE,
+                MFB_BLOCK_SIZE   => MFB_UP_BLOCK_SIZE,
+                MFB_ITEM_WIDTH   => MFB_UP_ITEM_WIDTH,
+
+                AXI_RQUSER_WIDTH => AXI_RQUSER_WIDTH)
+            port map (
+                RX_MFB_DATA    => UP_MFB_DATA(0),
+                RX_MFB_SOF_POS => UP_MFB_SOF_POS(0),
+                RX_MFB_EOF_POS => UP_MFB_EOF_POS(0),
+                RX_MFB_SOF     => UP_MFB_SOF(0),
+                RX_MFB_EOF     => UP_MFB_EOF(0),
+                RX_MFB_SRC_RDY => UP_MFB_SRC_RDY(0),
+                RX_MFB_DST_RDY => UP_MFB_DST_RDY(0),
+                RX_MFB_BE      => (others => '1'),
+
+                RQ_DATA        => RQ_AXI_DATA,
+                RQ_USER        => RQ_AXI_USER,
+                RQ_LAST        => RQ_AXI_LAST,
+                RQ_KEEP        => RQ_AXI_KEEP,
+                RQ_READY       => RQ_AXI_READY,
+                RQ_VALID       => RQ_AXI_VALID);
+
     end generate;
-
-    ptc_down_mfb_hdr    <= slv_array_ser(ptc_down_mfb_hdr_arr,MFB_DOWN_REGIONS,PCI_CHDR_W);
-    ptc_down_mfb_prefix <= slv_array_ser(ptc_down_mfb_prefix_arr,MFB_DOWN_REGIONS,PCI_PREFIX_W);
-
-    ptc_up_mfb_hdr_arr    <= slv_array_deser(ptc_up_mfb_hdr,MFB_UP_REGIONS,PCI_HDR_W);
-    ptc_up_mfb_prefix_arr <= slv_array_deser(ptc_up_mfb_prefix,MFB_UP_REGIONS,PCI_PREFIX_W);
-
-    ptc_up_mfb_meta_pack_g : for i in 0 to MFB_UP_REGIONS-1 generate
-        ptc_up_mfb_meta_arr(i)(PCI_HDR_W-1 downto 0)                      <= ptc_up_mfb_hdr_arr(i);
-        ptc_up_mfb_meta_arr(i)(PCI_HDR_W+PCI_PREFIX_W-1 downto PCI_HDR_W) <= ptc_up_mfb_prefix_arr(i);
-    end generate;
-
-    ptc_up_mfb_meta <= slv_array_ser(ptc_up_mfb_meta_arr,MFB_UP_REGIONS,MFB_UP_META_WIDTH);
-
-    ptc_i : entity work.PCIE_TRANSACTION_CTRL_WRAPPER
-    generic map(
-        DMA_PORTS            => DMA_PORTS,
-
-        RQ_TUSER_WIDTH       => AXI_RQUSER_WIDTH,
-        RC_TUSER_WIDTH       => AXI_RCUSER_WIDTH,
-
-        MVB_UP_ITEMS         => MVB_UP_ITEMS,
-        DMA_MVB_UP_ITEMS     => DMA_MVB_UP_ITEMS,
-        MFB_UP_REGIONS       => MFB_UP_REGIONS,
-        DMA_MFB_UP_REGIONS   => DMA_MFB_UP_REGIONS,
-        MFB_UP_REG_SIZE      => MFB_UP_REG_SIZE,
-        MFB_UP_BLOCK_SIZE    => MFB_UP_BLOCK_SIZE,
-        MFB_UP_ITEM_WIDTH    => MFB_UP_ITEM_WIDTH,
-
-        MVB_DOWN_ITEMS       => MVB_DOWN_ITEMS,
-        DMA_MVB_DOWN_ITEMS   => DMA_MVB_DOWN_ITEMS,
-        MFB_DOWN_REGIONS     => MFB_DOWN_REGIONS,
-        DMA_MFB_DOWN_REGIONS => DMA_MFB_DOWN_REGIONS,
-        MFB_DOWN_REG_SIZE    => MFB_DOWN_REG_SIZE,
-        MFB_DOWN_BLOCK_SIZE  => MFB_DOWN_BLOCK_SIZE,
-        MFB_DOWN_ITEM_WIDTH  => MFB_DOWN_ITEM_WIDTH,
-
-        DOWN_FIFO_ITEMS      => 1024,
-        AUTO_ASSIGN_TAGS     => true,
-
-        ENDPOINT_TYPE        => ENDPOINT_TYPE,
-        DEVICE               => DEVICE
-    )
-    port map(
-        CLK                => PCIE_CLK,
-        RESET              => PCIE_RESET(2),
-
-        CLK_DMA            => DMA_CLK,
-        RESET_DMA          => DMA_RESET,
-
-        RQ_TDATA           => RQ_AXI_DATA,
-        RQ_TUSER           => RQ_AXI_USER,
-        RQ_TLAST           => RQ_AXI_LAST,
-        RQ_TKEEP           => RQ_AXI_KEEP,
-        RQ_TVALID          => RQ_AXI_VALID,
-        RQ_TREADY          => RQ_AXI_READY,
-
-        RC_TDATA           => RC_AXI_DATA,
-        RC_TUSER           => RC_AXI_USER,
-        RC_TLAST           => RC_AXI_LAST,
-        RC_TKEEP           => RC_AXI_KEEP,
-        RC_TVALID          => RC_AXI_VALID,
-        RC_TREADY          => RC_AXI_READY,
-
-        RQ_MVB_HDR_DATA    => ptc_up_mfb_hdr,
-        RQ_MVB_PREFIX_DATA => ptc_up_mfb_prefix,
-        RQ_MVB_VLD         => open,
-        RQ_MFB_DATA        => ptc_up_mfb_data,
-        RQ_MFB_SOF         => ptc_up_mfb_sof,
-        RQ_MFB_EOF         => ptc_up_mfb_eof,
-        RQ_MFB_SOF_POS     => ptc_up_mfb_sof_pos,
-        RQ_MFB_EOF_POS     => ptc_up_mfb_eof_pos,
-        RQ_MFB_SRC_RDY     => ptc_up_mfb_src_rdy,
-        RQ_MFB_DST_RDY     => ptc_up_mfb_dst_rdy,
-
-        RC_MVB_HDR_DATA    => ptc_down_mfb_hdr,
-        RC_MVB_PREFIX_DATA => ptc_down_mfb_prefix,
-        RC_MVB_VLD         => ptc_down_mfb_sof,
-        RC_MFB_DATA        => ptc_down_mfb_data,
-        RC_MFB_SOF         => ptc_down_mfb_sof,
-        RC_MFB_EOF         => ptc_down_mfb_eof,
-        RC_MFB_SOF_POS     => ptc_down_mfb_sof_pos,
-        RC_MFB_EOF_POS     => ptc_down_mfb_eof_pos,
-        RC_MFB_SRC_RDY     => ptc_down_mfb_src_rdy,
-        RC_MFB_DST_RDY     => ptc_down_mfb_dst_rdy,
-
-        UP_MVB_DATA      => UP_MVB_DATA,
-        UP_MVB_VLD       => UP_MVB_VLD,
-        UP_MVB_SRC_RDY   => UP_MVB_SRC_RDY,
-        UP_MVB_DST_RDY   => UP_MVB_DST_RDY,
-
-        UP_MFB_DATA      => UP_MFB_DATA,
-        UP_MFB_SOF       => UP_MFB_SOF,
-        UP_MFB_EOF       => UP_MFB_EOF,
-        UP_MFB_SOF_POS   => UP_MFB_SOF_POS,
-        UP_MFB_EOF_POS   => UP_MFB_EOF_POS,
-        UP_MFB_SRC_RDY   => UP_MFB_SRC_RDY,
-        UP_MFB_DST_RDY   => UP_MFB_DST_RDY,
-
-        DOWN_MVB_DATA    => DOWN_MVB_DATA,
-        DOWN_MVB_VLD     => DOWN_MVB_VLD,
-        DOWN_MVB_SRC_RDY => DOWN_MVB_SRC_RDY,
-        DOWN_MVB_DST_RDY => DOWN_MVB_DST_RDY,
-
-        DOWN_MFB_DATA    => DOWN_MFB_DATA,
-        DOWN_MFB_SOF     => DOWN_MFB_SOF,
-        DOWN_MFB_EOF     => DOWN_MFB_EOF,
-        DOWN_MFB_SOF_POS => DOWN_MFB_SOF_POS,
-        DOWN_MFB_EOF_POS => DOWN_MFB_EOF_POS,
-        DOWN_MFB_SRC_RDY => DOWN_MFB_SRC_RDY,
-        DOWN_MFB_DST_RDY => DOWN_MFB_DST_RDY,
-
-        RCB_SIZE         => CTL_RCB_SIZE,
-
-        TAG_ASSIGN       => TAG_ASSIGN,
-        TAG_ASSIGN_VLD   => TAG_ASSIGN_VLD
-    );
 
     -- =========================================================================
     -- MI32 CONTROLLER

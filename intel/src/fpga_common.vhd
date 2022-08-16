@@ -549,6 +549,9 @@ begin
         PCIE_CLKS           => PCIE_CLKS,
         PCIE_CONS           => PCIE_CONS,
         PCIE_LANES          => PCIE_LANES,
+
+        PTC_DISABLE         => PTC_DISABLE,
+
         DEVICE              => DEVICE
     )
     port map (

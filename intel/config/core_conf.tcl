@@ -60,11 +60,11 @@ set ETH_PORT_TX_MTU(3) 16383
 # 5 = PCIe Gen5 (Agilex with R-Tile)
 set PCIE_GEN           4
 # PCIe endpoints (possible values: 1, 2, 4):
-# 1 = 1x PCIe x16 in one slot
+# 1 = 1x PCIe x16 in one slot or 1x PCIe x8 in one slot
 # 2 = 2x PCIe x16 in two slot OR 2x PCIe x8 in one slot (bifurcation x8+x8)
 # 4 = 4x PCIe x8 in two slot (bifurcation x8+x8)
 set PCIE_ENDPOINTS     1
-# PCIe endpoint mode (possible values: 0, 1):
+# PCIe endpoint mode (possible values: 0, 1, 2):
 # 0 = 1x16 lanes
 # 1 = 2x8 lanes (bifurcation x8+x8)
 set PCIE_ENDPOINT_MODE 1
