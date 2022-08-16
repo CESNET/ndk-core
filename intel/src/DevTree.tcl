@@ -4,8 +4,8 @@ proc dts_build_netcope {} {
     # Changes must also be made manually in mi_addr_space_pkg.vhd!
     # =========================================================================
     set ADDR_TEST_SPACE "0x00000000"
-    set ADDR_SENSOR     "0x00001000"
-    set ADDR_SDM_CTRL   "0x00002000"
+    set ADDR_SDM_SYSMON "0x00001000"
+    set ADDR_BOOT_CTRL  "0x00002000"
     set ADDR_ETH_PMD    "0x00003000"
     set ADDR_TSU        "0x00004000"
     set ADDR_GEN_LOOP   "0x00005000"
@@ -49,7 +49,7 @@ proc dts_build_netcope {} {
         set BOOT_TYPE 3
     }
     if {$CARD_NAME == "FB4CGG3" || $CARD_NAME == "FB2CGG3" || $CARD_NAME == "FB2CGHH" || $CARD_NAME == "400G1"} {
-        append ret "boot:" [dts_boot_controller $ADDR_SDM_CTRL $BOOT_TYPE]
+        append ret "boot:" [dts_boot_controller $ADDR_BOOT_CTRL $BOOT_TYPE]
     }
 
     # TSU component
@@ -76,9 +76,19 @@ proc dts_build_netcope {} {
     #    append ret [dts_gen_loop_switch $i [expr $ADDR_GEN_LOOP + $gls_offset]]
     #}
 
-    # FPGA Temp Sensors
-    if {$CARD_NAME == "DK-DEV-1SDX-P"} {
-        append ret [dts_stratix_adc_sensors $ADDR_SENSOR]
+    global SDM_SYSMON_ARCH
+    # Intel FPGA SDM controller
+    if {$SDM_SYSMON_ARCH == "INTEL_SDM"} {
+        set boot_active_serial 0
+        append ret [dts_sdm_controller $ADDR_SDM_SYSMON $boot_active_serial]
+    }
+    # Deprecated ID component to access Xilinx SYSMON
+    if {$SDM_SYSMON_ARCH == "USP_IDCOMP"} {
+        append ret "idcomp:" [dts_idcomp $ADDR_SDM_SYSMON]
+    }
+    # Deprecated Intel Stratix 10 ADC Sensor Component
+    if {$SDM_SYSMON_ARCH == "S10_ADC"} {
+        append ret [dts_stratix_adc_sensors $ADDR_SDM_SYSMON]
     }
 
     # Populate application, if exists
