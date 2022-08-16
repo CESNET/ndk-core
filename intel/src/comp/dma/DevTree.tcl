@@ -17,6 +17,8 @@ proc dts_dmamod_open {base type rxn txn pcie rx_frame_size_max tx_frame_size_max
 
     if {$type == 3} {
         set strtype "ndp"
+    } elseif {$type == 4} {
+        set strtype "calypte"
     } else {
         error "ERROR: Unsupported DMA Type $type for DMA Module!"
     }
@@ -29,6 +31,9 @@ proc dts_dmamod_open {base type rxn txn pcie rx_frame_size_max tx_frame_size_max
         if {$type == 3} {
             set    var_base [expr $base + $i * 0x80]
             append ret [dts_dma_medusa_ctrl $strtype $type "rx" $i $var_base $pcie "dma_params_rx$pcie"]
+        } elseif {$type == 4} {
+            set    var_base [expr $base + $i * 0x80]
+            append ret [dts_dma_calypte_ctrl $strtype "rx" $i $var_base $pcie]
         }
     }
 

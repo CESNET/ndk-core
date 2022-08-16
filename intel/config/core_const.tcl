@@ -17,6 +17,27 @@ set BUILD_UID  [format "%d" [exec id -u]]
 set DMA_RX_FRAME_SIZE_MIN 60
 set DMA_TX_FRAME_SIZE_MIN 60
 
+# Disable PTC module and replace it with AXI <---> MBF converters (USP devices only)
+set PTC_DISABLE false
+
+set PCIE_LANES 16
+
+if {$DMA_TYPE == 4} {
+    if {$PCIE_ENDPOINTS == 1 && $PCIE_ENDPOINT_MODE == 2} {
+        set PCIE_LANES 8
+    }
+}
+
+# ------------------------------------------------------------------------------
+# Checking of parameter compatibility
+# ------------------------------------------------------------------------------
+if { $DMA_TYPE == 4 } {
+    if { $PCIE_ENDPOINTS != 1 || $PCIE_ENDPOINT_MODE != 2} {
+        error "Incompatible DMA_TYPE: $DMA_TYPE with chosen PCIE_ENDPOINTS: $PCIE_ENDPOINTS\
+                and PCIE_ENDPOINT_MODE: $PCIE_ENDPOINT_MODE!"
+    }
+}
+
 VhdlPkgProjectText $PROJECT_NAME
 
 VhdlPkgStr PCIE_MOD_ARCH $PCIE_MOD_ARCH
@@ -28,10 +49,12 @@ VhdlPkgIntArr ETH_PORT_CHAN   $ETH_PORTS
 VhdlPkgIntArr ETH_PORT_RX_MTU $ETH_PORTS
 VhdlPkgIntArr ETH_PORT_TX_MTU $ETH_PORTS
 
+VhdlPkgInt  PCIE_LANES         $PCIE_LANES
 VhdlPkgInt  PCIE_GEN           $PCIE_GEN
 VhdlPkgInt  PCIE_ENDPOINTS     $PCIE_ENDPOINTS
 VhdlPkgInt  PCIE_ENDPOINT_MODE $PCIE_ENDPOINT_MODE
 
+VhdlPkgInt  DMA_TYPE              $DMA_TYPE
 VhdlPkgInt  DMA_RX_CHANNELS       $DMA_RX_CHANNELS
 VhdlPkgInt  DMA_TX_CHANNELS       $DMA_TX_CHANNELS
 VhdlPkgInt  DMA_RX_FRAME_SIZE_MAX $DMA_RX_FRAME_SIZE_MAX
@@ -39,12 +62,7 @@ VhdlPkgInt  DMA_TX_FRAME_SIZE_MAX $DMA_TX_FRAME_SIZE_MAX
 #VhdlPkgInt  DMA_RX_FRAME_SIZE_MIN $DMA_RX_FRAME_SIZE_MIN
 #VhdlPkgInt  DMA_TX_FRAME_SIZE_MIN $DMA_TX_FRAME_SIZE_MIN
 VhdlPkgBool DMA_RX_BLOCKING_MODE  $DMA_RX_BLOCKING_MODE
-
-VhdlPkgBool PTC_DISABLE   $PTC_DISABLE
-
-VhdlPkgInt  DMA_RX_CHANNELS      $DMA_RX_CHANNELS
-VhdlPkgInt  DMA_TX_CHANNELS      $DMA_TX_CHANNELS
-VhdlPkgBool DMA_RX_BLOCKING_MODE $DMA_RX_BLOCKING_MODE
+VhdlPkgBool DMA_TSU_ENABLE        $DMA_TSU_ENABLE
 
 # Other parameters
 VhdlPkgBool TSU_ENABLE    $TSU_ENABLE
