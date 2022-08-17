@@ -91,7 +91,6 @@ architecture FULL of BOOT_CTRL is
     signal boot_timeout       : unsigned(25 downto 0) := (others => '0');
     signal flash_wr_data0_reg : std_logic;
     signal flash_wr_cmd       : std_logic := '0';
-
  
 begin
 
@@ -182,14 +181,15 @@ begin
 
     boot_type_2_g: if (BOOT_TYPE = 2) generate
 
-        mi_sync_ardy<= (mi_sync_rd or mi_sync_wr);
+        mi_sync_ardy <= (mi_sync_rd or mi_sync_wr);
+
         mi_rd_p : process(BOOT_CLK)
         begin
             if rising_edge(BOOT_CLK) then
                 case mi_sync_addr(3 downto 2) is
-                    when "00"   => mi_sync_dwr <= FLASH_RD_DATA(31 downto  0);
-                    when "01"   => mi_sync_dwr <= FLASH_RD_DATA(63 downto 32);
-                    when others => mi_sync_dwr <= (others => '0');
+                    when "00"   => mi_sync_drd <= FLASH_RD_DATA(31 downto  0);
+                    when "01"   => mi_sync_drd <= FLASH_RD_DATA(63 downto 32);
+                    when others => mi_sync_drd <= (others => '0');
                 end case;
                 mi_sync_drdy <= mi_sync_rd;
                     
@@ -227,7 +227,6 @@ begin
                 end if;
             end if;
         end process;
-    
         
         boot_timeout_p : process(BOOT_CLK)
         begin
