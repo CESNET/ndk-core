@@ -14,7 +14,8 @@ use work.type_pack.all;
 entity BOOT_CTRL is
     generic(
         -- FPGA device
-        DEVICE : string := "ULTRASCALE"
+        DEVICE      : string  := "ULTRASCALE";
+        BOOT_TYPE   : natural := 2 
     ); 
     port(
         MI_CLK        : in  std_logic;
@@ -45,7 +46,16 @@ entity BOOT_CTRL is
         AXI_MI_BE   : out std_logic_vector((32/8)-1 downto 0);
         AXI_MI_ARDY : in  std_logic :='0';
         AXI_MI_DRD  : in  std_logic_vector(32 - 1 downto 0) :=(others => '0');
-        AXI_MI_DRDY : in  std_logic :='0'
+        AXI_MI_DRDY : in  std_logic :='0';
+
+        BMC_MI_ADDR : out std_logic_vector(8 - 1 downto 0);
+        BMC_MI_DWR  : out std_logic_vector(32 - 1 downto 0);
+        BMC_MI_WR   : out std_logic;
+        BMC_MI_RD   : out std_logic;
+        BMC_MI_BE   : out std_logic_vector((32/8)-1 downto 0);
+        BMC_MI_ARDY : in  std_logic :='0';
+        BMC_MI_DRD  : in  std_logic_vector(32 - 1 downto 0) :=(others => '0');
+        BMC_MI_DRDY : in  std_logic :='0'
     );
 end entity;
 
@@ -115,113 +125,125 @@ begin
         MI_S_DRDY => mi_sync_drdy
     );
 
-    mi_splitter_i : entity work.MI_SPLITTER_PLUS_GEN
-    generic map(
-        ADDR_WIDTH    => 32,
-        DATA_WIDTH    => 32,
-        PORTS         => MI_BOOT_PORTS,
-        PIPE_OUTREG   => true,
-        ADDR_BASE     => MI_BOOT_ADDR_BASE,
-        ADDR_MASK     => MASK,
-        DEVICE        => DEVICE
-    )
-    port map(
-        CLK        => BOOT_CLK,
-        RESET      => BOOT_RESET,
-
-        RX_DWR     => mi_sync_dwr,
-        RX_ADDR    => mi_sync_addr,
-        RX_BE      => mi_sync_be,
-        RX_RD      => mi_sync_rd,
-        RX_WR      => mi_sync_wr,
-        RX_ARDY    => mi_sync_ardy,
-        RX_DRD     => mi_sync_drd,
-        RX_DRDY    => mi_sync_drdy,
-
-        TX_DWR     => mi_split_dwr,
-        TX_ADDR    => mi_split_addr,
-        TX_BE      => mi_split_be,
-        TX_RD      => mi_split_rd,
-        TX_WR      => mi_split_wr,
-        TX_ARDY    => mi_split_ardy,
-        TX_DRD     => mi_split_drd,
-        TX_DRDY    => mi_split_drdy
-    );
-
-
-    -- Axi Quad SPI interface
-    AXI_MI_ADDR         <= mi_split_addr(1)(8 - 1  downto 0);
-    AXI_MI_DWR          <= mi_split_dwr(1);
-    AXI_MI_WR           <= mi_split_wr(1);
-    AXI_MI_RD           <= mi_split_rd(1);
-    AXI_MI_BE           <= mi_split_be(1);
-    mi_split_ardy(1)    <= AXI_MI_ARDY;
-    mi_split_drd(1)     <= AXI_MI_DRD;
-    mi_split_drdy(1)    <= AXI_MI_DRDY;
-
-
-    mi_split_ardy(0)<= (mi_split_rd(0) or mi_split_wr(0));
-    mi_rd_p : process(BOOT_CLK)
-    begin
-        if rising_edge(BOOT_CLK) then
-            case mi_split_addr(0)(3 downto 2) is
-                when "00"   => mi_split_drd(0) <= FLASH_RD_DATA(31 downto  0);
-                when "01"   => mi_split_drd(0) <= FLASH_RD_DATA(63 downto 32);
-                when others => mi_split_drd(0) <= (others => '0');
-            end case;
-            mi_split_drdy(0) <= mi_split_rd(0);
-                
-            if (BOOT_RESET = '1') then
-                mi_split_drdy(0) <= '0';
-            end if;
-        end if;
-    end process;
-
-
-    mi_wr_p : process(BOOT_CLK)
-    begin
-        if rising_edge(BOOT_CLK) then
-            flash_wr_cmd <= '0';
-            if (mi_split_wr(0) = '1' and boot_cmd = '0') then
-                case mi_split_addr(0)(3 downto 2) is
-                    when "00" =>
-                        FLASH_WR_DATA(31 downto  0) <= mi_split_dwr(0);
-                        flash_wr_data0_reg          <= mi_split_dwr(0)(0);
-                    when "01" =>
-                        FLASH_WR_DATA(63 downto 32) <= mi_split_dwr(0);
-                        flash_wr_cmd <= '1';
-                        -- Reboot FPGA command
-                        if (mi_split_dwr(0)(31 downto 28) = X"E") then
-                            flash_wr_cmd <= '0';
-                            boot_cmd <= '1';
-                            boot_img <= not flash_wr_data0_reg;
-                        end if;
-        
-                    when others => null;
-                end case;            
-            end if;
-
-            if (BOOT_RESET = '1') then
-                boot_cmd <= '0';
-            end if;
-        end if;
-    end process;
-
+    boot_type_3_g: if (BOOT_TYPE = 3) generate
+        mi_splitter_i : entity work.MI_SPLITTER_PLUS_GEN
+        generic map(
+            ADDR_WIDTH    => 32,
+            DATA_WIDTH    => 32,
+            PORTS         => MI_BOOT_PORTS,
+            PIPE_OUTREG   => true,
+            ADDR_BASE     => MI_BOOT_ADDR_BASE,
+            ADDR_MASK     => MASK,
+            DEVICE        => DEVICE
+        )
+        port map(
+            CLK        => BOOT_CLK,
+            RESET      => BOOT_RESET,
     
-    boot_timeout_p : process(BOOT_CLK)
-    begin
-        if rising_edge(BOOT_CLK) then
-            if (boot_cmd = '1') then
-                boot_timeout <= boot_timeout + 1;
-            else
-                boot_timeout <= (others =>'0');
+            RX_DWR     => mi_sync_dwr,
+            RX_ADDR    => mi_sync_addr,
+            RX_BE      => mi_sync_be,
+            RX_RD      => mi_sync_rd,
+            RX_WR      => mi_sync_wr,
+            RX_ARDY    => mi_sync_ardy,
+            RX_DRD     => mi_sync_drd,
+            RX_DRDY    => mi_sync_drdy,
+    
+            TX_DWR     => mi_split_dwr,
+            TX_ADDR    => mi_split_addr,
+            TX_BE      => mi_split_be,
+            TX_RD      => mi_split_rd,
+            TX_WR      => mi_split_wr,
+            TX_ARDY    => mi_split_ardy,
+            TX_DRD     => mi_split_drd,
+            TX_DRDY    => mi_split_drdy
+        );
+
+        -- Axi Quad SPI interface
+        AXI_MI_ADDR         <= mi_split_addr(1)(8 - 1  downto 0);
+        AXI_MI_DWR          <= mi_split_dwr(1);
+        AXI_MI_WR           <= mi_split_wr(1);
+        AXI_MI_RD           <= mi_split_rd(1);
+        AXI_MI_BE           <= mi_split_be(1);
+        mi_split_ardy(1)    <= AXI_MI_ARDY;
+        mi_split_drd(1)     <= AXI_MI_DRD;
+        mi_split_drdy(1)    <= AXI_MI_DRDY;
+
+        --BMC device (BE is not available)
+        BMC_MI_ADDR      <= mi_split_addr(0)(8-1 downto 0);
+        BMC_MI_DWR       <= mi_split_dwr(0);
+        BMC_MI_WR        <= mi_split_wr(0);
+        BMC_MI_RD        <= mi_split_rd(0);
+        BMC_MI_BE        <= mi_split_be(0);
+        mi_split_ardy(0) <= BMC_MI_ARDY;
+        mi_split_drd(0)  <= BMC_MI_DRD;
+        mi_split_drdy(0) <= BMC_MI_DRDY;
+    end generate;
+
+    boot_type_2_g: if (BOOT_TYPE = 2) generate
+
+        mi_sync_ardy<= (mi_sync_rd or mi_sync_wr);
+        mi_rd_p : process(BOOT_CLK)
+        begin
+            if rising_edge(BOOT_CLK) then
+                case mi_sync_addr(3 downto 2) is
+                    when "00"   => mi_sync_dwr <= FLASH_RD_DATA(31 downto  0);
+                    when "01"   => mi_sync_dwr <= FLASH_RD_DATA(63 downto 32);
+                    when others => mi_sync_dwr <= (others => '0');
+                end case;
+                mi_sync_drdy <= mi_sync_rd;
+                    
+                if (BOOT_RESET = '1') then
+                    mi_sync_drdy <= '0';
+                end if;
             end if;
-        end if;
-    end process;
-
-    BOOT_REQUEST <= boot_cmd and (boot_timeout(25));
-    BOOT_IMAGE   <= boot_img;
-
-    FLASH_WR_EN <= flash_wr_cmd or BOOT_REQUEST;
-
+        end process;
+    
+        mi_wr_p : process(BOOT_CLK)
+        begin
+            if rising_edge(BOOT_CLK) then
+                flash_wr_cmd <= '0';
+                if (mi_sync_wr = '1' and boot_cmd = '0') then
+                    case mi_sync_addr(3 downto 2) is
+                        when "00" =>
+                            FLASH_WR_DATA(31 downto  0) <= mi_sync_dwr;
+                            flash_wr_data0_reg          <= mi_sync_dwr(0);
+                        when "01" =>
+                            FLASH_WR_DATA(63 downto 32) <= mi_sync_dwr;
+                            flash_wr_cmd <= '1';
+                            -- Reboot FPGA command
+                            if (mi_sync_dwr(31 downto 28) = X"E") then
+                                flash_wr_cmd <= '0';
+                                boot_cmd <= '1';
+                                boot_img <= not flash_wr_data0_reg;
+                            end if;
+            
+                        when others => null;
+                    end case;            
+                end if;
+    
+                if (BOOT_RESET = '1') then
+                    boot_cmd <= '0';
+                end if;
+            end if;
+        end process;
+    
+        
+        boot_timeout_p : process(BOOT_CLK)
+        begin
+            if rising_edge(BOOT_CLK) then
+                if (boot_cmd = '1') then
+                    boot_timeout <= boot_timeout + 1;
+                else
+                    boot_timeout <= (others =>'0');
+                end if;
+            end if;
+        end process;
+    
+        BOOT_REQUEST <= boot_cmd and (boot_timeout(25));
+        BOOT_IMAGE   <= boot_img;
+    
+        FLASH_WR_EN <= flash_wr_cmd or BOOT_REQUEST;
+    end generate;
+    
 end architecture;
