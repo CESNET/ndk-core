@@ -209,6 +209,9 @@ architecture FULL of FPGA_COMMON is
     constant DMA_CROX_EQ_DMA     : boolean := (DMA_CROX_CLK_SEL=1);
     constant DMA_CROX_DOUBLE_DMA : boolean := (DMA_CROX_CLK_SEL=0);
 
+    -- Boot type 
+    constant BOOT_TYPE           : natural := tsel(BOARD="FB2CGHH",3,2);
+
     signal heartbeat_cnt                 : unsigned(HEARTBEAT_CNT_W-1 downto 0);
     signal init_done_n                   : std_logic;
     signal pll_locked                    : std_logic;
@@ -381,6 +384,15 @@ architecture FULL of FPGA_COMMON is
     signal axi_mi_ardy_s                 : std_logic;          
     signal axi_mi_drd_s                  : std_logic_vector(32 - 1 downto 0);         
     signal axi_mi_drdy_s                 : std_logic;
+
+    signal bmc_mi_addr_s                 : std_logic_vector(8 - 1 downto 0);           
+    signal bmc_mi_dwr_s                  : std_logic_vector(32 - 1 downto 0);         
+    signal bmc_mi_wr_s                   : std_logic;        
+    signal bmc_mi_rd_s                   : std_logic;        
+    signal bmc_mi_be_s                   : std_logic_vector((32/8)-1 downto 0) := (others => '0');
+    signal bmc_mi_ardy_s                 : std_logic;          
+    signal bmc_mi_drd_s                  : std_logic_vector(32 - 1 downto 0);         
+    signal bmc_mi_drdy_s                 : std_logic;
 
     -- clk_gen reference clock
     signal ref_clk_in                    : std_logic;
@@ -622,7 +634,8 @@ begin
     boot_ctrl_g: if (BOARD = "FB4CGG3") or (BOARD = "400G1") generate
         boot_ctrl_i : entity work.BOOT_CTRL
         generic map(
-            DEVICE => DEVICE
+            DEVICE      => DEVICE,
+            BOOT_TYPE   => BOOT_TYPE
         )
         port map(
             MI_CLK        => clk_mi,
@@ -651,7 +664,8 @@ begin
     elsif BOARD = "FB2CGHH" generate
         boot_ctrl_i : entity work.BOOT_CTRL
         generic map(
-            DEVICE => DEVICE
+            DEVICE      => DEVICE,
+            BOOT_TYPE   => BOOT_TYPE
         )
         port map(
             MI_CLK        => clk_mi,
@@ -672,9 +686,14 @@ begin
             BOOT_IMAGE    => open,
 
             --BMC 
-            FLASH_WR_DATA => flash_wr_data,
-            FLASH_WR_EN   => flash_wr_en,
-            FLASH_RD_DATA => flash_rd_data,
+            BMC_MI_ADDR   => bmc_mi_addr_s,
+            BMC_MI_DWR    => bmc_mi_dwr_s, 
+            BMC_MI_WR     => bmc_mi_wr_s,
+            BMC_MI_RD     => bmc_mi_rd_s,
+            BMC_MI_BE     => bmc_mi_be_s,
+            BMC_MI_ARDY   => bmc_mi_ardy_s,
+            BMC_MI_DRD    => bmc_mi_drd_s,
+            BMC_MI_DRDY   => bmc_mi_drdy_s,
             
             --AXI Quad SPI
             AXI_MI_ADDR   => axi_mi_addr_s,
@@ -687,21 +706,28 @@ begin
             AXI_MI_DRDY   => axi_mi_drdy_s
         );
 
-        flash_rd_data <= MISC_IN(64-1    downto  0);
-        axi_mi_drd_s  <= MISC_IN(32+64-1 downto 64);
-        axi_mi_drdy_s <= MISC_IN(96);
-        axi_mi_ardy_s <= MISC_IN(97);
+        -- misc signals
+        bmc_mi_ardy_s    <=  MISC_IN(0);                   
+        bmc_mi_drdy_s    <=  MISC_IN(1);                   
+        bmc_mi_drd_s     <=  MISC_IN(32+2-1 downto 2);      
+        axi_mi_ardy_s    <=  MISC_IN(34);                  
+        axi_mi_drdy_s    <=  MISC_IN(35);                  
+        axi_mi_drd_s     <=  MISC_IN(32+36-1 downto 36);   
 
-        MISC_OUT(0)                     <= clk_usr_x1;  -- 100 MHz
-        MISC_OUT(1)                     <= clk_usr_x2;  -- 200 MHz
-        MISC_OUT(2)                     <= rst_usr_x2(0);
-        MISC_OUT(3)                     <= flash_wr_en;
-        MISC_OUT(64+ 4-1 downto   4)    <= flash_wr_data;
-        MISC_OUT(32+68-1 downto  68)    <= axi_mi_dwr_s;
-        MISC_OUT(8+100-1 downto 100)    <= axi_mi_addr_s;
-        MISC_OUT(4+108-1 downto 108)    <= axi_mi_be_s;
-        MISC_OUT(112)                   <= axi_mi_wr_s;
-        MISC_OUT(113)                   <= axi_mi_rd_s;
+        MISC_OUT(0)                 <= clk_usr_x1;  -- 100 MHz
+        MISC_OUT(1)                 <= clk_usr_x2;  -- 200 MHz
+        MISC_OUT(2)                 <= rst_usr_x2(0);
+        MISC_OUT(3)                 <= bmc_mi_wr_s;
+        MISC_OUT(4)                 <= bmc_mi_rd_s;
+        MISC_OUT(4+5-1 downto 5)    <= bmc_mi_be_s;
+        MISC_OUT(8+9-1 downto 9)    <= bmc_mi_addr_s;
+        MISC_OUT(32+17-1 downto 17) <= bmc_mi_dwr_s;
+        MISC_OUT(49)                <= axi_mi_wr_s;
+        MISC_OUT(50)                <= axi_mi_rd_s;
+        MISC_OUT(4+51-1 downto 51)  <= axi_mi_be_s;
+        MISC_OUT(8+55-1 downto 55)  <= axi_mi_addr_s;
+        MISC_OUT(32+63-1 downto 63) <= axi_mi_dwr_s;
+
     else generate
         mi_adc_ardy(MI_ADC_PORT_BOOT) <= '1';
         mi_adc_drdy(MI_ADC_PORT_BOOT) <= '0';
