@@ -20,7 +20,6 @@ set PCIE_BASE            "$ENTITY_BASE/src/comp/pcie"
 set DMA_BUS_BASE         "$ENTITY_BASE/src/comp/dma"
 set NETWORK_MOD_BASE     "$ENTITY_BASE/src/comp/network_mod"
 set CLOCK_GEN_BASE       "$ENTITY_BASE/src/comp/clk_gen"
-set BOOT_CTRL_BASE       "$ENTITY_BASE/src/comp/boot_ctrl"
 set SDM_CTRL_BASE        "$ENTITY_BASE/src/comp/sdm_ctrl"
 set MI_SPLITTER_BASE     "$OFM_PATH/comp/mi_tools/splitter_plus_gen"
 set RESET_TREE_GEN_BASE  "$OFM_PATH/comp/base/misc/reset_tree_gen"
@@ -44,7 +43,6 @@ if { $ARCHGRP == "APPLICATION_CORE_ENTYTY_ONLY" } {
   lappend MOD "$ENTITY_BASE/src/application_ent.vhd"
 } else {
   lappend COMPONENTS [list "CLOCK_GEN"       $CLOCK_GEN_BASE       $CLOCK_GEN_ARCH  ]
-  lappend COMPONENTS [list "BOOT_CTRL"       $BOOT_CTRL_BASE       "FULL"           ]
   lappend COMPONENTS [list "SDM_CTRL"        $SDM_CTRL_BASE        $SDM_SYSMON_ARCH ]
   lappend COMPONENTS [list "ASYNC_RESET"     $ASYNC_RESET_BASE     "FULL"           ]
   lappend COMPONENTS [list "ASYNC_OPEN_LOOP" $ASYNC_OPEN_LOOP_BASE "FULL"           ]
