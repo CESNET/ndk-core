@@ -254,9 +254,9 @@ begin
         -- pack MVB data (DMA2APP)
         dma_tx_mvb_data_g: for i in 0 to DMA_STREAMS-1 generate
             dma_tx_mvb_data_g2: for r in 0 to MFB_REGIONS-1 generate
-                dma_tx_mvb_data_deser(i)(r*DMA_TX_ALL_META_W+log2(DMA_TX_CHANNELS)-1 downto r*DMA_RX_ALL_META_W)                                          <= DMA_TX_MVB_CHANNEL(i)((r+1)*log2(DMA_TX_CHANNELS)-1 downto r*log2(DMA_TX_CHANNELS));
-                dma_tx_mvb_data_deser(i)(r*DMA_TX_ALL_META_W+log2(DMA_TX_CHANNELS)+DMA_HDR_META_WIDTH-1 downto r*DMA_RX_ALL_META_W+log2(DMA_TX_CHANNELS)) <= DMA_TX_MVB_HDR_META(i)((r+1)*DMA_HDR_META_WIDTH-1 downto r*DMA_HDR_META_WIDTH);
-                dma_tx_mvb_data_deser(i)((r+1)*DMA_TX_ALL_META_W-1 downto r*DMA_RX_ALL_META_W+log2(DMA_TX_CHANNELS)+DMA_HDR_META_WIDTH)                   <= DMA_TX_MVB_LEN(i)((r+1)*log2(DMA_PKT_MTU+1)-1 downto r*log2(DMA_PKT_MTU+1));
+                dma_tx_mvb_data_deser(i)(r*DMA_TX_ALL_META_W+log2(DMA_TX_CHANNELS)-1 downto r*DMA_TX_ALL_META_W)                                          <= DMA_TX_MVB_CHANNEL(i)((r+1)*log2(DMA_TX_CHANNELS)-1 downto r*log2(DMA_TX_CHANNELS));
+                dma_tx_mvb_data_deser(i)(r*DMA_TX_ALL_META_W+log2(DMA_TX_CHANNELS)+DMA_HDR_META_WIDTH-1 downto r*DMA_TX_ALL_META_W+log2(DMA_TX_CHANNELS)) <= DMA_TX_MVB_HDR_META(i)((r+1)*DMA_HDR_META_WIDTH-1 downto r*DMA_HDR_META_WIDTH);
+                dma_tx_mvb_data_deser(i)((r+1)*DMA_TX_ALL_META_W-1 downto r*DMA_TX_ALL_META_W+log2(DMA_TX_CHANNELS)+DMA_HDR_META_WIDTH)                   <= DMA_TX_MVB_LEN(i)((r+1)*log2(DMA_PKT_MTU+1)-1 downto r*log2(DMA_PKT_MTU+1));
 
                 dma_tx_mvb_switch_deser(i)((r+1)*log2(APP_STREAMS)-1 downto r*log2(APP_STREAMS)) <= DMA_TX_MVB_CHANNEL(i)((r+1)*log2(DMA_TX_CHANNELS)-1 downto (r+1)*log2(DMA_TX_CHANNELS)-log2(APP_STREAMS));
             end generate;
@@ -313,9 +313,9 @@ begin
         -- unpack MVB data (DMA2APP)
         app_dma_tx_mvb_data_g: for i in 0 to APP_STREAMS-1 generate
             app_dma_tx_mvb_data_g2: for r in 0 to MFB_REGIONS-1 generate
-                APP_DMA_TX_MVB_CHANNEL(i)((r+1)*log2(DMA_TX_CHANNELS)-1 downto r*log2(DMA_TX_CHANNELS)) <= app_dma_tx_mvb_data_deser(i)(r*DMA_TX_ALL_META_W+log2(DMA_TX_CHANNELS)-1 downto r*DMA_RX_ALL_META_W);
-                APP_DMA_TX_MVB_HDR_META(i)((r+1)*DMA_HDR_META_WIDTH-1 downto r*DMA_HDR_META_WIDTH)      <= app_dma_tx_mvb_data_deser(i)(r*DMA_TX_ALL_META_W+log2(DMA_TX_CHANNELS)+DMA_HDR_META_WIDTH-1 downto r*DMA_RX_ALL_META_W+log2(DMA_TX_CHANNELS));
-                APP_DMA_TX_MVB_LEN(i)((r+1)*log2(DMA_PKT_MTU+1)-1 downto r*log2(DMA_PKT_MTU+1))         <= app_dma_tx_mvb_data_deser(i)((r+1)*DMA_TX_ALL_META_W-1 downto r*DMA_RX_ALL_META_W+log2(DMA_TX_CHANNELS)+DMA_HDR_META_WIDTH);
+                APP_DMA_TX_MVB_CHANNEL(i)((r+1)*log2(DMA_TX_CHANNELS)-1 downto r*log2(DMA_TX_CHANNELS)) <= app_dma_tx_mvb_data_deser(i)(r*DMA_TX_ALL_META_W+log2(DMA_TX_CHANNELS)-1 downto r*DMA_TX_ALL_META_W);
+                APP_DMA_TX_MVB_HDR_META(i)((r+1)*DMA_HDR_META_WIDTH-1 downto r*DMA_HDR_META_WIDTH)      <= app_dma_tx_mvb_data_deser(i)(r*DMA_TX_ALL_META_W+log2(DMA_TX_CHANNELS)+DMA_HDR_META_WIDTH-1 downto r*DMA_TX_ALL_META_W+log2(DMA_TX_CHANNELS));
+                APP_DMA_TX_MVB_LEN(i)((r+1)*log2(DMA_PKT_MTU+1)-1 downto r*log2(DMA_PKT_MTU+1))         <= app_dma_tx_mvb_data_deser(i)((r+1)*DMA_TX_ALL_META_W-1 downto r*DMA_TX_ALL_META_W+log2(DMA_TX_CHANNELS)+DMA_HDR_META_WIDTH);
             end generate;
         end generate;
     end generate;
