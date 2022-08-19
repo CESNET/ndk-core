@@ -138,11 +138,11 @@ begin
          if (i2c_mi_wr = '1') then
             if (MI_ADDR_PHY(3 downto 2) = "00") then    -- 0x10 - I2C control reg - low 32 bits
                i2c_qsfp_dwr(31 downto  0) <= MI_DWR_PHY;
-               i2c_qsfp_be                <= "00001111";
+               i2c_qsfp_be                <= "0000" & MI_BE_PHY;
                i2c_qsfp_wen               <= '1';
             elsif (MI_ADDR_PHY(3 downto 2) = "01") then -- 0x14 - I2C control reg - high 32 bits
                i2c_qsfp_dwr(63 downto 32) <= MI_DWR_PHY;
-               i2c_qsfp_be                <= "11110000";
+               i2c_qsfp_be                <= MI_BE_PHY & "0000";
                i2c_qsfp_wen               <= '1';
             elsif (MI_ADDR_PHY(3 downto 2) = "11") then -- 0x1C - QSFP control reg
                trans_ctrl(qsfp_mi_sel_i*3+2 downto qsfp_mi_sel_i*3) <= MI_DWR_PHY(3 downto 1);
