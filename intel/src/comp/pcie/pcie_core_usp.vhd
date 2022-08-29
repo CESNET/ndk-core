@@ -327,7 +327,7 @@ begin
                 cfg_tph_st_mode                   => open,
                 cfg_vf_tph_requester_enable       => open,
                 cfg_vf_tph_st_mode                => open,
-                cfg_dsn                           => (others => '1'),
+                cfg_dsn                           => (others => '0'),
                 cfg_bus_number                    => open,
                 cfg_msg_received                  => open,
                 cfg_msg_received_data             => open,
@@ -446,10 +446,12 @@ begin
             DEVICE_TREE_ENABLE     => dt_en,
             VSEC_BASE_ADDRESS      => VSEC_BASE_ADDRESS,
             VSEC_NEXT_POINTER      => DTB_NEXT_POINTER,
+            CARD_ID_WIDTH          => CARD_ID_WIDTH,
             CFG_EXT_READ_DV_HOTFIX => false
         )
         port map(
             CLK                    => pcie_clk(i),
+            CARD_ID                => CARD_ID(i),
             CFG_EXT_READ           => cfg_ext_read(i),
             CFG_EXT_WRITE          => cfg_ext_write(i),
             CFG_EXT_REGISTER       => cfg_ext_register(i),

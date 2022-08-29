@@ -46,6 +46,7 @@ entity PCIE_CORE is
         CRDT_TOTAL_CPLD  : natural := 32;
         -- Reset width
         RESET_WIDTH      : natural := 8;
+        CARD_ID_WIDTH    : natural := 0;
         -- FPGA device
         DEVICE           : string  := "STRATIX10"
     );
@@ -92,6 +93,9 @@ entity PCIE_CORE is
         PCIE_10B_TAG_REQ_EN : out std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
         -- PCIe RCB size control
         PCIE_RCB_SIZE       : out std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+
+        -- Card ID / PCIe Device Serial Number
+        CARD_ID             : in slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CARD_ID_WIDTH-1 downto 0);
 
         -- =====================================================================
         --  User DOWN/UP Flow Control Interface - R-Tile only (PCIE_USER_CLK)

@@ -187,6 +187,8 @@ architecture FULL of FPGA_COMMON is
     constant RESET_WIDTH  : natural := 10;
     constant TSU_USE_DSP  : boolean := (DEVICE="ULTRASCALE");
 
+    constant CARD_ID_WIDTH	: natural := tsel(DEVICE="ULTRASCALE", 96, 0);
+
     constant MI_DATA_WIDTH      : integer := 32;
     constant MI_ADDR_WIDTH      : integer := 32;
 
@@ -257,6 +259,10 @@ architecture FULL of FPGA_COMMON is
     signal pcie_link_up                  : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
     signal dma_pcie_link_up              : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
     signal app_pcie_link_up              : std_logic_vector(PCIE_ENDPOINTS-1 downto 0) := (others => '0');
+
+    signal xilinx_dna                    : std_logic_vector(95 downto 0);
+    signal card_id                       : std_logic_vector(CARD_ID_WIDTH-1 downto 0);
+    signal pcie_card_id                  : slv_array_t     (PCIE_ENDPOINTS-1 downto 0)(CARD_ID_WIDTH-1 downto 0);
 
     -- MI32 interface signals
     signal mi_dwr                        : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(31 downto 0);
@@ -483,6 +489,20 @@ begin
     MISC_OUT(2) <= clk_usr_x2;  -- 200 MHz
     MISC_OUT(3) <= rst_usr_x2(0);
 
+    hwid_i : entity work.hwid
+    generic map (
+        DEVICE          => DEVICE
+    )
+    port map (
+        CLK             => clk_usr_x1,
+        XILINX_DNA      => xilinx_dna,
+        XILINX_DNA_VLD  => open
+    );
+
+    card_id_usp_g: if (DEVICE = "ULTRASCALE") generate
+        card_id <= xilinx_dna;
+    end generate;
+
     -- =========================================================================
     --                      PCIe module instance and connections
     -- =========================================================================
@@ -504,6 +524,7 @@ begin
         XVC_ENABLE          => false,
         PF0_TOTAL_VF        => 0,
 
+        CARD_ID_WIDTH       => CARD_ID_WIDTH,
         DMA_ENDPOINTS       => DMA_ENDPOINTS,
 
         MVB_UP_ITEMS        => DMA_UP_MVB_ITEMS,
@@ -538,6 +559,8 @@ begin
         PCIE_USER_CLK      => clk_pci,
         PCIE_USER_RESET    => rst_pci,
         PCIE_LINK_UP       => pcie_link_up,
+
+        CARD_ID            => pcie_card_id,
 
         DMA_CLK            => clk_dma,
         DMA_RESET          => rst_dma(0),
@@ -607,6 +630,19 @@ begin
             BRST     => '0',
             ADATAIN  => pcie_link_up(i),                
             BDATAOUT => app_pcie_link_up(i) 
+        );
+
+        cdc_pcie_cardid_i: entity work.ASYNC_OPEN_LOOP_SMD
+        generic map(
+            DATA_WIDTH => CARD_ID_WIDTH
+        )
+        port map(
+            ACLK     => clk_usr_x1,
+            BCLK     => clk_pci(i),
+            ARST     => '0',
+            BRST     => '0',
+            ADATAIN  => card_id,
+            BDATAOUT => pcie_card_id(i)
         );
     end generate;
 

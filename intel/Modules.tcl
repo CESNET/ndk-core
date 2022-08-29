@@ -25,6 +25,7 @@ set MI_SPLITTER_BASE     "$OFM_PATH/comp/mi_tools/splitter_plus_gen"
 set RESET_TREE_GEN_BASE  "$OFM_PATH/comp/base/misc/reset_tree_gen"
 set MI_TEST_SPACE_BASE   "$OFM_PATH/comp/mi_tools/test_space"
 set DMA_GENERATOR_BASE   "$OFM_PATH/comp/mfb_tools/debug/dma_generator"
+set HWID_BASE            "$OFM_PATH/comp/base/misc/hwid"
 
 # Packages
 lappend PACKAGES "$OFM_PATH/comp/base/pkg/math_pack.vhd"
@@ -47,6 +48,7 @@ if { $ARCHGRP == "APPLICATION_CORE_ENTYTY_ONLY" } {
   lappend COMPONENTS [list "ASYNC_RESET"     $ASYNC_RESET_BASE     "FULL"           ]
   lappend COMPONENTS [list "ASYNC_OPEN_LOOP" $ASYNC_OPEN_LOOP_BASE "FULL"           ]
   lappend COMPONENTS [list "TSU"             $TSU_BASE             "FULL"           ]
+  lappend COMPONENTS [list "HWID"            $HWID_BASE            $CLOCK_GEN_ARCH  ]
   lappend COMPONENTS [list "RESET_TREE_GEN"  $RESET_TREE_GEN_BASE  "FULL"           ]
   lappend COMPONENTS [list "PCIE"            $PCIE_BASE            $PCIE_MOD_ARCH   ]
   lappend COMPONENTS [list "MI_SPLITTER"     $MI_SPLITTER_BASE     "FULL"           ]

@@ -62,6 +62,8 @@ entity PCIE is
         PCIE_CONS           : natural := 1;
         PCIE_LANES          : natural := 16;
 
+        CARD_ID_WIDTH       : natural := 0;
+
         -- FPGA device
         DEVICE              : string  := "STRATIX10"
     );
@@ -99,6 +101,9 @@ entity PCIE is
         PCIE_10B_TAG_REQ_EN : out std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
         -- PCIe RCB size control
         PCIE_RCB_SIZE       : out std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+
+        -- Card ID / PCIe Device Serial Number
+        CARD_ID             : in slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CARD_ID_WIDTH-1 downto 0) := (others => (others => '0'));
 
         -- =====================================================================
         --  DMA BUS - DOWN/UP - MFB/MVB Streams (DMA_CLK)
@@ -287,6 +292,7 @@ begin
         CRDT_TOTAL_PD     => MTC_FIFO_CRDT/2,
         CRDT_TOTAL_NPD    => MTC_FIFO_CRDT/2,
         CRDT_TOTAL_CPLD   => 0,
+        CARD_ID_WIDTH     => CARD_ID_WIDTH,
         RESET_WIDTH       => RESET_WIDTH,
         DEVICE            => DEVICE
     )
@@ -310,6 +316,8 @@ begin
         PCIE_EXT_TAG_EN     => pcie_cfg_ext_tag_en,
         PCIE_10B_TAG_REQ_EN => pcie_cfg_10b_tag_req_en,
         PCIE_RCB_SIZE       => pcie_cfg_rcb_size,
+
+        CARD_ID             => CARD_ID,
 
         CRDT_UP_INIT_DONE   => crdt_up_init_done,
         CRDT_UP_UPDATE      => crdt_up_update,
