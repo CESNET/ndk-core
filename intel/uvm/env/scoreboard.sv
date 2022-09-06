@@ -8,38 +8,38 @@
  * SPDX-License-Identifier: BSD-3-Clause
 */
 
-class scoreboard #(ETH_STREAMS, ETH_CHANNELS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, REGIONS, MI_DATA_WIDTH, MI_ADDR_WIDTH) extends uvm_env;
-    `uvm_component_param_utils(uvm_app_core::scoreboard#(ETH_STREAMS, ETH_CHANNELS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, REGIONS, MI_DATA_WIDTH, MI_ADDR_WIDTH))
+class scoreboard #(ETH_STREAMS, ETH_CHANNELS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, REGIONS, ITEM_WIDTH, MI_DATA_WIDTH, MI_ADDR_WIDTH) extends uvm_env;
+    `uvm_component_param_utils(uvm_app_core::scoreboard#(ETH_STREAMS, ETH_CHANNELS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, REGIONS, ITEM_WIDTH, MI_DATA_WIDTH, MI_ADDR_WIDTH))
 
     //RESET --
-    typedef scoreboard #(ETH_STREAMS, ETH_CHANNELS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, REGIONS, MI_DATA_WIDTH, MI_ADDR_WIDTH) this_type;
+    typedef scoreboard #(ETH_STREAMS, ETH_CHANNELS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, REGIONS, ITEM_WIDTH, MI_DATA_WIDTH, MI_ADDR_WIDTH) this_type;
     uvm_analysis_imp_reset#(uvm_reset::sequence_item, this_type) analysis_imp_reset;
  
     //// ETH I/O
     localparam ETH_TX_LENGTH_WIDTH  = 16;
     localparam ETH_TX_CHANNEL_WIDTH = 8;
     uvm_common::subscriber#(uvm_logic_vector::sequence_item#(ETH_RX_HDR_WIDTH)) eth_mvb_rx[ETH_STREAMS];
-    uvm_common::subscriber#(uvm_byte_array::sequence_item)                      eth_mfb_rx[ETH_STREAMS];
+    uvm_common::subscriber#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)) eth_mfb_rx[ETH_STREAMS];
     uvm_analysis_export #(uvm_logic_vector::sequence_item#(ETH_TX_HDR_WIDTH))   eth_mvb_tx[ETH_STREAMS];
-    uvm_analysis_export #(uvm_byte_array::sequence_item)                        eth_mfb_tx[ETH_STREAMS];
+    uvm_analysis_export #(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))   eth_mfb_tx[ETH_STREAMS];
     // DMA I/O
     localparam DMA_RX_MVB_WIDTH = $clog2(DMA_PKT_MTU+1)+DMA_HDR_META_WIDTH+$clog2(DMA_TX_CHANNELS);
     localparam DMA_TX_MVB_WIDTH = $clog2(DMA_PKT_MTU+1)+DMA_HDR_META_WIDTH+$clog2(DMA_RX_CHANNELS) + 1;
     uvm_common::subscriber#(uvm_logic_vector::sequence_item#(DMA_RX_MVB_WIDTH)) dma_mvb_rx[DMA_STREAMS];
-    uvm_common::subscriber#(uvm_byte_array::sequence_item)                      dma_mfb_rx[DMA_STREAMS];
+    uvm_common::subscriber#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)) dma_mfb_rx[DMA_STREAMS];
     uvm_analysis_export #(uvm_logic_vector::sequence_item#(DMA_TX_MVB_WIDTH))   dma_mvb_tx[DMA_STREAMS];
-    uvm_analysis_export #(uvm_byte_array::sequence_item)                        dma_mfb_tx[DMA_STREAMS];
+    uvm_analysis_export #(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))   dma_mfb_tx[DMA_STREAMS];
 
     //////////////////////////
     // CONNECTION to internal fifos
     scoreboard_channel_header#(ETH_TX_HDR_WIDTH, 0, 2**ETH_TX_CHANNEL_WIDTH, 2**ETH_TX_LENGTH_WIDTH-1) eth_mvb_cmp[ETH_STREAMS];
-    scoreboard_channel_mfb #(uvm_byte_array::sequence_item)                                            eth_mfb_cmp[ETH_STREAMS];
+    scoreboard_channel_mfb #(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))                       eth_mfb_cmp[ETH_STREAMS];
     scoreboard_channel_header#(DMA_TX_MVB_WIDTH, DMA_HDR_META_WIDTH, DMA_RX_CHANNELS, DMA_PKT_MTU)     dma_mvb_cmp[DMA_STREAMS];
-    scoreboard_channel_mfb #(uvm_byte_array::sequence_item)                                            dma_mfb_cmp[DMA_STREAMS];
+    scoreboard_channel_mfb #(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))                       dma_mfb_cmp[DMA_STREAMS];
 
     /////////////////////////
     // MODEL
-    model #(ETH_STREAMS, ETH_CHANNELS, ETH_RX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, REGIONS, MI_DATA_WIDTH, MI_ADDR_WIDTH) m_model;
+    model #(ETH_STREAMS, ETH_CHANNELS, ETH_RX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, REGIONS, ITEM_WIDTH, MI_DATA_WIDTH, MI_ADDR_WIDTH) m_model;
 
     ////////////////////////
     // LOCAL VARIABLES
@@ -58,14 +58,14 @@ class scoreboard #(ETH_STREAMS, ETH_CHANNELS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH
             it_num.itoa(it);
 
             eth_mvb_rx[it] = uvm_common::subscriber#(uvm_logic_vector::sequence_item#(ETH_RX_HDR_WIDTH))::type_id::create({"eth_mvb_rx_", it_num}, this);
-            eth_mfb_rx[it] = uvm_common::subscriber#(uvm_byte_array::sequence_item)::type_id::create({"eth_mfb_rx_", it_num}, this);
+            eth_mfb_rx[it] = uvm_common::subscriber#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))::type_id::create({"eth_mfb_rx_", it_num}, this);
             eth_mvb_tx[it] = new({"eth_mvb_tx_", it_num}, this);
             eth_mfb_tx[it] = new({"eth_mfb_tx_", it_num}, this);
 
             eth_mvb_cmp[it] = scoreboard_channel_header#(ETH_TX_HDR_WIDTH, 0, 2**ETH_TX_CHANNEL_WIDTH, 2**ETH_TX_LENGTH_WIDTH-1)::type_id::create({"eth_mvb_cmp_", it_num}, this);
             //eth_mvb_cmp[it].prefix_set({"ETH [", it_num, "] header "});
 
-            eth_mfb_cmp[it] = scoreboard_channel_mfb #(uvm_byte_array::sequence_item)::type_id::create({"eth_mfb_cmp_", it_num}, this);
+            eth_mfb_cmp[it] = scoreboard_channel_mfb #(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))::type_id::create({"eth_mfb_cmp_", it_num}, this);
             //eth_mfb_cmp[it].prefix_set({"ETH [", it_num, "] packet "});
         end
 
@@ -76,18 +76,18 @@ class scoreboard #(ETH_STREAMS, ETH_CHANNELS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH
             it_num.itoa(it);
 
             dma_mvb_rx[it] = uvm_common::subscriber#(uvm_logic_vector::sequence_item#(DMA_RX_MVB_WIDTH))::type_id::create({"dma_mvb_rx_", it_num}, this);
-            dma_mfb_rx[it] = uvm_common::subscriber#(uvm_byte_array::sequence_item)::type_id::create({"dma_mfb_rx_", it_num}, this);
+            dma_mfb_rx[it] = uvm_common::subscriber#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))::type_id::create({"dma_mfb_rx_", it_num}, this);
             dma_mvb_tx[it] = new({"dma_mvb_tx_", it_num}, this);
             dma_mfb_tx[it] = new({"dma_mfb_tx_", it_num}, this);
 
             dma_mvb_cmp[it] = uvm_app_core::scoreboard_channel_header#(DMA_TX_MVB_WIDTH, DMA_HDR_META_WIDTH, DMA_RX_CHANNELS, DMA_PKT_MTU)::type_id::create({"dma_mvb_cmp_", it_num}, this);
             //dma_mvb_cmp[it].prefix_set({"DMA [", it_num, "] header "});
 
-            dma_mfb_cmp[it] = scoreboard_channel_mfb #(uvm_byte_array::sequence_item)::type_id::create({"dma_mfb_cmp_", it_num}, this);
+            dma_mfb_cmp[it] = scoreboard_channel_mfb #(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))::type_id::create({"dma_mfb_cmp_", it_num}, this);
             //dma_mfb_cmp[it].prefix_set({"DMA [", it_num, "] packet "});
         end
 
-        m_model = model#(ETH_STREAMS, ETH_CHANNELS, ETH_RX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, REGIONS, MI_DATA_WIDTH, MI_ADDR_WIDTH)::type_id::create("m_model", this);
+        m_model = model#(ETH_STREAMS, ETH_CHANNELS, ETH_RX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, REGIONS, ITEM_WIDTH, MI_DATA_WIDTH, MI_ADDR_WIDTH)::type_id::create("m_model", this);
     endfunction
 
     function void delay_max_set(time delay_max);

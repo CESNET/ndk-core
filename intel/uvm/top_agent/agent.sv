@@ -8,16 +8,16 @@
  * SPDX-License-Identifier: BSD-3-Clause
 */
 
-class agent extends uvm_agent;
+class agent #(ITEM_WIDTH) extends uvm_agent;
     // registration of component tools
-    `uvm_component_utils(uvm_app_core_top_agent::agent)
+    `uvm_component_param_utils(uvm_app_core_top_agent::agent#(ITEM_WIDTH))
 
     // -----------------------
     // Variables.
     // -----------------------
     uvm_reset::sync_cbs       reset_sync;
-    uvm_byte_array::sequencer m_sequencer;
-    driver                    m_driver;
+    uvm_logic_vector_array::sequencer#(ITEM_WIDTH) m_sequencer;
+    driver#(ITEM_WIDTH)       m_driver;
 
     // Contructor, where analysis port is created.
     function new(string name, uvm_component parent = null);
@@ -32,8 +32,8 @@ class agent extends uvm_agent;
         super.build_phase(phase);
 
         reset_sync  = new();
-        m_sequencer = uvm_byte_array::sequencer::type_id::create("m_sequencer", this);
-        m_driver    = driver::type_id::create("m_driver", this);
+        m_sequencer = uvm_logic_vector_array::sequencer#(ITEM_WIDTH)::type_id::create("m_sequencer", this);
+        m_driver    = driver#(ITEM_WIDTH)::type_id::create("m_driver", this);
     endfunction
 
     function void connect_phase(uvm_phase phase);

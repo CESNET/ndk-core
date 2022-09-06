@@ -16,15 +16,15 @@ class env #(ETH_STREAMS, ETH_CHANNELS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR
 
     // ETHERNET I/O
     uvm_logic_vector_mvb::env_rx#(REGIONS, ETH_RX_HDR_WIDTH)                             m_eth_mvb_rx[ETH_STREAMS];
-    uvm_byte_array_mfb::env_rx#(REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, 0)                m_eth_mfb_rx[ETH_STREAMS];
-    uvm_byte_array_mfb::env_tx#(REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, ETH_TX_HDR_WIDTH) m_eth_mfb_tx[ETH_STREAMS];
+    uvm_logic_vector_array_mfb::env_rx#(REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, MFB_ITEM_WIDTH, 0)                m_eth_mfb_rx[ETH_STREAMS];
+    uvm_logic_vector_array_mfb::env_tx#(REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, MFB_ITEM_WIDTH, ETH_TX_HDR_WIDTH) m_eth_mfb_tx[ETH_STREAMS];
     // DMA I/O
     localparam DMA_RX_MVB_WIDTH = $clog2(DMA_PKT_MTU+1)+DMA_HDR_META_WIDTH+$clog2(DMA_TX_CHANNELS);
     localparam DMA_TX_MVB_WIDTH = $clog2(DMA_PKT_MTU+1)+DMA_HDR_META_WIDTH+$clog2(DMA_RX_CHANNELS) + 1;
     uvm_logic_vector_mvb::env_rx#(REGIONS, DMA_RX_MVB_WIDTH)                m_dma_mvb_rx[DMA_STREAMS];
-    uvm_byte_array_mfb::env_rx#(REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, 0)   m_dma_mfb_rx[DMA_STREAMS];
+    uvm_logic_vector_array_mfb::env_rx#(REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, MFB_ITEM_WIDTH, 0)   m_dma_mfb_rx[DMA_STREAMS];
     uvm_logic_vector_mvb::env_tx#(REGIONS, DMA_TX_MVB_WIDTH)                m_dma_mvb_tx[DMA_STREAMS];
-    uvm_byte_array_mfb::env_tx#(REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, 0)   m_dma_mfb_tx[DMA_STREAMS];
+    uvm_logic_vector_array_mfb::env_tx#(REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, MFB_ITEM_WIDTH, 0)   m_dma_mfb_tx[DMA_STREAMS];
     //RESET
     uvm_reset::env#(4)         m_resets_gen;
     uvm_reset::agent           m_resets_mi;
@@ -36,7 +36,7 @@ class env #(ETH_STREAMS, ETH_CHANNELS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR
     uvm_mi::regmodel#(uvm_app_core::regmodel #(ETH_STREAMS, ETH_CHANNELS, DMA_RX_CHANNELS), MI_DATA_WIDTH, MI_ADDR_WIDTH) m_regmodel;
 
     //SCOREBOARD
-    scoreboard #(ETH_STREAMS, ETH_CHANNELS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, REGIONS, MI_DATA_WIDTH, MI_ADDR_WIDTH) m_scoreboard;
+    scoreboard #(ETH_STREAMS, ETH_CHANNELS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, REGIONS, MFB_ITEM_WIDTH, MI_DATA_WIDTH, MI_ADDR_WIDTH) m_scoreboard;
 
     function new(string name, uvm_component parent = null);
         super.new(name, parent);
@@ -53,8 +53,8 @@ class env #(ETH_STREAMS, ETH_CHANNELS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR
         // ETH CONFIG
         for (int unsigned it = 0; it < ETH_STREAMS; it++) begin
             uvm_logic_vector_mvb::config_item mvb_rx_config;
-            uvm_byte_array_mfb::config_item mfb_rx_config;
-            uvm_byte_array_mfb::config_item mfb_tx_config;
+            uvm_logic_vector_array_mfb::config_item mfb_rx_config;
+            uvm_logic_vector_array_mfb::config_item mfb_tx_config;
             string it_num;
 
             it_num.itoa(it);
@@ -69,24 +69,24 @@ class env #(ETH_STREAMS, ETH_CHANNELS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR
             mfb_rx_config = new();
             mfb_rx_config.active         = UVM_ACTIVE;
             mfb_rx_config.interface_name = {"ETH_RX_MFB_", it_num};
-            uvm_config_db#(uvm_byte_array_mfb::config_item)::set(this, {"m_eth_mfb_rx_", it_num}, "m_config", mfb_rx_config);
-            m_eth_mfb_rx[it] = uvm_byte_array_mfb::env_rx#(REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, 0)::type_id::create({"m_eth_mfb_rx_", it_num}, this); 
+            uvm_config_db#(uvm_logic_vector_array_mfb::config_item)::set(this, {"m_eth_mfb_rx_", it_num}, "m_config", mfb_rx_config);
+            m_eth_mfb_rx[it] = uvm_logic_vector_array_mfb::env_rx#(REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, MFB_ITEM_WIDTH, 0)::type_id::create({"m_eth_mfb_rx_", it_num}, this); 
             // TX MFB
             mfb_tx_config = new();
-            mfb_tx_config.meta_behav     = 1;
+            mfb_tx_config.meta_behav     = uvm_logic_vector_array_mfb::config_item::META_SOF;
             mfb_tx_config.active         = UVM_ACTIVE;
             mfb_tx_config.interface_name = {"ETH_TX_MFB_", it_num};
-            uvm_config_db#(uvm_byte_array_mfb::config_item)::set(this, {"m_eth_mfb_tx_", it_num}, "m_config", mfb_tx_config);
-            m_eth_mfb_tx[it] = uvm_byte_array_mfb::env_tx#(REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, ETH_TX_HDR_WIDTH)::type_id::create({"m_eth_mfb_tx_", it_num}, this);
+            uvm_config_db#(uvm_logic_vector_array_mfb::config_item)::set(this, {"m_eth_mfb_tx_", it_num}, "m_config", mfb_tx_config);
+            m_eth_mfb_tx[it] = uvm_logic_vector_array_mfb::env_tx#(REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, MFB_ITEM_WIDTH, ETH_TX_HDR_WIDTH)::type_id::create({"m_eth_mfb_tx_", it_num}, this);
         end
 
         ///////////////
         // DMA CONFIG
         for (int unsigned it = 0; it < DMA_STREAMS; it++) begin
             uvm_logic_vector_mvb::config_item   mvb_rx_config;
-            uvm_byte_array_mfb::config_item mfb_rx_config;
+            uvm_logic_vector_array_mfb::config_item mfb_rx_config;
             uvm_logic_vector_mvb::config_item   mvb_tx_config;
-            uvm_byte_array_mfb::config_item mfb_tx_config;
+            uvm_logic_vector_array_mfb::config_item mfb_tx_config;
             string it_num;
             it_num.itoa(it);
 
@@ -100,8 +100,8 @@ class env #(ETH_STREAMS, ETH_CHANNELS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR
             mfb_rx_config = new();
             mfb_rx_config.active         = UVM_ACTIVE;
             mfb_rx_config.interface_name = {"DMA_RX_MFB_", it_num};
-            uvm_config_db#(uvm_byte_array_mfb::config_item)::set(this, {"m_dma_mfb_rx_", it_num}, "m_config", mfb_rx_config);
-            m_dma_mfb_rx[it] = uvm_byte_array_mfb::env_rx#(REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, 0)::type_id::create({"m_dma_mfb_rx_", it_num}, this);
+            uvm_config_db#(uvm_logic_vector_array_mfb::config_item)::set(this, {"m_dma_mfb_rx_", it_num}, "m_config", mfb_rx_config);
+            m_dma_mfb_rx[it] = uvm_logic_vector_array_mfb::env_rx#(REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, MFB_ITEM_WIDTH, 0)::type_id::create({"m_dma_mfb_rx_", it_num}, this);
             // TX MVB
             mvb_tx_config = new();
             mvb_tx_config.active         = UVM_ACTIVE;
@@ -112,8 +112,8 @@ class env #(ETH_STREAMS, ETH_CHANNELS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR
             mfb_tx_config = new();
             mfb_tx_config.active         = UVM_ACTIVE;
             mfb_tx_config.interface_name = {"DMA_TX_MFB_", it_num};
-            uvm_config_db#(uvm_byte_array_mfb::config_item)::set(this, {"m_dma_mfb_tx_", it_num}, "m_config", mfb_tx_config);
-            m_dma_mfb_tx[it] = uvm_byte_array_mfb::env_tx#(REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, 0)::type_id::create({"m_dma_mfb_tx_", it_num}, this);
+            uvm_config_db#(uvm_logic_vector_array_mfb::config_item)::set(this, {"m_dma_mfb_tx_", it_num}, "m_config", mfb_tx_config);
+            m_dma_mfb_tx[it] = uvm_logic_vector_array_mfb::env_tx#(REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, MFB_ITEM_WIDTH, 0)::type_id::create({"m_dma_mfb_tx_", it_num}, this);
         end
 
         ///////////////
@@ -143,7 +143,7 @@ class env #(ETH_STREAMS, ETH_CHANNELS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR
         m_resets_dma_config.active[1]         = UVM_PASSIVE;
         m_resets_dma_config.interface_name[1] = "RESET_DMA_X2";
         uvm_config_db#(uvm_reset::env_config_item#(2))::set(this, "m_resets_dma", "m_config", m_resets_dma_config);
-        m_resets_dma = uvm_reset::env#(2)::type_id::create("m_resets_dma", this); 
+        m_resets_dma = uvm_reset::env#(2)::type_id::create("m_resets_dma", this);
 
         m_resets_app_config = new();
         m_resets_app_config.active         = UVM_PASSIVE;
@@ -174,7 +174,7 @@ class env #(ETH_STREAMS, ETH_CHANNELS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR
 
         ///////////////
         // SCOREBOARD
-        m_scoreboard = scoreboard #(ETH_STREAMS, ETH_CHANNELS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, REGIONS, MI_DATA_WIDTH, MI_ADDR_WIDTH)::type_id::create("m_scoreboard", this);
+        m_scoreboard = scoreboard #(ETH_STREAMS, ETH_CHANNELS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, REGIONS, MFB_ITEM_WIDTH, MI_DATA_WIDTH, MI_ADDR_WIDTH)::type_id::create("m_scoreboard", this);
     endfunction
 
     function void delay_max_set(time delay_max);

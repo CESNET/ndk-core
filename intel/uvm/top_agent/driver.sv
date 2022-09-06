@@ -8,22 +8,21 @@
  * SPDX-License-Identifier: BSD-3-Clause
 */
 
-class driver extends uvm_driver #(uvm_byte_array::sequence_item);
+class driver#(ITEM_WIDTH) extends uvm_driver #(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH));
     // registration of component tools
-    `uvm_component_utils(uvm_app_core_top_agent::driver)
+    `uvm_component_param_utils(uvm_app_core_top_agent::driver#(ITEM_WIDTH))
 
     //RESET reset_sync
     uvm_reset::sync_terminate reset_sync;
 
-    uvm_byte_array::sequence_item m_sequencer;
-    //uvm_seq_item_pull_imp #( byte_array::sequence_item, byte_array::sequence_item , driver) byte_array_export;
-    mailbox#(uvm_byte_array::sequence_item) byte_array_export;
-    mailbox#(uvm_byte_array::sequence_item) header_export;
+    uvm_logic_vector_array::sequence_item#(ITEM_WIDTH) m_sequencer;
+    mailbox#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)) logic_vector_array_export;
+    mailbox#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)) header_export;
 
     // Contructor, where analysis port is created.
     function new(string name, uvm_component parent = null);
         super.new(name, parent);
-        byte_array_export = new(10);
+        logic_vector_array_export = new(10);
         header_export     = new(10);
         reset_sync = new();
     endfunction: new
@@ -33,15 +32,15 @@ class driver extends uvm_driver #(uvm_byte_array::sequence_item);
     // -----------------------
 
     task run_phase(uvm_phase phase);
-        uvm_byte_array::sequence_item clone_item;
+        uvm_logic_vector_array::sequence_item#(ITEM_WIDTH) clone_item;
 
         forever begin
             // Get new sequence item to drive to interface
-            wait((byte_array_export.num() < 10 &&  header_export.num() < 10) || reset_sync.is_reset());
+            wait((logic_vector_array_export.num() < 10 &&  header_export.num() < 10) || reset_sync.is_reset());
             if (reset_sync.has_been_reset()) begin
-                uvm_byte_array::sequence_item tmp;
+                uvm_logic_vector_array::sequence_item#(ITEM_WIDTH) tmp;
 
-                while (byte_array_export.try_get(tmp)) begin
+                while (logic_vector_array_export.try_get(tmp)) begin
                 end
 
                 while (header_export.try_get(tmp)) begin
@@ -54,7 +53,7 @@ class driver extends uvm_driver #(uvm_byte_array::sequence_item);
 
             seq_item_port.get_next_item(req);
             $cast(clone_item, req.clone());
-            byte_array_export.put(clone_item);
+            logic_vector_array_export.put(clone_item);
             header_export.put(clone_item);
             seq_item_port.item_done();
         end

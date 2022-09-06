@@ -24,26 +24,26 @@ class packet_header #(WIDTH, CHANNELS, PKT_MTU);
 endclass
 
 
-class model #(ETH_STREAMS, ETH_CHANNELS, ETH_RX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, MVB_ITEMS, MI_DATA_WIDTH, MI_ADDR_WIDTH) extends uvm_component;
-    `uvm_component_param_utils(uvm_app_core::model#(ETH_STREAMS, ETH_CHANNELS, ETH_RX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, MVB_ITEMS, MI_DATA_WIDTH, MI_ADDR_WIDTH))
+class model #(ETH_STREAMS, ETH_CHANNELS, ETH_RX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, MVB_ITEMS, ITEM_WIDTH, MI_DATA_WIDTH, MI_ADDR_WIDTH) extends uvm_component;
+    `uvm_component_param_utils(uvm_app_core::model#(ETH_STREAMS, ETH_CHANNELS, ETH_RX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, MVB_ITEMS, ITEM_WIDTH, MI_DATA_WIDTH, MI_ADDR_WIDTH))
 
     //RESET
-    typedef model#(ETH_STREAMS, ETH_CHANNELS, ETH_RX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, MVB_ITEMS, MI_DATA_WIDTH, MI_ADDR_WIDTH) this_type;
+    typedef model#(ETH_STREAMS, ETH_CHANNELS, ETH_RX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, MVB_ITEMS, ITEM_WIDTH, MI_DATA_WIDTH, MI_ADDR_WIDTH) this_type;
     uvm_analysis_imp_reset#(uvm_reset::sequence_item, this_type) analysis_imp_reset;
 
     //ETH
     localparam ETH_TX_LENGTH_WIDTH  = 16;
     localparam ETH_TX_CHANNEL_WIDTH = 8;
-    uvm_tlm_analysis_fifo #(uvm_common::model_item#(uvm_logic_vector::sequence_item#(ETH_RX_HDR_WIDTH)))   eth_mvb_rx[ETH_STREAMS];
-    uvm_tlm_analysis_fifo #(uvm_common::model_item#(uvm_byte_array::sequence_item))                        eth_mfb_rx[ETH_STREAMS];
-    uvm_analysis_port     #(uvm_common::model_item#(packet_header #(0, 2**ETH_TX_CHANNEL_WIDTH, 2**ETH_TX_LENGTH_WIDTH-1)))    eth_mvb_tx[ETH_STREAMS];
-    uvm_analysis_port     #(uvm_common::model_item#(uvm_byte_array::sequence_item))                        eth_mfb_tx[ETH_STREAMS];
+    uvm_tlm_analysis_fifo #(uvm_common::model_item#(uvm_logic_vector::sequence_item#(ETH_RX_HDR_WIDTH)))                    eth_mvb_rx[ETH_STREAMS];
+    uvm_tlm_analysis_fifo #(uvm_common::model_item#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)))                    eth_mfb_rx[ETH_STREAMS];
+    uvm_analysis_port     #(uvm_common::model_item#(packet_header #(0, 2**ETH_TX_CHANNEL_WIDTH, 2**ETH_TX_LENGTH_WIDTH-1))) eth_mvb_tx[ETH_STREAMS];
+    uvm_analysis_port     #(uvm_common::model_item#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)))                    eth_mfb_tx[ETH_STREAMS];
     //DMA
     localparam DMA_RX_MVB_WIDTH = $clog2(DMA_PKT_MTU+1)+DMA_HDR_META_WIDTH+$clog2(DMA_TX_CHANNELS);
-    uvm_tlm_analysis_fifo #(uvm_common::model_item#(uvm_logic_vector::sequence_item#(DMA_RX_MVB_WIDTH))) dma_mvb_rx[DMA_STREAMS];
-    uvm_tlm_analysis_fifo #(uvm_common::model_item#(uvm_byte_array::sequence_item))                      dma_mfb_rx[DMA_STREAMS];
+    uvm_tlm_analysis_fifo #(uvm_common::model_item#(uvm_logic_vector::sequence_item#(DMA_RX_MVB_WIDTH)))                dma_mvb_rx[DMA_STREAMS];
+    uvm_tlm_analysis_fifo #(uvm_common::model_item#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)))                dma_mfb_rx[DMA_STREAMS];
     uvm_analysis_port     #(uvm_common::model_item#(packet_header #(DMA_HDR_META_WIDTH, DMA_RX_CHANNELS, DMA_PKT_MTU))) dma_mvb_tx[DMA_STREAMS];
-    uvm_analysis_port     #(uvm_common::model_item#(uvm_byte_array::sequence_item))                      dma_mfb_tx[DMA_STREAMS];
+    uvm_analysis_port     #(uvm_common::model_item#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)))                dma_mfb_tx[DMA_STREAMS];
 
     function new(string name, uvm_component parent = null);
         super.new(name, parent);
