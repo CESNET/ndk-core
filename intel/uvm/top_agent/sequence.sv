@@ -8,11 +8,11 @@
  * SPDX-License-Identifier: BSD-3-Clause
 */
 
-class byte_array_sequence_simple extends uvm_sequence #(uvm_byte_array::sequence_item);
-    `uvm_object_utils(uvm_app_core_top_agent::byte_array_sequence_simple)
-    `uvm_declare_p_sequencer(uvm_byte_array::sequencer);
+class logic_vector_array_sequence_simple#(ITEM_WIDTH) extends uvm_sequence #(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH));
+    `uvm_object_param_utils(uvm_app_core_top_agent::logic_vector_array_sequence_simple#(ITEM_WIDTH))
+    `uvm_declare_p_sequencer(uvm_logic_vector_array::sequencer#(ITEM_WIDTH));
 
-    mailbox#(uvm_byte_array::sequence_item) packet_export;
+    mailbox#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)) packet_export;
 
     // Constructor - creates new instance of this class
     function new(string name = "sequence");
@@ -23,13 +23,13 @@ class byte_array_sequence_simple extends uvm_sequence #(uvm_byte_array::sequence
     // Functions.
     // -----------------------
     task body;
-        req = uvm_byte_array::sequence_item::type_id::create("req", p_sequencer);
-        if(!uvm_config_db#(mailbox#(uvm_byte_array::sequence_item))::get(p_sequencer, "", "packet_export", packet_export)) begin
+        req = uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)::type_id::create("req", p_sequencer);
+        if(!uvm_config_db#(mailbox#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)))::get(p_sequencer, "", "packet_export", packet_export)) begin
             `uvm_fatal(p_sequencer.get_full_name(), "\n\tFailed to get packet msg box");
         end
 
         forever begin
-            uvm_byte_array::sequence_item tmp_packet;
+            uvm_logic_vector_array::sequence_item#(ITEM_WIDTH) tmp_packet;
 
             //wait to end reset
             packet_export.get(tmp_packet);
@@ -49,11 +49,11 @@ class mvb_config;
     int unsigned port_min = 0;
 endclass
 
-class logic_vector_sequence_simple_eth #(ITEM_WIDTH) extends uvm_sequence #(uvm_logic_vector::sequence_item #(ITEM_WIDTH));
-    `uvm_object_param_utils(uvm_app_core_top_agent::logic_vector_sequence_simple_eth  #(ITEM_WIDTH))
-    `uvm_declare_p_sequencer(uvm_logic_vector::sequencer#(ITEM_WIDTH));
+class logic_vector_sequence_simple_eth #(ITEM_WIDTH, HDR_WIDTH) extends uvm_sequence #(uvm_logic_vector::sequence_item #(HDR_WIDTH));
+    `uvm_object_param_utils(uvm_app_core_top_agent::logic_vector_sequence_simple_eth  #(ITEM_WIDTH, HDR_WIDTH))
+    `uvm_declare_p_sequencer(uvm_logic_vector::sequencer#(HDR_WIDTH));
 
-    mailbox#(uvm_byte_array::sequence_item) header_export;
+    mailbox#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)) header_export;
 
     // ------------------------------------------------------------------------
     // Variables
@@ -75,9 +75,9 @@ class logic_vector_sequence_simple_eth #(ITEM_WIDTH) extends uvm_sequence #(uvm_
     task body();
         logic reset;
         // Generate transaction_count transactions
-        req = uvm_logic_vector::sequence_item #(ITEM_WIDTH)::type_id::create("req", p_sequencer);
+        req = uvm_logic_vector::sequence_item #(HDR_WIDTH)::type_id::create("req", p_sequencer);
 
-        if(!uvm_config_db#(mailbox#(uvm_byte_array::sequence_item))::get(p_sequencer, "", "hdr_export", header_export)) begin
+        if(!uvm_config_db#(mailbox#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)))::get(p_sequencer, "", "hdr_export", header_export)) begin
             `uvm_fatal(p_sequencer.get_full_name(), "\n\tFailed to get packet msg box");
         end
 
@@ -86,7 +86,7 @@ class logic_vector_sequence_simple_eth #(ITEM_WIDTH) extends uvm_sequence #(uvm_
         end
 
         repeat(transaction_count) begin
-            uvm_byte_array::sequence_item tmp_packet;
+            uvm_logic_vector_array::sequence_item#(ITEM_WIDTH) tmp_packet;
             // Create a request for sequence item
 
             header_export.get(tmp_packet);
@@ -102,9 +102,9 @@ class logic_vector_sequence_simple_eth #(ITEM_WIDTH) extends uvm_sequence #(uvm_
     endtask
 endclass
 
-class logic_vector_sequence_lib_eth #(ITEM_WIDTH) extends uvm_sequence_library#(uvm_logic_vector::sequence_item#(ITEM_WIDTH));
-  `uvm_object_param_utils(uvm_app_core_top_agent::logic_vector_sequence_lib_eth #(ITEM_WIDTH))
-  `uvm_sequence_library_utils(uvm_app_core_top_agent::logic_vector_sequence_lib_eth#(ITEM_WIDTH))
+class logic_vector_sequence_lib_eth #(ITEM_WIDTH, HDR_WIDTH) extends uvm_sequence_library#(uvm_logic_vector::sequence_item#(HDR_WIDTH));
+  `uvm_object_param_utils(uvm_app_core_top_agent::logic_vector_sequence_lib_eth #(ITEM_WIDTH, HDR_WIDTH))
+  `uvm_sequence_library_utils(uvm_app_core_top_agent::logic_vector_sequence_lib_eth#(ITEM_WIDTH, HDR_WIDTH))
 
     function new(string name = "");
         super.new(name);
@@ -114,15 +114,15 @@ class logic_vector_sequence_lib_eth #(ITEM_WIDTH) extends uvm_sequence_library#(
     // subclass can redefine and change run sequences
     // can be useful in specific tests
     virtual function void init_sequence();
-        this.add_sequence(logic_vector_sequence_simple_eth #(ITEM_WIDTH)::get_type());
+        this.add_sequence(logic_vector_sequence_simple_eth #(ITEM_WIDTH, HDR_WIDTH)::get_type());
     endfunction
 endclass
 
-class logic_vector_sequence_simple #(ITEM_WIDTH) extends uvm_sequence #(uvm_logic_vector::sequence_item #(ITEM_WIDTH));
-    `uvm_object_param_utils(uvm_app_core_top_agent::logic_vector_sequence_simple #(ITEM_WIDTH))
-    `uvm_declare_p_sequencer(uvm_logic_vector::sequencer#(ITEM_WIDTH));
+class logic_vector_sequence_simple #(ITEM_WIDTH, HDR_WIDTH) extends uvm_sequence #(uvm_logic_vector::sequence_item #(HDR_WIDTH));
+    `uvm_object_param_utils(uvm_app_core_top_agent::logic_vector_sequence_simple #(ITEM_WIDTH, HDR_WIDTH))
+    `uvm_declare_p_sequencer(uvm_logic_vector::sequencer#(HDR_WIDTH));
 
-    mailbox#(uvm_byte_array::sequence_item) header_export;
+    mailbox#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)) header_export;
 
     // ------------------------------------------------------------------------
     // Variables
@@ -142,14 +142,14 @@ class logic_vector_sequence_simple #(ITEM_WIDTH) extends uvm_sequence #(uvm_logi
     // Generates transactions
     task body();
         // Generate transaction_count transactions
-        req = uvm_logic_vector::sequence_item #(ITEM_WIDTH)::type_id::create("req", p_sequencer);
-        if(!uvm_config_db#(mailbox#(uvm_byte_array::sequence_item))::get(p_sequencer, "", "hdr_export", header_export)) begin
+        req = uvm_logic_vector::sequence_item #(HDR_WIDTH)::type_id::create("req", p_sequencer);
+        if(!uvm_config_db#(mailbox#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)))::get(p_sequencer, "", "hdr_export", header_export)) begin
             `uvm_fatal(p_sequencer.get_full_name(), "\n\tFailed to get packet msg box");
         end
 
         repeat(transaction_count) begin
             // Create a request for sequence item
-            uvm_byte_array::sequence_item tmp_packet;
+            uvm_logic_vector_array::sequence_item#(ITEM_WIDTH) tmp_packet;
             header_export.get(tmp_packet);
 
             //generat new packet
@@ -164,9 +164,9 @@ class logic_vector_sequence_simple #(ITEM_WIDTH) extends uvm_sequence #(uvm_logi
     endtask
 endclass
 
-class logic_vector_sequence_lib#(ITEM_WIDTH) extends uvm_sequence_library#(uvm_logic_vector::sequence_item#(ITEM_WIDTH));
-  `uvm_object_param_utils(uvm_app_core_top_agent::logic_vector_sequence_lib#(ITEM_WIDTH))
-  `uvm_sequence_library_utils(uvm_app_core_top_agent::logic_vector_sequence_lib#(ITEM_WIDTH))
+class logic_vector_sequence_lib#(ITEM_WIDTH, HDR_WIDTH) extends uvm_sequence_library#(uvm_logic_vector::sequence_item#(HDR_WIDTH));
+  `uvm_object_param_utils(uvm_app_core_top_agent::logic_vector_sequence_lib#(ITEM_WIDTH, HDR_WIDTH))
+  `uvm_sequence_library_utils(uvm_app_core_top_agent::logic_vector_sequence_lib#(ITEM_WIDTH, HDR_WIDTH))
 
     function new(string name = "");
         super.new(name);
@@ -176,7 +176,7 @@ class logic_vector_sequence_lib#(ITEM_WIDTH) extends uvm_sequence_library#(uvm_l
     // subclass can redefine and change run sequences
     // can be useful in specific tests
     virtual function void init_sequence();
-        this.add_sequence(logic_vector_sequence_simple #(ITEM_WIDTH)::get_type());
+        this.add_sequence(logic_vector_sequence_simple #(ITEM_WIDTH, HDR_WIDTH)::get_type());
     endfunction
 endclass
 
