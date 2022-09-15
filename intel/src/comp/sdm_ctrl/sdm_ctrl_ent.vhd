@@ -11,11 +11,13 @@ use IEEE.numeric_std.all;
 entity SDM_CTRL is
     generic(
         -- Data word width in bits
-        DATA_WIDTH : natural := 32;
+        DATA_WIDTH   : natural := 32;
         -- Address word width in bits
-        ADDR_WIDTH : natural := 32;
+        ADDR_WIDTH   : natural := 32;
+        -- Read CHIP_ID after reset
+        READ_CHIP_ID : boolean := true;
         -- Target device (Intel only)
-        DEVICE     : string  := "AGILEX"
+        DEVICE       : string  := "AGILEX"
     );
     port(
         -- Clock and Reset
@@ -23,14 +25,17 @@ entity SDM_CTRL is
         RESET : in  std_logic;
 
         -- MI interface
-        MI_DWR   : in  std_logic_vector(DATA_WIDTH-1 downto 0);     -- Input Data
-        MI_ADDR  : in  std_logic_vector(ADDR_WIDTH-1 downto 0);     -- Address
-        MI_RD    : in  std_logic;                                   -- Read Request
-        MI_WR    : in  std_logic;                                   -- Write Request
-        MI_BE    : in  std_logic_vector((DATA_WIDTH/8)-1 downto 0); -- Byte Enable
-        MI_DRD   : out std_logic_vector(DATA_WIDTH-1 downto 0);     -- Output Data
-        MI_ARDY  : out std_logic;                                   -- Address Ready
-        MI_DRDY  : out std_logic                                    -- Data Ready
+        MI_DWR   : in  std_logic_vector(DATA_WIDTH-1 downto 0);
+        MI_ADDR  : in  std_logic_vector(ADDR_WIDTH-1 downto 0);
+        MI_RD    : in  std_logic;
+        MI_WR    : in  std_logic;
+        MI_BE    : in  std_logic_vector((DATA_WIDTH/8)-1 downto 0);
+        MI_DRD   : out std_logic_vector(DATA_WIDTH-1 downto 0);
+        MI_ARDY  : out std_logic;
+        MI_DRDY  : out std_logic;
+
+        -- CHIP ID
+        CHIP_ID  : out std_logic_vector(64-1 downto 0)
     );
 end entity;
 

@@ -29,4 +29,6 @@ begin
         DRDY  => MI_DRDY
     );
 
+    CHIP_ID <= X"0ADCDEAD0ADCDEAD";
+
 end architecture;
