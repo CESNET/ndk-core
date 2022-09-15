@@ -15,5 +15,6 @@ begin
     MI_ARDY <= MI_RD or MI_WR;
     MI_DRDY <= MI_RD;
     MI_DRD  <= X"DEADDEAD";
+    CHIP_ID <= X"DEADDEADDEADDEAD";
 
 end architecture;
