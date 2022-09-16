@@ -187,7 +187,7 @@ architecture FULL of FPGA_COMMON is
     constant RESET_WIDTH  : natural := 10;
     constant TSU_USE_DSP  : boolean := (DEVICE="ULTRASCALE");
 
-    constant CARD_ID_WIDTH	: natural := tsel(DEVICE="ULTRASCALE", 96, 0);
+    constant CARD_ID_WIDTH	: natural := tsel(DEVICE="ULTRASCALE", 96, 64);
 
     constant MI_DATA_WIDTH      : integer := 32;
     constant MI_ADDR_WIDTH      : integer := 32;
@@ -261,6 +261,7 @@ architecture FULL of FPGA_COMMON is
     signal app_pcie_link_up              : std_logic_vector(PCIE_ENDPOINTS-1 downto 0) := (others => '0');
 
     signal xilinx_dna                    : std_logic_vector(95 downto 0);
+    signal intel_chip_id                 : std_logic_vector(63 downto 0);
     signal card_id                       : std_logic_vector(CARD_ID_WIDTH-1 downto 0);
     signal pcie_card_id                  : slv_array_t     (PCIE_ENDPOINTS-1 downto 0)(CARD_ID_WIDTH-1 downto 0);
 
@@ -503,6 +504,10 @@ begin
         card_id <= xilinx_dna;
     end generate;
 
+    card_id_intel_g: if (DEVICE = "STRATIX10" or DEVICE = "AGILEX") generate
+        card_id <= intel_chip_id;
+    end generate;
+
     -- =========================================================================
     --                      PCIe module instance and connections
     -- =========================================================================
@@ -740,7 +745,9 @@ begin
         MI_BE   => mi_adc_be(MI_ADC_PORT_SENSOR),
         MI_DRD  => mi_adc_drd(MI_ADC_PORT_SENSOR),
         MI_ARDY => mi_adc_ardy(MI_ADC_PORT_SENSOR),
-        MI_DRDY => mi_adc_drdy(MI_ADC_PORT_SENSOR)
+        MI_DRDY => mi_adc_drdy(MI_ADC_PORT_SENSOR),
+
+        CHIP_ID => intel_chip_id
     );
 
     -- =========================================================================
