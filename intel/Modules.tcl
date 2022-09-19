@@ -1,16 +1,14 @@
 # Modules.tcl: script to compile single module
-# Copyright (C) 2019 CESNET z. s. p. o.
+# Copyright (C) 2022 CESNET z. s. p. o.
 # Author(s): Jakub Cabal <cabal@cesnet.cz>
+#           Vladislav Valek <valekv@cesnet.cz>
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-# Globally defined variables
-global BOARD
-global DMA_ENABLE
-global CLOCK_GEN_ARCH
-global PCIE_MOD_ARCH
-global NET_MOD_ARCH
-global SDM_SYSMON_ARCH
+# NOTE: For more information, visit the Parametrization section of the NDK-CORE documentation.
+
+# convert input list to an array
+array set ARCHGRP_ARR $ARCHGRP
 
 # Paths to components
 set ASYNC_RESET_BASE     "$OFM_PATH/comp/base/async/reset"
@@ -36,26 +34,27 @@ lappend PACKAGES "$ENTITY_BASE/config/ndk_const.vhd"
 lappend PACKAGES "$ENTITY_BASE/src/mi_addr_space_pkg.vhd"
 
 set DMA_BUS_ARCH "EMPTY"
-if {$DMA_ENABLE} {
-  set DMA_BUS_ARCH "FULL"
+
+if {$ARCHGRP_ARR(DMA_TYPE) == 3} {
+    set DMA_BUS_ARCH "FULL"
 }
 
-if { $ARCHGRP == "APPLICATION_CORE_ENTYTY_ONLY" } {
+if { $ARCHGRP == "APPLICATION_CORE_ENTITY_ONLY" } {
   lappend MOD "$ENTITY_BASE/src/application_ent.vhd"
 } else {
-  lappend COMPONENTS [list "CLOCK_GEN"       $CLOCK_GEN_BASE       $CLOCK_GEN_ARCH  ]
-  lappend COMPONENTS [list "SDM_CTRL"        $SDM_CTRL_BASE        $SDM_SYSMON_ARCH ]
-  lappend COMPONENTS [list "ASYNC_RESET"     $ASYNC_RESET_BASE     "FULL"           ]
-  lappend COMPONENTS [list "ASYNC_OPEN_LOOP" $ASYNC_OPEN_LOOP_BASE "FULL"           ]
-  lappend COMPONENTS [list "TSU"             $TSU_BASE             "FULL"           ]
-  lappend COMPONENTS [list "HWID"            $HWID_BASE            $CLOCK_GEN_ARCH  ]
-  lappend COMPONENTS [list "RESET_TREE_GEN"  $RESET_TREE_GEN_BASE  "FULL"           ]
-  lappend COMPONENTS [list "PCIE"            $PCIE_BASE            $PCIE_MOD_ARCH   ]
-  lappend COMPONENTS [list "MI_SPLITTER"     $MI_SPLITTER_BASE     "FULL"           ]
-  lappend COMPONENTS [list "MI_TEST_SPACE"   $MI_TEST_SPACE_BASE   "FULL"           ]
-  lappend COMPONENTS [list "NETWORK_MOD"     $NETWORK_MOD_BASE     $NET_MOD_ARCH    ]
-  lappend COMPONENTS [list "DMA_BUS"         $DMA_BUS_BASE         $DMA_BUS_ARCH    ]
-  lappend COMPONENTS [list "DMA_GENERATOR"   $DMA_GENERATOR_BASE   "FULL"           ]
+  lappend COMPONENTS [list "CLOCK_GEN"       $CLOCK_GEN_BASE       $ARCHGRP_ARR(CLOCK_GEN_ARCH) ]
+  lappend COMPONENTS [list "SDM_CTRL"        $SDM_CTRL_BASE        $ARCHGRP_ARR(SDM_SYSMON_ARCH)]
+  lappend COMPONENTS [list "ASYNC_RESET"     $ASYNC_RESET_BASE     "FULL"                       ]
+  lappend COMPONENTS [list "ASYNC_OPEN_LOOP" $ASYNC_OPEN_LOOP_BASE "FULL"                       ]
+  lappend COMPONENTS [list "TSU"             $TSU_BASE             "FULL"                       ]
+  lappend COMPONENTS [list "HWID"            $HWID_BASE            $ARCHGRP_ARR(CLOCK_GEN_ARCH) ]
+  lappend COMPONENTS [list "RESET_TREE_GEN"  $RESET_TREE_GEN_BASE  "FULL"                       ]
+  lappend COMPONENTS [list "PCIE"            $PCIE_BASE            $ARCHGRP_ARR(PCIE_MOD_ARCH)  ]
+  lappend COMPONENTS [list "MI_SPLITTER"     $MI_SPLITTER_BASE     "FULL"                       ]
+  lappend COMPONENTS [list "MI_TEST_SPACE"   $MI_TEST_SPACE_BASE   "FULL"                       ]
+  lappend COMPONENTS [list "NETWORK_MOD"     $NETWORK_MOD_BASE     $ARCHGRP_ARR(NET_MOD_ARCH)   ]
+  lappend COMPONENTS [list "DMA_BUS"         $DMA_BUS_BASE         $DMA_BUS_ARCH                ]
+  lappend COMPONENTS [list "DMA_GENERATOR"   $DMA_GENERATOR_BASE   "FULL"                       ]
 
   lappend MOD "$ENTITY_BASE/src/application_ent.vhd"
   lappend MOD "$ENTITY_BASE/src/fpga_common.vhd"
