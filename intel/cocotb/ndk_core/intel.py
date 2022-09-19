@@ -9,6 +9,8 @@ from cocotbext.ofm.axi4sibpcie import Axi4SCMiRoot
 from cocotbext.ofm.axi4sibpcie import Axi4SRequester
 
 import cocotbext.nfb
+from cocotbext.ofm.lbus.monitors import LBusMonitor
+from cocotbext.ofm.lbus.drivers import LBusDriver
 
 class Axi4StreamMasterV(Axi4StreamMaster):
     _signals = {"TVALID": "VALID"}
@@ -40,7 +42,7 @@ class NFBDevice(cocotbext.nfb.NFBDevice):
 
             cq  = Axi4StreamMasterV(pcie_i, "CQ_AXI", clk, array_idx=i)
             cc  = Axi4StreamSlaveV(pcie_i, "CC_AXI", clk, array_idx=i)
-            ccm = Axi4StreamV(pcie_i, "CC_AXI", clk, 0, array_idx=i)
+            ccm = Axi4StreamV(pcie_i, "CC_AXI", clk, 0, aux_signals=True, array_idx=i)
 
             rq  = Axi4StreamSlaveV(pcie_i, "RQ_AXI", clk, array_idx=i)
             rc  = Axi4StreamMasterV(pcie_i, "RC_AXI", clk, array_idx=i)
@@ -49,6 +51,17 @@ class NFBDevice(cocotbext.nfb.NFBDevice):
             req = Axi4SRequester(self.ram, rq, rc, rqm)
             mi  = Axi4SCMiRoot(cq, cc, ccm)
             self.mi.append(mi)
+
+        self._eth_rx_driver = []
+        self._eth_tx_monitor = []
+        for i, eth_core in enumerate(self._dut.usp_i.network_mod_i.eth_core_g):
+            eth_core.network_mod_core_i.cmac_tx_lbus_rdy.value = 1
+            eth_core.network_mod_core_i.cmac_rx_local_fault.value = 0
+
+            tx_monitor = LBusMonitor(eth_core.network_mod_core_i, "cmac_tx_lbus", eth_core.network_mod_core_i.cmac_clk_322m)
+            rx_driver = LBusDriver(eth_core.network_mod_core_i, "cmac_rx_lbus", eth_core.network_mod_core_i.cmac_clk_322m)
+            self._eth_tx_monitor.append(tx_monitor)
+            self._eth_rx_driver.append(rx_driver)
 
         self.dtb = None
 
@@ -62,35 +75,36 @@ class NFBDevice(cocotbext.nfb.NFBDevice):
             rst.value = 0
         await Timer(2, units="us")
 
-    async def _read_dtb_raw(self):
-        r = 0
-        cap_dtb = 0x480
-
+    async def _pcie_cfg_ext_reg_access(self, addr, index = 0, fn = 0, sync=True, data=None):
         pcie_i = self._dut.usp_i.pcie_i.pcie_core_i
-        clk = pcie_i.pcie_hip_clk[r]
+        clk = pcie_i.pcie_hip_clk[index]
 
-        await RisingEdge(clk)
-        pcie_i.cfg_ext_function[r].value = 0
-        pcie_i.cfg_ext_register[r].value = (cap_dtb + 0x0C) >> 2
-        pcie_i.cfg_ext_write[r].value = 0
-        pcie_i.cfg_ext_read[r].value = 1
-        await RisingEdge(clk)
+        if sync:
+            await RisingEdge(clk)
 
-        dtb_length = pcie_i.cfg_ext_read_data[r].value.integer
-        data = [] 
+        pcie_i.cfg_ext_function[index].value = fn
+        pcie_i.cfg_ext_register[index].value = addr >> 2
+        pcie_i.cfg_ext_read[index].value = 1 if data == None else 0
+        pcie_i.cfg_ext_write[index].value = 0 if data == None else 1
+        if data:
+            pcie_i.cfg_ext_write_data[index].value = data
+        await RisingEdge(clk)
+        pcie_i.cfg_ext_read[index].value = 0
+        pcie_i.cfg_ext_write[index].value = 0
+        if data == None:
+            return pcie_i.cfg_ext_read_data[index].value.integer
+
+    async def _pcie_cfg_ext_reg_read(self, addr, index = 0, fn = 0, sync=True):
+        return await self._pcie_cfg_ext_reg_access(addr, index, fn, sync)
+
+    async def _pcie_cfg_ext_reg_write(self, addr, data, index = 0, fn = 0, sync=True):
+        await self._pcie_cfg_ext_reg_access(addr, index, fn, sync, data)
+
+    async def _read_dtb_raw(self, cap_dtb = 0x480):
+        dtb_length = await self._pcie_cfg_ext_reg_read(cap_dtb + 0x0c)
+        data = []
         for i in range(dtb_length // 4):
-            pcie_i.cfg_ext_register[r].value = (cap_dtb + 0x10) >> 2
-            pcie_i.cfg_ext_write_data[r].value = i
-            pcie_i.cfg_ext_read[r].value = 0
-            pcie_i.cfg_ext_write[r].value = 1
-            await RisingEdge(clk)
-
-            pcie_i.cfg_ext_register[r].value = 0x494 >> 2
-            pcie_i.cfg_ext_write[r].value = 0
-            pcie_i.cfg_ext_read[r].value = 1
-            await RisingEdge(clk)
-            await RisingEdge(clk)
-            data.append(pcie_i.cfg_ext_read_data[r].value.integer)
-        pcie_i.cfg_ext_read[r].value = 0
+            await self._pcie_cfg_ext_reg_write(cap_dtb + 0x10, i, sync=False)
+            data.append(await self._pcie_cfg_ext_reg_read(cap_dtb + 0x14, sync=True))
 
         return bytes(sum([[(x >> 0) & 0xFF, (x >> 8) & 0xFF, (x >> 16) & 0xFF, (x >> 24) & 0xFF] for x in data], []))
