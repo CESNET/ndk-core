@@ -25,12 +25,12 @@ class Axi4StreamV(Axi4Stream):
 
 class NFBDevice(cocotbext.nfb.NFBDevice):
     def _init_clks(self):
-        cocotb.fork(Clock(self._dut.REFCLK, 20, 'ns').start())
+        cocotb.start_soon(Clock(self._dut.REFCLK, 20, 'ns').start())
 
         for pcie_clk in self._dut.usp_i.pcie_i.pcie_core_i.pcie_hip_clk:
-            cocotb.fork(Clock(pcie_clk, 4, 'ns').start())
+            cocotb.start_soon(Clock(pcie_clk, 4, 'ns').start())
         for eth_core in self._dut.usp_i.network_mod_i.eth_core_g:
-            cocotb.fork(Clock(eth_core.network_mod_core_i.cmac_clk_322m, 3106, 'ps').start())
+            cocotb.start_soon(Clock(eth_core.network_mod_core_i.cmac_clk_322m, 3106, 'ps').start())
 
     def _init_pcie(self):
         pcie_i = self._dut.usp_i.pcie_i.pcie_core_i
