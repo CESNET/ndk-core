@@ -29,7 +29,7 @@ lappend PACKAGES "$OFM_PATH/comp/base/pkg/math_pack.vhd"
 lappend PACKAGES "$OFM_PATH/comp/base/pkg/type_pack.vhd"
 lappend PACKAGES "$OFM_PATH/comp/base/pkg/dma_bus_pack.vhd"
 lappend PACKAGES "$OFM_PATH/comp/base/pkg/eth_hdr_pack.vhd"
-lappend PACKAGES "$ENTITY_BASE/config/ndk_const.vhd"
+lappend PACKAGES "$ENTITY_BASE/config/core_const.vhd"
 lappend PACKAGES "$ENTITY_BASE/src/mi_addr_space_pkg.vhd"
 
 set DMA_BUS_ARCH "EMPTY"
