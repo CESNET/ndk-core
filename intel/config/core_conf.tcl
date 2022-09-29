@@ -29,7 +29,6 @@ set ETH_PORT_CHAN(0)   1
 # Number of lanes for each one of the ETH_PORTS
 # Typical values: 4 (QSFP), 8 (QSFP-DD)
 set ETH_PORT_LANES(0)  8
-# ------------------------------------------------------------------------------
 
 # ------------------------------------------------------------------------------
 # PCIe parameters (not all combinations work):
@@ -64,4 +63,3 @@ set DMA_RX_BLOCKING_MODE true
 set TSU_ENABLE      false
 # Generic value must be replaced for each card
 set TSU_FREQUENCY   161132812
-# ------------------------------------------------------------------------------

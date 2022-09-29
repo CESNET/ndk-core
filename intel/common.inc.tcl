@@ -7,7 +7,7 @@
 
 set SYNTH_FLAGS(OUTPUT) $OUTPUT_NAME
 
-# Propagate common constants to Modules.tcl files of the underlying components through
+# Propagate CORE constants to Modules.tcl files of the underlying components through
 # an associative array. For more detailed description of how pass parameters to this array,
 # see the configuration section of the NDK-CORE repository documentation.
 set CORE_ARCHGRP(CLOCK_GEN_ARCH)    $CLOCK_GEN_ARCH
