@@ -70,12 +70,6 @@ proc dts_build_netcope {} {
         append ret [dts_network_mod $ADDR_ETH_MAC $ADDR_ETH_PCS $ADDR_ETH_PMD $ETH_PORTS ETH_PORT_SPEED ETH_PORT_CHAN ETH_PORT_LANES $CARD_NAME]
     }
 
-    # Gen Loop Switch debug modules
-    #for {set i 0} {$i < $ETH_PORTS} {incr i} {
-    #    set    gls_offset [expr $i * 0x100]
-    #    append ret [dts_gen_loop_switch $i [expr $ADDR_GEN_LOOP + $gls_offset]]
-    #}
-
     global SDM_SYSMON_ARCH
     # Intel FPGA SDM controller
     if {$SDM_SYSMON_ARCH == "INTEL_SDM"} {
@@ -95,6 +89,13 @@ proc dts_build_netcope {} {
     if { [llength [info procs dts_application]] > 0 } {
         global MEM_PORTS
         append ret "app:" [dts_application $ADDR_USERAPP $ETH_PORTS $MEM_PORTS]
+    }
+
+    # Gen Loop Switch debug modules for each DMA stream
+    set dma_streams [expr min($ETH_PORTS,$PCIE_ENDPOINTS)]
+    for {set i 0} {$i < $dma_streams} {incr i} {
+        set    gls_offset [expr $i * 0x100]
+        append ret [dts_gen_loop_switch [expr $ADDR_GEN_LOOP + $gls_offset] "dbg_gls$i"]
     }
 
     append ret "};"
