@@ -59,8 +59,8 @@ proc dts_build_netcope {} {
     }
 
     # DMA module
-    global DMA_ENABLE DMA_TYPE DMA_MODULES DMA_RX_CHANNELS DMA_TX_CHANNELS PCIE_ENDPOINTS
-    if {$DMA_ENABLE} {
+    global DMA_TYPE DMA_MODULES DMA_RX_CHANNELS DMA_TX_CHANNELS PCIE_ENDPOINTS
+    if {$DMA_TYPE != 0} {
         append ret [dts_dmamod_open $ADDR_DMA_MOD $DMA_TYPE [expr $DMA_RX_CHANNELS / $PCIE_ENDPOINTS] [expr $DMA_TX_CHANNELS / $PCIE_ENDPOINTS] "0"]
     }
 
@@ -110,7 +110,7 @@ proc dts_build_netcope {} {
         append ret "resource = \"PCI$i,BAR0\";"
         append ret "width = <0x20>;"
 
-        if {$DMA_ENABLE} {
+        if {$DMA_TYPE != 0} {
             append ret [dts_dmamod_open $ADDR_DMA_MOD $DMA_TYPE [expr $DMA_RX_CHANNELS / $PCIE_ENDPOINTS] [expr $DMA_TX_CHANNELS / $PCIE_ENDPOINTS] $i]
         }
         append ret "};"

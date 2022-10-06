@@ -50,8 +50,6 @@ set PCIE_ENDPOINT_MODE 1
 
 # ------------------------------------------------------------------------------
 # DMA parameters:
-set DMA_ENABLE            true
-set DMA_TYPE              3
 # ------------------------------------------------------------------------------
 set DMA_RX_CHANNELS      16
 set DMA_TX_CHANNELS      16
