@@ -1,8 +1,15 @@
-# ndk_const.tcl: Base parameters for Intel FPGA cards
-# Copyright (C) 2019 CESNET, z. s. p. o.
+# ndk_pkg_gen.tcl: Generates constants to the VHDL package and fills them with
+# values specified by TCL variables with same names. This file is sourced as a last step
+# in the hierarchy of *_const.tcl files therefore it has the highest priority.
+# Copyright (C) 2022 CESNET, z. s. p. o.
 # Author(s): Jakub Cabal <cabal@cesnet.cz>
+#            Vladislav Valek <valekv@cesnet.cz>
 #
 # SPDX-License-Identifier: BSD-3-Clause
+
+# ==================================================================================
+# WARNING: Values of constants in this file should not be changed deliberately by the user.
+# ==================================================================================
 
 # Build identification (generated automatically by default)
 set BUILD_TIME [format "%d" [clock seconds]]
@@ -31,3 +38,18 @@ VhdlPkgBool DMA_RX_BLOCKING_MODE $DMA_RX_BLOCKING_MODE
 # Other parameters
 VhdlPkgBool TSU_ENABLE    $TSU_ENABLE
 VhdlPkgInt  TSU_FREQUENCY $TSU_FREQUENCY
+
+# ==================================================================================
+# Add other constants which you want to export to the VHDL package
+# ==================================================================================
+# Examples:
+#
+# Boolean constant
+# VhdlPkgBool <name_of_the_VHDL_constant> $<name_of_the_TCL_variable>
+#
+# Integer constant
+# VhdlPkgInt <name_of_the_VHDL_constant> $<name_of_the_TCL_variable>
+#
+# The supported types can be found in the VhdlPkgGen.tcl script in the OFM repository
+#
+# ==================================================================================
