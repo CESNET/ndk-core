@@ -16,9 +16,8 @@ set CORE_ARCHGRP(NET_MOD_ARCH)      $NET_MOD_ARCH
 set CORE_ARCHGRP(SDM_SYSMON_ARCH)   $SDM_SYSMON_ARCH
 set CORE_ARCHGRP(DMA_TYPE)          $DMA_TYPE
 
-# Prerequisites for generated USER_CONST package
-set UCP_PREREQ [list $NDK_CONST $DEFAULT_CONST [expr {[info exists USER_CONST] ? $USER_CONST : ""}]]
-# Let generate package from USER_CONST and add it to project
+# Prerequisites for generated VHDL package
+set UCP_PREREQ [list $CARD_CONST $CORE_CONF $CARD_CONF [expr {[info exists APP_CONF] ? $APP_CONF : ""}]]
 
 # Let generate package from configuration files and add it to project
 lappend HIERARCHY(PACKAGES) [nb_generate_file_register_userpkg "combo_user_const" "" $UCP_PREREQ]
