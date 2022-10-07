@@ -6,4 +6,4 @@
 
 # Including synthesis procedures
 source $OFM_PATH/build/Quartus.inc.tcl
-source $CARD_COMMON_BASE/common.inc.tcl
+source $CORE_BASE/common.inc.tcl

@@ -1,8 +1,13 @@
-# ndk_const.tcl: Base parameters for Intel FPGA cards
-# Copyright (C) 2019 CESNET, z. s. p. o.
+# core_const.tcl: Generates constants to the VHDL package and fills them with
+# values specified by TCL variables
+# Copyright (C) 2022 CESNET, z. s. p. o.
 # Author(s): Jakub Cabal <cabal@cesnet.cz>
+#            Vladislav Valek <valekv@cesnet.cz>
 #
 # SPDX-License-Identifier: BSD-3-Clause
+
+# NOTE: For detailed description about a purpose of this file, see the
+# Parametrization section in the documentation of the NDK-CORE repository.
 
 # Build identification (generated automatically by default)
 set BUILD_TIME [format "%d" [clock seconds]]
