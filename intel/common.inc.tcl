@@ -10,11 +10,12 @@ set SYNTH_FLAGS(OUTPUT) $OUTPUT_NAME
 # Propagate CORE constants to Modules.tcl files of the underlying components through
 # an associative array. For more detailed description of how pass parameters to this array,
 # see the configuration section of the NDK-CORE repository documentation.
-set CORE_ARCHGRP(CLOCK_GEN_ARCH)    $CLOCK_GEN_ARCH
-set CORE_ARCHGRP(PCIE_MOD_ARCH)     $PCIE_MOD_ARCH
-set CORE_ARCHGRP(NET_MOD_ARCH)      $NET_MOD_ARCH
-set CORE_ARCHGRP(SDM_SYSMON_ARCH)   $SDM_SYSMON_ARCH
-set CORE_ARCHGRP(DMA_TYPE)          $DMA_TYPE
+set CORE_ARCHGRP(CLOCK_GEN_ARCH)                $CLOCK_GEN_ARCH
+set CORE_ARCHGRP(PCIE_MOD_ARCH)                 $PCIE_MOD_ARCH
+set CORE_ARCHGRP(NET_MOD_ARCH)                  $NET_MOD_ARCH
+set CORE_ARCHGRP(SDM_SYSMON_ARCH)               $SDM_SYSMON_ARCH
+set CORE_ARCHGRP(DMA_TYPE)                      $DMA_TYPE
+set CORE_ARCHGRP(APPLICATION_CORE_ENTITY_ONLY)  false
 
 # Prerequisites for generated VHDL package
 set UCP_PREREQ [list $CARD_CONST $CORE_CONF $CARD_CONF [expr {[info exists APP_CONF] ? $APP_CONF : ""}]]
