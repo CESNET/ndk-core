@@ -32,15 +32,16 @@ lappend PACKAGES "$OFM_PATH/comp/base/pkg/eth_hdr_pack.vhd"
 lappend PACKAGES "$ENTITY_BASE/config/core_const.vhd"
 lappend PACKAGES "$ENTITY_BASE/src/mi_addr_space_pkg.vhd"
 
-set DMA_BUS_ARCH "EMPTY"
-
-if {$ARCHGRP_ARR(DMA_TYPE) == 3} {
-    set DMA_BUS_ARCH "FULL"
-}
-
-if { $ARCHGRP == "APPLICATION_CORE_ENTITY_ONLY" } {
+if { $ARCHGRP_ARR(APPLICATION_CORE_ENTITY_ONLY) } {
   lappend MOD "$ENTITY_BASE/src/application_ent.vhd"
 } else {
+
+  set DMA_BUS_ARCH "EMPTY"
+
+  if {$ARCHGRP_ARR(DMA_TYPE) == 3} {
+      set DMA_BUS_ARCH "FULL"
+  }
+
   lappend COMPONENTS [list "CLOCK_GEN"       $CLOCK_GEN_BASE       $ARCHGRP_ARR(CLOCK_GEN_ARCH) ]
   lappend COMPONENTS [list "SDM_CTRL"        $SDM_CTRL_BASE        $ARCHGRP_ARR(SDM_SYSMON_ARCH)]
   lappend COMPONENTS [list "ASYNC_RESET"     $ASYNC_RESET_BASE     "FULL"                       ]
