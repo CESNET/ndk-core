@@ -1,3 +1,9 @@
+.. _ndk_configuration:
+
+Configuration files and parameters
+**********************************
+This chapter describes the NDK configuration files and parameters. The configuration has three levels: the CORE, the card, and the user application. A detailed description of each level is below.
+
 .. _ndk_core_configuration:
 
 Parametrizing NDK-CORE design
@@ -6,10 +12,9 @@ The files in the ``<NDK-CORE_root_directory>/intel/config`` directory and the
 ``<NDK-CORE_root_directory>/intel/core.mk`` file contain CORE parameters. Some
 of these parameters are configurable (more info below). The sourcing of
 configuration parameter files has its own hierarchy, which is shown in the
-:ref:`fig_const_hierarchy`. This page describes the
+:ref:`fig_const_hierarchy`. This section describes the
 configuration files used in the case of NDK-CORE design. For the description of
-the application and card-specific configuration, see
-:ref:`ndk_core_conf_furth_read` on the end of this page.
+the application and card-specific configuration, see following sections on this page.
 
 .. _fig_const_hierarchy:
 .. figure:: img/const_hierarchy.svg
@@ -151,10 +156,9 @@ provided in the following code block:
 
 Parametrizing a specific card type
 ==================================
-The resulting design of the NDK application depends on the underlying
-platform, e.g., the card type on which the design should run. The build system
-provides a mechanism to specify card parameters that can overwrite some parameters
-specified in the configuration of `NDK-CORE`.
+The final design of the NDK application depends on the underlying
+platform, e.g., the card type on which the design should run.
+The system provides mechanism to configure card specific parameters.
 
 File description
 ----------------
@@ -163,9 +167,11 @@ The file structure is similar to the one described in the configuration of the
 
 card_conf.tcl
 ^^^^^^^^^^^^^
-This file lists user changeable parameters and their allowed
+This file lists user-configurable parameters and their possible
 values in the comments. The purpose of this file is the same as of the
 ``core_conf.tcl`` file in the `NDK-CORE` repository. The only difference is that it has a higher priority.
+
+.. _card_conf_card_const_tcl:
 
 card_const.tcl
 ^^^^^^^^^^^^^^
@@ -174,13 +180,9 @@ card_const.tcl
    the parameters in this file.
 
 This file contains card-specific parameters which mostly depend on the features
-of the physical hardware (the target card). It sources all
-other configuration files described in the :ref:`fig_const_hierarchy`.
-The order of sourcing the files is from the lowest priority to the highest. The
-``card_const.tcl`` file has the highest priority. Hence, before the generation
-of the VHDL package, it should also check the configuration
-parameters for whether their values are valid and compatible with the values of
-the other parameters.
+of the physical hardware (the target card). It should also implement a check for
+the configuration parameters whether their values are valid and compatible with
+the values of other parameters.
 
 card.mk
 ^^^^^^^
@@ -211,16 +213,79 @@ the ``<card_root_directory>/src/Vivado.inc.tcl`` file for Xilinx-based cards and
 in ``<card_root_directory>/src/Quartus.inc.tcl`` for Intel-based cards. The
 ``CARD_ARCHGRP`` array is concatenated with ``CORE_ARCHGRP`` so the top-level
 Modules.tcl file shares parameters of them both. The parameters specified
-in the `core_conf.tcl`, `core_const.tcl`, `card_conf.tcl` and `card_const.tcl`
+in the :ref:`ndk_core_conf_core_conf_tcl`, :ref:`ndk_core_conf_core_const_tcl`,
+`card_conf.tcl`, `card_const.tcl` and also :ref:`ndk_app_conf_app_conf_tcl`.
 are visible in the `*.inc.tcl` files and can be added to the array.
 
 Adding constants to the VHDL package
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 It is recommended to add constants to the ``combo_user_const`` VHDL package in
-the ``core_const.tcl`` file which was described in the :ref:`previous section
-<core_config_vhdl_pkg_const>`.
+It is recommended to add card-specific constants to the ``combo_user_const`` VHDL 
+package in `card_const.tcl` file. The way of adding these constants was described in 
+the :ref:`core_config_vhdl_pkg_const` section in the documentation of NDK-CORE
+configuration.
 
-Further reading
----------------
-* Card-specific configuration -> :ref:`ndk_card_configuration`
-* Application configuration -> :ref:`ndk_app_configuration`
+.. _ndk_app_configuration:
+
+Parametrizing the user application
+==================================
+The user application can also be parametrized using specific configuration
+files. Configuration parameters are handed to the subcomponents of the
+``APPLICATION_CORE`` design entity. It also allows the user to choose one of,
+sometimes, multiple configurations for a specific card before launching the
+build process.
+
+Configuration files
+-------------------
+The configuration of the application is less constrained than `NDK-CORE` and
+card configuration. The application repository provides three files in which the user
+application is or can be configured.
+
+.. _app_config_makefile:
+
+build/<card_name>/Makefile
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. WARNING::
+   This file contains features for development. It is not recommended for the user to change
+   the parameters in this file.
+
+
+This is the top-level file that launches the building of the design. The
+configuration(s) given in this file depend on the card type and they allow to build the
+design with different parameters, for example, when there are multiple Ethernet configurations.
+For more information about the modes of each
+card, visit the "Build instructions" section provided in the documentation for each of the
+card types.
+
+The configuration parameters are handed as environment variables which are
+converted into TCL variables. These are used in the `*_const.tcl*` and
+`*_conf.tcl` files throughout the design. There are more Makefile configuration
+parameters in use than just Ethernet configuration. They are declared in the
+:ref:`core_mk_include` and can be changed when issuing the ``make`` command.
+The example of this goes as follows:
+
+.. code-block:: bash
+
+    # default build configuration
+    make DMA_TYPE=4
+
+    # choosing to build specific Ethernet configuration
+    make 100g4 DMA_TYPE=3
+
+build/<card_name>/{Vivado,Quartus}.tcl
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This file adds the ``APPLICATION_CORE`` architecture where a logic of a
+user application is. The `APP_ARCHGRP` associative array is
+initialized in this file and allows the user to pass one or more user-specified
+parameter(s) to Modules.tcl files of the ``APPLICATION_CORE`` and its underlying
+components. All configuration parameters in the :ref:`fig_const_hierarchy`
+are visible here and can be added to the array as well.
+
+.. _ndk_app_conf_app_conf_tcl:
+
+build/<card_name>/app_conf.tcl
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This file has the highest priority of all user-configurable
+constants (for more details, refer to the :ref:`fig_const_hierarchy`). The user
+can change the parameters specified in this file or add others according to
+their needs.
