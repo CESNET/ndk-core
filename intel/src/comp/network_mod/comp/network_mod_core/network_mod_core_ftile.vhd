@@ -867,10 +867,10 @@ architecture FULL of NETWORK_MOD_CORE is
     signal mi_ia_addr_phy   : slv_array_t     (IA_OUTPUT_INFS-1 downto 0)(MI_ADDR_WIDTH_PHY-1 downto 0);
     signal mi_ia_rd_phy     : std_logic_vector(IA_OUTPUT_INFS-1 downto 0);
     signal mi_ia_wr_phy     : std_logic_vector(IA_OUTPUT_INFS-1 downto 0);
-    signal mi_ia_ardy_phy   : std_logic_vector(16-1 downto 0);
-    signal mi_ia_ardy_phy_n : std_logic_vector(16-1 downto 0);
-    signal mi_ia_drd_phy    : slv_array_t     (16-1 downto 0)(MI_DATA_WIDTH_PHY-1 downto 0);
-    signal mi_ia_drdy_phy   : std_logic_vector(16-1 downto 0);
+    signal mi_ia_ardy_phy   : std_logic_vector(IA_OUTPUT_INFS-1 downto 0);
+    signal mi_ia_ardy_phy_n : std_logic_vector(IA_OUTPUT_INFS-1 downto 0);
+    signal mi_ia_drd_phy    : slv_array_t     (IA_OUTPUT_INFS-1 downto 0)(MI_DATA_WIDTH_PHY-1 downto 0);
+    signal mi_ia_drdy_phy   : std_logic_vector(IA_OUTPUT_INFS-1 downto 0);
 
     signal qsfp_rx_p_sig : slv_array_t(ETH_PORT_CHAN-1 downto 0)(LANES_PER_CHANNEL-1 downto 0); -- QSFP XCVR RX Data
     signal qsfp_rx_n_sig : slv_array_t(ETH_PORT_CHAN-1 downto 0)(LANES_PER_CHANNEL-1 downto 0); -- QSFP XCVR RX Data
@@ -1056,14 +1056,14 @@ begin
         mi_ia_wr_phy(i)     <= mi_ia_en and     mi_ia_we_phy when mi_ia_sel = "0000" else '0';
         mi_ia_rd_phy(i)     <= mi_ia_en and not mi_ia_we_phy when mi_ia_sel = "0000" else '0';
         -- Generate WR/RD signals for XCVR blocks
-        gen_xcvr_wr_rd: for xcvr in 0 to 7 generate
+        gen_xcvr_wr_rd: for xcvr in 0 to LANES_PER_CHANNEL-1 generate
             mi_ia_wr_phy  (xcvr + i*LANES_PER_CHANNEL + ETH_PORT_CHAN) <= mi_ia_en and     mi_ia_we_phy when mi_ia_sel = std_logic_vector(to_unsigned(xcvr+1,4)) else '0';
             mi_ia_rd_phy  (xcvr + i*LANES_PER_CHANNEL + ETH_PORT_CHAN) <= mi_ia_en and not mi_ia_we_phy when mi_ia_sel = std_logic_vector(to_unsigned(xcvr+1,4)) else '0';
             mi_ia_addr_phy(xcvr + i*LANES_PER_CHANNEL + ETH_PORT_CHAN) <= mi_ia_addr(mi_ia_addr_phy(i)'range);
             mi_ia_dwr_phy (xcvr + i*LANES_PER_CHANNEL + ETH_PORT_CHAN) <= mi_ia_dwr;
         end generate;
         -- Mux read data from Eth/xvcr to mgmt
-        drd_mux_p: process(ia_rd_sel, mi_ia_drd_phy)
+        drd_mux_p: process(all)
         begin
             case ia_rd_sel is
                 when "0001" => -- XCVR0
@@ -1071,33 +1071,75 @@ begin
                     mi_ia_drdy <= mi_ia_drdy_phy(0 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
                     mi_ia_ardy <= mi_ia_ardy_phy(0 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
                 when "0010" => -- XCVR1
-                    mi_ia_drd  <= mi_ia_drd_phy (1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
-                    mi_ia_drdy <= mi_ia_drdy_phy(1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
-                    mi_ia_ardy <= mi_ia_ardy_phy(1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                    if (LANES_PER_CHANNEL > 1) then
+                        mi_ia_drd  <= mi_ia_drd_phy (1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                        mi_ia_drdy <= mi_ia_drdy_phy(1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                        mi_ia_ardy <= mi_ia_ardy_phy(1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                    else
+                        mi_ia_drd  <= (others => '0');
+                        mi_ia_drdy <= '0';
+                        mi_ia_ardy <= '0';
+                    end if;
                 when "0011" => -- XCVR2
-                    mi_ia_drd  <= mi_ia_drd_phy (2 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
-                    mi_ia_drdy <= mi_ia_drdy_phy(2 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
-                    mi_ia_ardy <= mi_ia_ardy_phy(2 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                    if (LANES_PER_CHANNEL > 2) then
+                        mi_ia_drd  <= mi_ia_drd_phy (2 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                        mi_ia_drdy <= mi_ia_drdy_phy(2 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                        mi_ia_ardy <= mi_ia_ardy_phy(2 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                    else
+                        mi_ia_drd  <= (others => '0');
+                        mi_ia_drdy <= '0';
+                        mi_ia_ardy <= '0';
+                    end if;
                 when "0100" => -- XCVR3
-                    mi_ia_drd  <= mi_ia_drd_phy (3 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
-                    mi_ia_drdy <= mi_ia_drdy_phy(3 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
-                    mi_ia_ardy <= mi_ia_ardy_phy(3 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                    if (LANES_PER_CHANNEL > 3) then
+                        mi_ia_drd  <= mi_ia_drd_phy (3 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                        mi_ia_drdy <= mi_ia_drdy_phy(3 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                        mi_ia_ardy <= mi_ia_ardy_phy(3 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                    else
+                        mi_ia_drd  <= (others => '0');
+                        mi_ia_drdy <= '0';
+                        mi_ia_ardy <= '0';
+                    end if;
                 when "0101" => -- XCVR4
-                    mi_ia_drd  <= mi_ia_drd_phy (4 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
-                    mi_ia_drdy <= mi_ia_drdy_phy(4 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
-                    mi_ia_ardy <= mi_ia_ardy_phy(4 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                    if (LANES_PER_CHANNEL > 4) then
+                        mi_ia_drd  <= mi_ia_drd_phy (4 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                        mi_ia_drdy <= mi_ia_drdy_phy(4 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                        mi_ia_ardy <= mi_ia_ardy_phy(4 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                    else
+                        mi_ia_drd  <= (others => '0');
+                        mi_ia_drdy <= '0';
+                        mi_ia_ardy <= '0';
+                    end if;
                 when "0110" => -- XCVR5
-                    mi_ia_drd  <= mi_ia_drd_phy (5 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
-                    mi_ia_drdy <= mi_ia_drdy_phy(5 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
-                    mi_ia_ardy <= mi_ia_ardy_phy(5 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                    if (LANES_PER_CHANNEL > 5) then
+                        mi_ia_drd  <= mi_ia_drd_phy (5 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                        mi_ia_drdy <= mi_ia_drdy_phy(5 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                        mi_ia_ardy <= mi_ia_ardy_phy(5 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                    else
+                        mi_ia_drd  <= (others => '0');
+                        mi_ia_drdy <= '0';
+                        mi_ia_ardy <= '0';
+                    end if;
                 when "0111" => -- XCVR6
-                    mi_ia_drd  <= mi_ia_drd_phy (6 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
-                    mi_ia_drdy <= mi_ia_drdy_phy(6 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
-                    mi_ia_ardy <= mi_ia_ardy_phy(6 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                    if (LANES_PER_CHANNEL > 6) then
+                        mi_ia_drd  <= mi_ia_drd_phy (6 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                        mi_ia_drdy <= mi_ia_drdy_phy(6 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                        mi_ia_ardy <= mi_ia_ardy_phy(6 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                    else
+                        mi_ia_drd  <= (others => '0');
+                        mi_ia_drdy <= '0';
+                        mi_ia_ardy <= '0';
+                    end if;
                 when "1000" => -- XCVR7
-                    mi_ia_drd  <= mi_ia_drd_phy (7 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
-                    mi_ia_drdy <= mi_ia_drdy_phy(7 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
-                    mi_ia_ardy <= mi_ia_ardy_phy(7 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                    if (LANES_PER_CHANNEL > 7) then
+                        mi_ia_drd  <= mi_ia_drd_phy (7 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                        mi_ia_drdy <= mi_ia_drdy_phy(7 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                        mi_ia_ardy <= mi_ia_ardy_phy(7 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                    else
+                        mi_ia_drd  <= (others => '0');
+                        mi_ia_drdy <= '0';
+                        mi_ia_ardy <= '0';
+                    end if;
                 when others => -- "0000": Ethernet core + RSFEC
                     mi_ia_drd  <= mi_ia_drd_phy(i);
                     mi_ia_drdy <= mi_ia_drdy_phy(i);
