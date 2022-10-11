@@ -15,7 +15,7 @@ class env #(ETH_STREAMS, ETH_CHANNELS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR
             REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, MFB_ITEM_WIDTH, MEM_PORTS, MEM_ADDR_WIDTH, MEM_BURST_WIDTH, MEM_DATA_WIDTH, MI_DATA_WIDTH, MI_ADDR_WIDTH))
 
     // ETHERNET I/O
-    uvm_logic_vector_mvb::env_rx#(REGIONS, ETH_RX_HDR_WIDTH)                             m_eth_mvb_rx[ETH_STREAMS];
+    uvm_logic_vector_mvb::env_rx#(REGIONS, ETH_RX_HDR_WIDTH)                                                     m_eth_mvb_rx[ETH_STREAMS];
     uvm_logic_vector_array_mfb::env_rx#(REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, MFB_ITEM_WIDTH, 0)                m_eth_mfb_rx[ETH_STREAMS];
     uvm_logic_vector_array_mfb::env_tx#(REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, MFB_ITEM_WIDTH, ETH_TX_HDR_WIDTH) m_eth_mfb_tx[ETH_STREAMS];
     // DMA I/O
@@ -67,6 +67,7 @@ class env #(ETH_STREAMS, ETH_CHANNELS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR
             m_eth_mvb_rx[it] = uvm_logic_vector_mvb::env_rx#(REGIONS, ETH_RX_HDR_WIDTH)::type_id::create({"m_eth_mvb_rx_", it_num}, this);
             // RX MFB
             mfb_rx_config = new();
+            mfb_rx_config.meta_behav     = uvm_logic_vector_array_mfb::config_item::META_NONE;
             mfb_rx_config.active         = UVM_ACTIVE;
             mfb_rx_config.interface_name = {"ETH_RX_MFB_", it_num};
             uvm_config_db#(uvm_logic_vector_array_mfb::config_item)::set(this, {"m_eth_mfb_rx_", it_num}, "m_config", mfb_rx_config);

@@ -109,8 +109,8 @@ class scoreboard #(ETH_STREAMS, ETH_CHANNELS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH
             string it_num;
             it_num.itoa(it);
             //INPUT TO MODEL
-            eth_mvb_rx[it].port.connect(m_model.eth_mvb_rx[it].analysis_export);
-            eth_mfb_rx[it].port.connect(m_model.eth_mfb_rx[it].analysis_export);
+            eth_mvb_rx[it].port.connect(m_model.eth_mvb_rx[it]);
+            eth_mfb_rx[it].port.connect(m_model.eth_mfb_rx[it]);
             //INPUT TO SC
             eth_mvb_tx[it].connect(eth_mvb_cmp[it].analysis_imp_dut);
             eth_mfb_tx[it].connect(eth_mfb_cmp[it].analysis_imp_dut);
@@ -124,8 +124,8 @@ class scoreboard #(ETH_STREAMS, ETH_CHANNELS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH
             string it_num;
             it_num.itoa(it);
             // INPUT TO MODEL
-            dma_mvb_rx[it].port.connect(m_model.dma_mvb_rx[it].analysis_export);
-            dma_mfb_rx[it].port.connect(m_model.dma_mfb_rx[it].analysis_export);
+            dma_mvb_rx[it].port.connect(m_model.dma_mvb_rx[it]);
+            dma_mfb_rx[it].port.connect(m_model.dma_mfb_rx[it]);
             // INPUT TO SCOREBOARD
             dma_mvb_tx[it].connect(dma_mvb_cmp[it].analysis_imp_dut);
             dma_mfb_tx[it].connect(dma_mfb_cmp[it].analysis_imp_dut);
