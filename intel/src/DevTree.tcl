@@ -52,6 +52,8 @@ proc dts_build_netcope {} {
         append ret "boot:" [dts_boot_controller $ADDR_BOOT_CTRL $BOOT_TYPE]
     }
 
+    append ret [dts_mi_test_space "mi_test_space" $ADDR_TEST_SPACE]
+
     # TSU component
     global TSU_ENABLE
     if {$TSU_ENABLE} {
