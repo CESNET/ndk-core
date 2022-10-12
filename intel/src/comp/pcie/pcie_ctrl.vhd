@@ -491,7 +491,7 @@ begin
 
     ptc_up_mfb_meta <= slv_array_ser(ptc_up_mfb_meta_arr,MFB_UP_REGIONS,MFB_UP_META_WIDTH);
 
-    ptc_i : entity work.PCIE_TRANSACTION_CTRL
+    ptc_i : entity work.PCIE_TRANSACTION_CTRL_WRAPPER
     generic map(
         DMA_PORTS            => DMA_PORTS,
 
