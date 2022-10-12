@@ -3,18 +3,45 @@
 NDK testing
 -----------
 
-This chapter describes the testing options in the NDK:
+This chapter describes how the NDK firmware and its HDL components can be tested:
 
-- HDL components are tested by :ref:`verification, mainly using UVM <uvm_ver>`.
-- There is also :ref:`a simulation of almost the entire design using cocotb <cocotb_sim>` (simulation is not yet publicly available).
-- For simple HW tests, a :ref:`Gen Loop Switch (GLS) debug module <gls_debug>` is available (see GLS module tutorial below).
+- Test R/W access to scratch registers in the NDK firmware (:ref:`see below <ndk_testing_mi>`).
+- Simple HW throughput tests can be executed using the :ref:`Gen Loop Switch (GLS) debug module <gls_debug>` (:ref:`see below <ndk_testing_gls>`).
+- HDL components are tested by :ref:`verification, mainly using the UVM <uvm_ver>`.
+- There is also a:ref:`simulation of almost the entire firmware using cocotb <cocotb_sim>` (however, it is not yet publicly available).
+
+.. _ndk_testing_mi:
+
+Testing R/W access to the scratch registers
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The NDK firmware implements 64 32-bit scratch registers for testing purposes. Like other parts of the firmware, they are accessible via the :ref:`MI bus <ndk_intel_mi>`. This address space is (among other things) stored in the :ref:`DeviceTree <ndk_devtree>`. The `nfb-bus tool <https://cesnet.github.io/ndk-sw/tools/nfb-bus.html>`_ can be used for easy R/W access to any register in the firmware that is mapped to the MI bus. The following example shows how to:
+
+- read the first scratch register (the offset is 0x0 in the byte format) in the MI TEST SPACE component (selected using the DeviceTree path),
+- write a new value (0x42) to it, and
+- read it again.
+
+.. code-block:: bash
+
+    $ nfb-bus -p /firmware/mi_bus0/mi_test_space 0x0
+    00000000
+    $ nfb-bus -p /firmware/mi_bus0/mi_test_space 0x0 0x42
+    $ nfb-bus -p /firmware/mi_bus0/mi_test_space 0x0
+    00000042
+
+You can test R/W requests to the NDK firmware address space of these scratch registers however you want. Similarly, in the future, you can access the registers in your own application that you build on the NDK platform.
+
+.. _ndk_testing_gls:
 
 GLS module tutorial
 ^^^^^^^^^^^^^^^^^^^
 
-The NDK design may include a GLS module that is instantiated in each DMA stream between the application core and the DMA controller. The GLS module is used for testing purposes and contains HW packet generators, speed meters, and datapath switches. Please refer to :ref:`the GLS module documentation <gls_debug>` for a more detailed description.
+GLS module tutorial
+^^^^^^^^^^^^^^^^^^^
 
-The GLS module also comes with a Python script (``ndk/ofm/comp/mfb_tools/debug/gen_loop_switch/sw/gls_mod.py``) that can be used to quickly perform several basic tests (modes) like measuring the throughput of the NDK design. A list of tests can be obtained by running this script without parameters:
+The NDK firmware may include a GLS module that is instantiated in each DMA stream between the application core and the DMA controller. The GLS module is used for testing purposes and contains HW packet generators, speed meters, and datapath switches. Please refer to the :ref:`GLS module documentation <gls_debug>` for a more information.
+
+The GLS module also comes with a Python script (``<NDK-APP-XXX_root_directory>/ndk/ofm/comp/mfb_tools/debug/gen_loop_switch/sw/gls_mod.py``) that can be used to quickly perform several basic tests (modes). For example, you can measure the throughput of the NDK firmware. A list of tests can be obtained by running this script without parameters:
 
 .. code-block::
 
@@ -32,7 +59,7 @@ The GLS module also comes with a Python script (``ndk/ofm/comp/mfb_tools/debug/g
     7: TX DMA --> Black Hole ### RX DMA --> Black Hole;
     8: TX DMA --> RX DMA     ### (internal DMA loopback)
 
-Some tests require an available DMA controller; others require an external QSFP loopback for Ethernet. Test 1 can be used for NDK design without a DMA controller. In this test, :ref:`the HW generator <mfb_generator>` sends Ethernet packets of constant length to the output network interface at full speed. The script measures the transmission data rate and continues to repeat the test for incrementing packet lengths until the maximum packet length is reached.
+Some tests require an available DMA controller; others require an external QSFP loopback for Ethernet. Test 1 can be used for NDK firmware without a DMA controller. In this test, the :ref:`HW generator <mfb_generator>` sends Ethernet packets of constant length to the output network interface at full speed. The script measures the transmission data rate and continues to repeat the test for incrementing packet lengths until the maximum packet length is reached.
 
 .. warning::
 
