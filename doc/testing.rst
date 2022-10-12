@@ -36,9 +36,6 @@ You can test R/W requests to the NDK firmware address space of these scratch reg
 GLS module tutorial
 ^^^^^^^^^^^^^^^^^^^
 
-GLS module tutorial
-^^^^^^^^^^^^^^^^^^^
-
 The NDK firmware may include a GLS module that is instantiated in each DMA stream between the application core and the DMA controller. The GLS module is used for testing purposes and contains HW packet generators, speed meters, and datapath switches. Please refer to the :ref:`GLS module documentation <gls_debug>` for a more information.
 
 The GLS module also comes with a Python script (``<NDK-APP-XXX_root_directory>/ndk/ofm/comp/mfb_tools/debug/gen_loop_switch/sw/gls_mod.py``) that can be used to quickly perform several basic tests (modes). For example, you can measure the throughput of the NDK firmware. A list of tests can be obtained by running this script without parameters:
