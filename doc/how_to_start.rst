@@ -18,8 +18,8 @@ How to build an FPGA firmware with an NDK-based application
 .. NOTE::
     To build the FPGA firmware, you must have Intel Quartus Prime Pro or Xilinx Vivado (depending on the target card) installed, including a valid license.
 
- How to prepare the FPGA card and the host PC
-=============================================
+How to prepare the FPGA card and the host PC
+============================================
 
 - The target FPGA card may require proper switch settings. Check the card manufacturer's instructions.
 - Plug the target FPGA card into the PCIe slot of the host PC.
