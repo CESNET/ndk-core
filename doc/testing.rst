@@ -15,7 +15,7 @@ This chapter describes how the NDK firmware and its HDL components can be tested
 Testing R/W access to the scratch registers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The NDK firmware implements 64 32-bit scratch registers for testing purposes. Like other parts of the firmware, they are accessible via the :ref:`MI bus <ndk_intel_mi>`. This address space is (among other things) stored in the :ref:`DeviceTree <ndk_devtree>`. The `nfb-bus tool <https://cesnet.github.io/ndk-sw/tools/nfb-bus.html>`_ can be used for easy R/W access to any register in the firmware that is mapped to the MI bus. The following example shows how to:
+The NDK firmware implements 64 32-bit scratch registers for testing purposes. Like other parts of the firmware, they are accessible via the :ref:`MI bus <ndk_mi>`. This address space is (among other things) stored in the :ref:`DeviceTree <ndk_devtree>`. The `nfb-bus tool <https://cesnet.github.io/ndk-sw/tools/nfb-bus.html>`_ can be used for easy R/W access to any register in the firmware that is mapped to the MI bus. The following example shows how to:
 
 - read the first scratch register (the offset is 0x0 in the byte format) in the MI TEST SPACE component (selected using the DeviceTree path),
 - write a new value (0x42) to it, and
