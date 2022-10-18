@@ -1,17 +1,21 @@
-# 1. base_mac   - base address of MAC layer
-# 2. base_pcs   - base address of PCS/PMA layer
-# 2. base_pmd   - base address of PMD/I2C layer
-# 3. ports      - number of ethernet ports
-# 4. port_speed - array of strings, speed (and number of channels) for all ports
-proc dts_network_mod { base_mac base_pcs base_pmd ports ETH_PORT_SPEED ETH_PORT_CHAN ETH_PORT_LANES card_name} {
+# 1.  base_mac   - base address of MAC layer
+# 2.  base_pcs   - base address of PCS/PMA layer
+# 3.  base_pmd   - base address of PMD/I2C layer
+# 4.  ports      - number of ethernet ports
+# 5.  ETH_PORT_SPEED  - array of integer, speed value for all ports
+# 6.  ETH_PORT_CHAN   - array of integer, number of channels for all ports
+# 7.  ETH_PORT_LANES  - array of integer, number of lanes for all ports
+# 8.  ETH_PORT_RX_MTU - array of integer, RX MTU value for all ports
+# 9.  ETH_PORT_TX_MTU - array of integer, TX MTU value for all ports
+# 10. card_name - name of the card
+proc dts_network_mod { base_mac base_pcs base_pmd ports ETH_PORT_SPEED ETH_PORT_CHAN ETH_PORT_LANES ETH_PORT_RX_MTU ETH_PORT_TX_MTU card_name} {
 
     # use upvar to pass an array
     upvar $ETH_PORT_SPEED port_speed
     upvar $ETH_PORT_CHAN  port_chan
     upvar $ETH_PORT_LANES port_lanes
-
-    set MTUI 16383
-    set MTUO 16383
+    upvar $ETH_PORT_RX_MTU port_rx_mtu
+    upvar $ETH_PORT_TX_MTU port_tx_mtu
 
     set ei 0
     # MAC Lites offset (9 bits)
@@ -56,8 +60,8 @@ proc dts_network_mod { base_mac base_pcs base_pmd ports ETH_PORT_SPEED ETH_PORT_
             }
             append ret "regarr$ei:" [dts_pcs_regs $ei [expr $base_pcs + $MGMT_PORT_OFF * $p + $MGMT_CHAN_OFF * $ch]]
             append ret "pcspma$ei:" [dts_mgmt $ei "$port_speed($p)G" "regarr$ei" ""]
-            append ret "txmac$ei:" [dts_tx_mac_lite $ei $port_speed($p) [expr $base_mac + $p * $PORTS_OFF + $ch * $CHAN_OFF + $TX_RX_MAC_OFF * 0] $MTUO]
-            append ret "rxmac$ei:" [dts_rx_mac_lite $ei $port_speed($p) [expr $base_mac + $p * $PORTS_OFF + $ch * $CHAN_OFF + $TX_RX_MAC_OFF * 1] $MTUI]
+            append ret "txmac$ei:" [dts_tx_mac_lite $ei $port_speed($p) [expr $base_mac + $p * $PORTS_OFF + $ch * $CHAN_OFF + $TX_RX_MAC_OFF * 0] $port_tx_mtu($p)]
+            append ret "rxmac$ei:" [dts_rx_mac_lite $ei $port_speed($p) [expr $base_mac + $p * $PORTS_OFF + $ch * $CHAN_OFF + $TX_RX_MAC_OFF * 1] $port_rx_mtu($p)]
             append ret [dts_eth_channel $ei $p $ei $ei $ei $eth_lanes]
             incr ei
         }

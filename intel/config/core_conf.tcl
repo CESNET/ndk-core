@@ -1,7 +1,7 @@
 # core_conf.tcl: Core parameters for NDK which can be set customly by the user
 # Copyright (C) 2022 CESNET z. s. p. o.
 # Author(s): Jakub Cabal <cabal@cesnet.cz>
-#           Vladislav Valek <valekv@cesnet.cz>
+#            Vladislav Valek <valekv@cesnet.cz>
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
@@ -29,6 +29,12 @@ set ETH_PORT_CHAN(0)   1
 # Number of lanes for each one of the ETH_PORTS
 # Typical values: 4 (QSFP), 8 (QSFP-DD)
 set ETH_PORT_LANES(0)  8
+# Maximum allowed size of RX frame in bytes for each one of the ETH_PORTS
+# NOTE: ETH_PORT_RX_MTU = 16383 is maximum supported value!
+set ETH_PORT_RX_MTU(0) 16383
+# Maximum allowed size of TX frame in bytes for each one of the ETH_PORTS
+# NOTE: ETH_PORT_TX_MTU = 16383 is maximum supported value!
+set ETH_PORT_TX_MTU(0) 16383
 
 # ------------------------------------------------------------------------------
 # PCIe parameters (not all combinations work):
@@ -51,11 +57,17 @@ set PCIE_ENDPOINT_MODE 1
 # ------------------------------------------------------------------------------
 # DMA parameters:
 # ------------------------------------------------------------------------------
-set DMA_RX_CHANNELS      16
-set DMA_TX_CHANNELS      16
+set DMA_RX_CHANNELS       16
+set DMA_TX_CHANNELS       16
+# Maximum allowed size of DMA RX frame in bytes
+# NOTE: DMA_RX_FRAME_SIZE_MAX = 16383 is maximum supported value!
+set DMA_RX_FRAME_SIZE_MAX 16383
+# Maximum allowed size of DMA TX frame in bytes
+# NOTE: DMA_TX_FRAME_SIZE_MAX = 16383 is maximum supported value!
+set DMA_TX_FRAME_SIZE_MAX 16383
 # In blocking mode, packets are dropped only when the RX DMA channel is off.
 # In non-blocking mode, packets are dropped whenever they cannot be sent.
-set DMA_RX_BLOCKING_MODE true
+set DMA_RX_BLOCKING_MODE  true
 
 # ------------------------------------------------------------------------------
 # Other parameters:
