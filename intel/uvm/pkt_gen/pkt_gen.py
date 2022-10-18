@@ -13,7 +13,7 @@ from parser import *
 import scapy.utils
 import string
 import argparse
-
+import time
 
 def main():
     #parse options
@@ -22,10 +22,13 @@ def main():
                         help="Set output file", required=True)
     parser.add_argument("-p", "--packets", type=int,
                         help="number of generated packets", default=20)
+    parser.add_argument("-s", "--seed", type=int,
+                        help="set seed to random generator", default=time.time())
     args = parser.parse_args()
 
     gen = ethernet()
     packets = []
+    random.seed(args.seed)
     for x in range(args.packets):
         cfg = packet_config()
         protocols = []
@@ -33,8 +36,9 @@ def main():
         packet = scapy.packet.Packet()
         for pr in protocols:
             packet = packet/pr
+
         packets.append(scapy.packet.fuzz(packet))
-        #print(scapy.packet.Raw(packet))
+
     scapy.utils.wrpcap(args.file_output, packets)
 
 

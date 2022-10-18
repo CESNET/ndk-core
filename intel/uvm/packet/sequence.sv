@@ -59,7 +59,6 @@ class sequence_pcap#(ITEM_WIDTH) extends uvm_common::sequence_base#(uvm_logic_ve
             req.data = {>>{data}};
             finish_item(req);
         end
-        $write("TEST %s : %0d\n", p_sequencer.get_full_name(), pkt_num);
         reader.close();
     endtask
 
