@@ -25,6 +25,10 @@ generic(
     ETH_PORT_CHAN   : natural := 4;
     -- Different port ID for each Ethernet port (for RX MAC Lite identification)
     ETH_PORT_ID     : natural := 0;
+    -- Maximum allowed size of RX frame in bytes
+    ETH_PORT_RX_MTU : natural := 16383;
+    -- Maximum allowed size of TX frame in bytes
+    ETH_PORT_TX_MTU : natural := 16383;
 
     -- =====================================================================
     -- MFB configuration:
@@ -342,6 +346,7 @@ begin
             TX_BLOCK_SIZE   => BLOCK_SIZE      ,
             TX_ITEM_WIDTH   => ITEM_WIDTH      ,
             RESIZE_ON_TX    => True            ,
+            PKT_MTU_BYTES   => ETH_PORT_TX_MTU ,
             RX_INCLUDE_CRC  => false           ,
             RX_INCLUDE_IPG  => false           ,
             CRC_INSERT_EN   => false           ,
@@ -402,6 +407,7 @@ begin
             TX_ITEM_WIDTH   => ITEM_WIDTH      ,
             RESIZE_BUFFER   => RESIZE_BUFFER   ,
             NETWORK_PORT_ID => ETH_PORT_ID*ETH_PORT_CHAN+ch, -- no support different number of channels for each port
+            PKT_MTU_BYTES   => ETH_PORT_RX_MTU ,
             CRC_IS_RECEIVED => false           ,
             CRC_CHECK_EN    => false           ,
             CRC_REMOVE_EN   => false           ,

@@ -37,7 +37,8 @@ generic(
     USR_MFB_BLOCK_SIZE   : natural := 8;
     USR_MFB_ITEM_WIDTH   : natural := 8;
 
-    USR_PKT_SIZE_MAX     : natural := 2**12;
+    USR_RX_PKT_SIZE_MAX  : natural := 2**12;
+    USR_TX_PKT_SIZE_MAX  : natural := 2**12;
 
     DMA_ENDPOINTS        : natural := 1;
     PCIE_MPS             : natural := 256;
@@ -114,7 +115,7 @@ port(
     -- =====================================================================
 
     -- RX_USR_MVB_DATA =======================
-    RX_USR_MVB_LEN       : in  std_logic_vector(DMA_STREAMS*USR_MVB_ITEMS*log2(USR_PKT_SIZE_MAX+1)-1 downto 0);
+    RX_USR_MVB_LEN       : in  std_logic_vector(DMA_STREAMS*USR_MVB_ITEMS*log2(USR_RX_PKT_SIZE_MAX+1)-1 downto 0);
     RX_USR_MVB_HDR_META  : in  std_logic_vector(DMA_STREAMS*USR_MVB_ITEMS*HDR_META_WIDTH          -1 downto 0);
     RX_USR_MVB_CHANNEL   : in  std_logic_vector(DMA_STREAMS*USR_MVB_ITEMS*log2(RX_CHANNELS)       -1 downto 0);
     RX_USR_MVB_DISCARD   : in  std_logic_vector(DMA_STREAMS*USR_MVB_ITEMS*1                       -1 downto 0);
@@ -138,7 +139,7 @@ port(
     -- =====================================================================
 
     -- TX_USR_MVB_DATA =======================
-    TX_USR_MVB_LEN       : out std_logic_vector(DMA_STREAMS*USR_MVB_ITEMS*log2(USR_PKT_SIZE_MAX+1)-1 downto 0);
+    TX_USR_MVB_LEN       : out std_logic_vector(DMA_STREAMS*USR_MVB_ITEMS*log2(USR_TX_PKT_SIZE_MAX+1)-1 downto 0);
     TX_USR_MVB_HDR_META  : out std_logic_vector(DMA_STREAMS*USR_MVB_ITEMS*HDR_META_WIDTH          -1 downto 0);
     TX_USR_MVB_CHANNEL   : out std_logic_vector(DMA_STREAMS*USR_MVB_ITEMS*log2(TX_CHANNELS)       -1 downto 0);
     -- =======================================

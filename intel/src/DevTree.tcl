@@ -1,7 +1,8 @@
 proc dts_build_netcope {} {
     # =========================================================================
     # MI ADDRESS SPACE
-    # Changes must also be made manually in mi_addr_space_pkg.vhd!
+    # Changes must also be made manually in VHDL package:
+    # <NDK-CORE_root_directory>/intel/src/mi_addr_space_pkg.vhd
     # =========================================================================
     set ADDR_TEST_SPACE "0x00000000"
     set ADDR_SDM_SYSMON "0x00001000"
@@ -10,9 +11,9 @@ proc dts_build_netcope {} {
     set ADDR_TSU        "0x00004000"
     set ADDR_GEN_LOOP   "0x00005000"
     set ADDR_ETH_MAC    "0x00008000"
+    #set ADDR_DDR_MOD    "0x00010000"
     set ADDR_DMA_MOD    "0x01000000"
     #set ADDR_MSIX_MOD   "0x01400000"
-    set ADDR_DDR_MOD    "0x00010000"
     set ADDR_ETH_PCS    "0x00800000"
     set ADDR_USERAPP    "0x02000000"
 
@@ -61,15 +62,15 @@ proc dts_build_netcope {} {
     }
 
     # DMA module
-    global DMA_TYPE DMA_MODULES DMA_RX_CHANNELS DMA_TX_CHANNELS PCIE_ENDPOINTS
+    global DMA_TYPE DMA_MODULES DMA_RX_CHANNELS DMA_TX_CHANNELS PCIE_ENDPOINTS DMA_RX_FRAME_SIZE_MAX DMA_TX_FRAME_SIZE_MAX DMA_RX_FRAME_SIZE_MIN DMA_TX_FRAME_SIZE_MIN
     if {$DMA_TYPE != 0} {
-        append ret [dts_dmamod_open $ADDR_DMA_MOD $DMA_TYPE [expr $DMA_RX_CHANNELS / $PCIE_ENDPOINTS] [expr $DMA_TX_CHANNELS / $PCIE_ENDPOINTS] "0"]
+        append ret [dts_dmamod_open $ADDR_DMA_MOD $DMA_TYPE [expr $DMA_RX_CHANNELS / $PCIE_ENDPOINTS] [expr $DMA_TX_CHANNELS / $PCIE_ENDPOINTS] "0" $DMA_RX_FRAME_SIZE_MAX $DMA_TX_FRAME_SIZE_MAX $DMA_RX_FRAME_SIZE_MIN $DMA_TX_FRAME_SIZE_MIN]
     }
 
     # Network module
-    global NET_MOD_ARCH ETH_PORTS ETH_PORT_SPEED ETH_PORT_CHAN ETH_PORT_LANES
+    global NET_MOD_ARCH ETH_PORTS ETH_PORT_SPEED ETH_PORT_CHAN ETH_PORT_LANES ETH_PORT_RX_MTU ETH_PORT_TX_MTU
     if {$NET_MOD_ARCH != "EMPTY"} {
-        append ret [dts_network_mod $ADDR_ETH_MAC $ADDR_ETH_PCS $ADDR_ETH_PMD $ETH_PORTS ETH_PORT_SPEED ETH_PORT_CHAN ETH_PORT_LANES $CARD_NAME]
+        append ret [dts_network_mod $ADDR_ETH_MAC $ADDR_ETH_PCS $ADDR_ETH_PMD $ETH_PORTS ETH_PORT_SPEED ETH_PORT_CHAN ETH_PORT_LANES ETH_PORT_RX_MTU ETH_PORT_TX_MTU $CARD_NAME]
     }
 
     global SDM_SYSMON_ARCH
@@ -113,7 +114,7 @@ proc dts_build_netcope {} {
         append ret "width = <0x20>;"
 
         if {$DMA_TYPE != 0} {
-            append ret [dts_dmamod_open $ADDR_DMA_MOD $DMA_TYPE [expr $DMA_RX_CHANNELS / $PCIE_ENDPOINTS] [expr $DMA_TX_CHANNELS / $PCIE_ENDPOINTS] $i]
+            append ret [dts_dmamod_open $ADDR_DMA_MOD $DMA_TYPE [expr $DMA_RX_CHANNELS / $PCIE_ENDPOINTS] [expr $DMA_TX_CHANNELS / $PCIE_ENDPOINTS] $i $DMA_RX_FRAME_SIZE_MAX $DMA_TX_FRAME_SIZE_MAX $DMA_RX_FRAME_SIZE_MIN $DMA_TX_FRAME_SIZE_MIN]
         }
         append ret "};"
     }

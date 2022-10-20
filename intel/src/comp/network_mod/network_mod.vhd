@@ -300,8 +300,10 @@ begin
         network_mod_logic_i : entity work.NETWORK_MOD_LOGIC
         generic map(
             -- ETH
-            ETH_PORT_CHAN    => ETH_PORT_CHAN(p),
-            ETH_PORT_ID      => p               ,
+            ETH_PORT_CHAN    => ETH_PORT_CHAN(p)  ,
+            ETH_PORT_ID      => p                 ,
+            ETH_PORT_RX_MTU  => ETH_PORT_RX_MTU(p),
+            ETH_PORT_TX_MTU  => ETH_PORT_TX_MTU(p),
             -- MFB
             USER_REGIONS     => REGIONS         ,
             USER_REGION_SIZE => REGION_SIZE     ,

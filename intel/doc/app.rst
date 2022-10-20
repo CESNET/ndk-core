@@ -15,7 +15,7 @@ We recommend splitting the Application into several parts that we call Applicati
 How to use the Application interfaces
 *************************************
 
-The following sections describe how to work with each of the Application interfaces. You will also learn in which formats you can receive data and in which you must send it. We also strongly recommend that you read the :ref:`MFB bus specification <mfb_bus>`, :ref:`MVB bus specification <mvb_bus>` and :ref:`MI bus specification <mi_bus>`.
+The following sections describe how to work with each of the Application interfaces. You will also learn in which formats you can receive data and in which you must send it. We also strongly recommend that you read the :ref:`MFB bus specification <mfb_bus>`, :ref:`MVB bus specification <mvb_bus>` and :ref:`MI bus specification <mi_bus>`. The MTU of packets transferred via DMA or Ethernet can be set using configuration parameters, see :ref:`chapter "Configuration files and parameters" <ndk_configuration>`. The set MTU values are then available in the :ref:`DeviceTree <ndk_devtree>` description of the NDK firmware.
 
 Receiving packets from Ethernet
 -------------------------------
@@ -32,7 +32,7 @@ The packets are transferred as Ethernet frames without CRC. The ``eth_hdr_pack``
 Transmitting packets to the Ethernet
 ------------------------------------
 
-The packets are sent to the Ethernet only through the MFB bus (``ETH_TX_MFB_*``). In this case, the metadata is transferred in a special signal: ``ETH_TX_MFB_HDR``. This signal is valid for each MFB Region where an Ethernet packet starts. The packet data must contain an Ethernet frame without the CRC, which is calculated and inserted further in the design. The metadata format is also defined in the ``eth_hdr_pack`` package (see the previous section).
+The packets are sent to the Ethernet only through the MFB bus (``ETH_TX_MFB_*``). In this case, the metadata is transferred in a special signal: ``ETH_TX_MFB_HDR``. This signal is valid for each MFB Region where an Ethernet packet starts. The packet data must contain an Ethernet frame without the CRC, which is calculated and inserted further in the design. The minimum allowed length of the packet data is 60B, if necessary, the application must add padding to the packet. The metadata format is also defined in the ``eth_hdr_pack`` package (see the previous section).
 
 Receiving packets from the DMA module
 -------------------------------------
@@ -72,6 +72,7 @@ The application sends packets to the DMA module over two buses, MVB and MFB (``D
 
 The MFB bus transfers the packet data, which may contain a user header before the payload data (e.g., an Ethernet packet). 
 You can determine the presence of the user header and its length from the metadata in the ``DMA_RX_MVB_HDR_META`` signal (see the previous section).
+The minimum allowed length of the packet data is 60B, if necessary, the application must add padding to the packet.
 
 .. WARNING::
     The application must also send the corresponding MVB data with each MFB packet, or the data transfer will get stuck.

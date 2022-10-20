@@ -183,7 +183,6 @@ architecture FULL of FPGA_COMMON is
 
     constant PCIE_MPS     : natural := 256;
     constant PCIE_MRRS    : natural := 512;
-    constant ETH_PKT_MTU  : natural := 2**12;
     constant RESET_WIDTH  : natural := 10;
     constant TSU_USE_DSP  : boolean := (DEVICE="ULTRASCALE");
 
@@ -320,7 +319,7 @@ architecture FULL of FPGA_COMMON is
     signal dma_down_mfb_src_rdy          : std_logic_vector(DMA_ENDPOINTS-1 downto 0);
     signal dma_down_mfb_dst_rdy          : std_logic_vector(DMA_ENDPOINTS-1 downto 0);
 
-    signal app_dma_rx_mvb_len            : std_logic_vector(DMA_STREAMS*MVB_ITEMS*log2(ETH_PKT_MTU+1)-1 downto 0);
+    signal app_dma_rx_mvb_len            : std_logic_vector(DMA_STREAMS*MVB_ITEMS*log2(DMA_RX_FRAME_SIZE_MAX+1)-1 downto 0);
     signal app_dma_rx_mvb_hdr_meta       : std_logic_vector(DMA_STREAMS*MVB_ITEMS*HDR_META_WIDTH-1 downto 0);
     signal app_dma_rx_mvb_channel        : std_logic_vector(DMA_STREAMS*MVB_ITEMS*log2(DMA_RX_CHANNELS)-1 downto 0);
     signal app_dma_rx_mvb_discard        : std_logic_vector(DMA_STREAMS*MVB_ITEMS-1 downto 0);
@@ -336,7 +335,7 @@ architecture FULL of FPGA_COMMON is
     signal app_dma_rx_mfb_src_rdy        : std_logic_vector(DMA_STREAMS-1 downto 0);
     signal app_dma_rx_mfb_dst_rdy        : std_logic_vector(DMA_STREAMS-1 downto 0);
 
-    signal app_dma_tx_mvb_len            : std_logic_vector(DMA_STREAMS*MVB_ITEMS*log2(ETH_PKT_MTU+1)-1 downto 0);
+    signal app_dma_tx_mvb_len            : std_logic_vector(DMA_STREAMS*MVB_ITEMS*log2(DMA_TX_FRAME_SIZE_MAX+1)-1 downto 0);
     signal app_dma_tx_mvb_hdr_meta       : std_logic_vector(DMA_STREAMS*MVB_ITEMS*HDR_META_WIDTH-1 downto 0);
     signal app_dma_tx_mvb_channel        : std_logic_vector(DMA_STREAMS*MVB_ITEMS*log2(DMA_TX_CHANNELS)-1 downto 0);
     signal app_dma_tx_mvb_vld            : std_logic_vector(DMA_STREAMS*MVB_ITEMS-1 downto 0);
@@ -766,7 +765,8 @@ begin
         USR_MFB_BLOCK_SIZE   => MFB_BLOCK_SIZE            ,
         USR_MFB_ITEM_WIDTH   => MFB_ITEM_WIDTH            ,
 
-        USR_PKT_SIZE_MAX     => ETH_PKT_MTU               ,
+        USR_RX_PKT_SIZE_MAX  => DMA_RX_FRAME_SIZE_MAX     ,
+        USR_TX_PKT_SIZE_MAX  => DMA_TX_FRAME_SIZE_MAX     ,
 
         DMA_ENDPOINTS        => DMA_ENDPOINTS             ,
         PCIE_MPS             => PCIE_MPS                  ,
@@ -920,37 +920,36 @@ begin
     end process;
 
     -- =========================================================================
-    --  APPLICATION CORE
+    --  THE APPLICATION
     -- =========================================================================
 
-    application_core_i : entity work.APPLICATION_CORE
+    app_i : entity work.APPLICATION_CORE
     generic map (
-        ETH_PORTS          => ETH_PORTS,
-        ETH_CHANNELS       => ETH_CHANNELS,
-        ETH_STREAMS        => ETH_STREAMS,
-        ETH_PKT_MTU        => ETH_PKT_MTU,
-        PCIE_ENDPOINTS     => PCIE_ENDPOINTS,
-        DMA_STREAMS        => DMA_STREAMS,
-        DMA_RX_CHANNELS    => DMA_RX_CHANNELS,
-        DMA_TX_CHANNELS    => DMA_TX_CHANNELS,
-        DMA_HDR_META_WIDTH => HDR_META_WIDTH,
-        DMA_PKT_MTU        => ETH_PKT_MTU,
-        MFB_REGIONS        => MFB_REGIONS,
-        MFB_REG_SIZE       => MFB_REGION_SIZE,
-        MFB_BLOCK_SIZE     => MFB_BLOCK_SIZE,
-        MFB_ITEM_WIDTH     => MFB_ITEM_WIDTH,
-        MEM_PORTS          => MEM_PORTS,
-        MEM_ADDR_WIDTH     => MEM_ADDR_WIDTH,
-        MEM_BURST_WIDTH    => MEM_BURST_WIDTH,
-        MEM_DATA_WIDTH     => MEM_DATA_WIDTH,
-        MEM_REFR_PERIOD_WIDTH   => MEM_REFR_PERIOD_WIDTH,
-        MEM_DEF_REFR_PERIOD     => MEM_DEF_REFR_PERIOD,
-        AMM_FREQ_KHZ       => AMM_FREQ_KHZ,
-        MI_DATA_WIDTH      => MI_DATA_WIDTH,
-        MI_ADDR_WIDTH      => MI_ADDR_WIDTH,
-        RESET_WIDTH        => RESET_WIDTH,
-        BOARD              => BOARD,
-        DEVICE             => DEVICE
+        ETH_STREAMS           => ETH_STREAMS,
+        ETH_CHANNELS          => ETH_CHANNELS,
+        PCIE_ENDPOINTS        => PCIE_ENDPOINTS,
+        DMA_STREAMS           => DMA_STREAMS,
+        DMA_RX_CHANNELS       => DMA_RX_CHANNELS,
+        DMA_TX_CHANNELS       => DMA_TX_CHANNELS,
+        DMA_HDR_META_WIDTH    => HDR_META_WIDTH,
+        DMA_RX_FRAME_SIZE_MAX => DMA_RX_FRAME_SIZE_MAX,
+        DMA_TX_FRAME_SIZE_MAX => DMA_TX_FRAME_SIZE_MAX,
+        MFB_REGIONS           => MFB_REGIONS,
+        MFB_REG_SIZE          => MFB_REGION_SIZE,
+        MFB_BLOCK_SIZE        => MFB_BLOCK_SIZE,
+        MFB_ITEM_WIDTH        => MFB_ITEM_WIDTH,
+        MEM_PORTS             => MEM_PORTS,
+        MEM_ADDR_WIDTH        => MEM_ADDR_WIDTH,
+        MEM_BURST_WIDTH       => MEM_BURST_WIDTH,
+        MEM_DATA_WIDTH        => MEM_DATA_WIDTH,
+        MEM_REFR_PERIOD_WIDTH => MEM_REFR_PERIOD_WIDTH,
+        MEM_DEF_REFR_PERIOD   => MEM_DEF_REFR_PERIOD,
+        AMM_FREQ_KHZ          => AMM_FREQ_KHZ,
+        MI_DATA_WIDTH         => MI_DATA_WIDTH,
+        MI_ADDR_WIDTH         => MI_ADDR_WIDTH,
+        RESET_WIDTH           => RESET_WIDTH,
+        BOARD                 => BOARD,
+        DEVICE                => DEVICE
     )
     port map (
         CLK_USER           => clk_usr_x1,
@@ -1073,6 +1072,8 @@ begin
         ETH_PORTS         => ETH_PORTS      ,
         ETH_PORT_SPEED    => ETH_PORT_SPEED ,
         ETH_PORT_CHAN     => ETH_PORT_CHAN  ,
+        ETH_PORT_RX_MTU   => ETH_PORT_RX_MTU,
+        ETH_PORT_TX_MTU   => ETH_PORT_TX_MTU,
         LANES             => ETH_LANES      ,
         QSFP_I2C_PORTS    => QSFP_I2C_PORTS ,
 

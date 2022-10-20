@@ -15,14 +15,10 @@ use work.combo_user_const.all;
 
 entity APPLICATION_CORE is
 generic (
-    -- ETH: number of Ethernet ports present on board
-    ETH_PORTS          : natural := 1;
-    -- ETH: number of possible logical Ethernet links per Ethernet stream
-    ETH_CHANNELS       : natural := 1;
     -- ETH: number of Ethernet streams from network module
     ETH_STREAMS        : natural := 1;
-    -- ETH: Maximum size of a packet on ETH interfaces (in bytes)
-    ETH_PKT_MTU        : natural := 2**12;
+    -- ETH: number of possible logical Ethernet links per Ethernet stream
+    ETH_CHANNELS       : natural := 1;
     -- Number of instantiated PCIe endpoints
     PCIE_ENDPOINTS     : natural := 1;
     -- DMA: number of DMA streams
@@ -33,8 +29,10 @@ generic (
     DMA_TX_CHANNELS    : natural := 16;
     -- DMA: size of User Header Metadata in bits
     DMA_HDR_META_WIDTH : natural := 12;
-    -- DMA: Maximum size of a packet on DMA interfaces (in bytes)
-    DMA_PKT_MTU        : natural := 2**12;
+    -- DMA: Maximum size of a frame on RX DMA interfaces (in bytes)
+    DMA_RX_FRAME_SIZE_MAX : natural := 2**12;
+    -- DMA: Maximum size of a frame on TX DMA interfaces (in bytes)
+    DMA_TX_FRAME_SIZE_MAX : natural := 2**12;
     -- MFB parameters: number of regions in word
     MFB_REGIONS        : natural := 1;
     -- MFB parameters: number of blocks in region
@@ -188,7 +186,7 @@ port (
     -- =========================================================================
 
     -- DMA RX MVB streams: length of data packet in bytes
-    DMA_RX_MVB_LEN           : out std_logic_vector(DMA_STREAMS* MFB_REGIONS*log2(DMA_PKT_MTU+1)-1 downto 0);
+    DMA_RX_MVB_LEN           : out std_logic_vector(DMA_STREAMS* MFB_REGIONS*log2(DMA_RX_FRAME_SIZE_MAX+1)-1 downto 0);
     -- DMA RX MVB streams: user metadata for DMA header
     DMA_RX_MVB_HDR_META      : out std_logic_vector(DMA_STREAMS* MFB_REGIONS*DMA_HDR_META_WIDTH-1 downto 0);
     -- DMA RX MVB streams: number of DMA channel
@@ -225,7 +223,7 @@ port (
     -- =========================================================================
 
     -- DMA TX MVB streams: length of data packet in bytes
-    DMA_TX_MVB_LEN          : in  std_logic_vector(DMA_STREAMS* MFB_REGIONS*log2(DMA_PKT_MTU+1)-1 downto 0);
+    DMA_TX_MVB_LEN          : in  std_logic_vector(DMA_STREAMS* MFB_REGIONS*log2(DMA_TX_FRAME_SIZE_MAX+1)-1 downto 0);
     -- DMA TX MVB streams: user metadata for DMA header
     DMA_TX_MVB_HDR_META     : in  std_logic_vector(DMA_STREAMS* MFB_REGIONS*DMA_HDR_META_WIDTH-1 downto 0);
     -- DMA TX MVB streams: number of DMA channel
