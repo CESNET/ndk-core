@@ -15,26 +15,41 @@ set PROJECT_NAME ""
 # ETH parameters:
 # ------------------------------------------------------------------------------
 # Number of Ethernet ports, must match number of items in list ETH_PORTS_SPEED!
-set ETH_PORTS          1
+set ETH_PORTS          4
 # Speed for each one of the ETH_PORTS
 # ETH_PORT_SPEED is an array where each index represents given ETH_PORT and
 # each index has associated a required port speed.
 # NOTE: at this moment, all ports must have same speed!
-set ETH_PORT_SPEED(0)  400
+set ETH_PORT_SPEED(0)  100
+set ETH_PORT_SPEED(1)  100
+set ETH_PORT_SPEED(2)  100
+set ETH_PORT_SPEED(3)  100
 # Number of channels for each one of the ETH_PORTS
 # ETH_PORT_CHAN is an array where each index represents given ETH_PORT and
 # each index has associated a required number of channels this port has.
 # NOTE: at this moment, all ports must have same number of channels!
 set ETH_PORT_CHAN(0)   1
+set ETH_PORT_CHAN(1)   1
+set ETH_PORT_CHAN(2)   1
+set ETH_PORT_CHAN(3)   1
 # Number of lanes for each one of the ETH_PORTS
 # Typical values: 4 (QSFP), 8 (QSFP-DD)
-set ETH_PORT_LANES(0)  8
+set ETH_PORT_LANES(0)  4
+set ETH_PORT_LANES(1)  4
+set ETH_PORT_LANES(2)  4
+set ETH_PORT_LANES(3)  4
 # Maximum allowed size of RX frame in bytes for each one of the ETH_PORTS
 # NOTE: ETH_PORT_RX_MTU = 16383 is maximum supported value!
 set ETH_PORT_RX_MTU(0) 16383
+set ETH_PORT_RX_MTU(1) 16383
+set ETH_PORT_RX_MTU(2) 16383
+set ETH_PORT_RX_MTU(3) 16383
 # Maximum allowed size of TX frame in bytes for each one of the ETH_PORTS
 # NOTE: ETH_PORT_TX_MTU = 16383 is maximum supported value!
 set ETH_PORT_TX_MTU(0) 16383
+set ETH_PORT_TX_MTU(1) 16383
+set ETH_PORT_TX_MTU(2) 16383
+set ETH_PORT_TX_MTU(3) 16383
 
 # ------------------------------------------------------------------------------
 # PCIe parameters (not all combinations work):
