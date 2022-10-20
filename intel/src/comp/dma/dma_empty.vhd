@@ -41,7 +41,7 @@ architecture EMPTY of DMA is
 
     -- =====================================================================
 
-    signal rx_usr_arr_mvb_len       : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS*log2(USR_PKT_SIZE_MAX+1)-1 downto 0);
+    signal rx_usr_arr_mvb_len       : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS*log2(USR_RX_PKT_SIZE_MAX+1)-1 downto 0);
     signal rx_usr_arr_mvb_hdr_meta  : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS*HDR_META_WIDTH          -1 downto 0);
     signal rx_usr_arr_mvb_channel   : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS*log2(RX_CHANNELS)       -1 downto 0);
     signal rx_usr_arr_mvb_discard   : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS*1                       -1 downto 0);
@@ -57,7 +57,7 @@ architecture EMPTY of DMA is
     signal rx_usr_arr_mfb_src_rdy   : std_logic_vector(NUM_DMA-1 downto 0);
     signal rx_usr_arr_mfb_dst_rdy   : std_logic_vector(NUM_DMA-1 downto 0);
 
-    signal tx_usr_arr_mvb_len       : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS*log2(USR_PKT_SIZE_MAX+1)-1 downto 0);
+    signal tx_usr_arr_mvb_len       : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS*log2(USR_TX_PKT_SIZE_MAX+1)-1 downto 0);
     signal tx_usr_arr_mvb_hdr_meta  : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS*HDR_META_WIDTH          -1 downto 0);
     signal tx_usr_arr_mvb_channel   : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS*log2(TX_CHANNELS)       -1 downto 0);
     signal tx_usr_arr_mvb_vld       : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS                         -1 downto 0);
@@ -76,7 +76,7 @@ architecture EMPTY of DMA is
     --  GEN_LOOP_SWITCH -> DMA Module interface
     -- =====================================================================
 
-    signal dma_rx_usr_mvb_len       : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS*log2(USR_PKT_SIZE_MAX+1)-1 downto 0);
+    signal dma_rx_usr_mvb_len       : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS*log2(USR_RX_PKT_SIZE_MAX+1)-1 downto 0);
     signal dma_rx_usr_mvb_hdr_meta  : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS*HDR_META_WIDTH          -1 downto 0);
     signal dma_rx_usr_mvb_channel   : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS*log2(RX_CHANNELS)       -1 downto 0);
     signal dma_rx_usr_mvb_discard   : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS*1                       -1 downto 0);
@@ -98,7 +98,7 @@ architecture EMPTY of DMA is
     --  DMA Module -> GEN_LOOP_SWITCH interface
     -- =====================================================================
 
-    signal dma_tx_usr_mvb_len       : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS*log2(USR_PKT_SIZE_MAX+1)-1 downto 0);
+    signal dma_tx_usr_mvb_len       : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS*log2(USR_TX_PKT_SIZE_MAX+1)-1 downto 0);
     signal dma_tx_usr_mvb_hdr_meta  : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS*HDR_META_WIDTH          -1 downto 0);
     signal dma_tx_usr_mvb_channel   : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS*log2(TX_CHANNELS)       -1 downto 0);
     signal dma_tx_usr_mvb_vld       : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS                         -1 downto 0);
@@ -116,6 +116,10 @@ architecture EMPTY of DMA is
     -- =====================================================================
 
 begin
+
+    assert ((USR_RX_PKT_SIZE_MAX = USR_TX_PKT_SIZE_MAX) or (not GEN_LOOP_EN))
+        report "DMA: The maximum frame size for RX/TX DMA must be the same or the GLS module must be disabled!"
+        severity failure;
 
     MI_ARDY <= (others => '1');
     MI_DRD  <= (others => (others => '0'));
@@ -225,7 +229,7 @@ begin
                 REGION_SIZE       => USR_MFB_REGION_SIZE,
                 BLOCK_SIZE        => USR_MFB_BLOCK_SIZE ,
                 ITEM_WIDTH        => USR_MFB_ITEM_WIDTH ,
-                PKT_MTU           => USR_PKT_SIZE_MAX   ,
+                PKT_MTU           => USR_RX_PKT_SIZE_MAX,
                 RX_DMA_CHANNELS   => RX_CHANNELS        ,
                 TX_DMA_CHANNELS   => TX_CHANNELS        ,
                 HDR_META_WIDTH    => HDR_META_WIDTH     ,
