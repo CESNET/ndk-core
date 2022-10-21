@@ -23,9 +23,9 @@ generic (
     PCIE_ENDPOINTS     : natural := 1;
     -- DMA: number of DMA streams
     DMA_STREAMS        : natural := 1;
-    -- DMA: number of RX channel
+    -- DMA: number of RX channel per DMA stream
     DMA_RX_CHANNELS    : natural := 16;
-    -- DMA: number of TX channel
+    -- DMA: number of TX channel per DMA stream
     DMA_TX_CHANNELS    : natural := 16;
     -- DMA: size of User Header Metadata in bits
     DMA_HDR_META_WIDTH : natural := 12;
