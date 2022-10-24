@@ -669,7 +669,7 @@ begin
             end if;
         end process;
 
-        mtc_i : entity work.MTC
+        mtc_i : entity work.MTC_WRAPPER
         generic map (
             AXI_DATA_WIDTH    => AXI_DATA_WIDTH,
             AXI_CQUSER_WIDTH  => AXI_CQUSER_WIDTH,
