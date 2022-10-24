@@ -180,7 +180,7 @@ architecture USP of PCIE_CORE is
     
     constant VSEC_BASE_ADDRESS : natural := 16#480#;
     constant DTB_NEXT_POINTER  : natural := tsel(XVC_ENABLE, 16#4A0#, 0);
-    constant PCIE_HIPS         : natural := tsel(ENDPOINT_MODE=0,PCIE_ENDPOINTS,PCIE_ENDPOINTS/2);
+    constant PCIE_HIPS         : natural := tsel((ENDPOINT_MODE = 0 or ENDPOINT_MODE = 2),PCIE_ENDPOINTS,PCIE_ENDPOINTS/2);
 
     signal pcie_sysclk_buf          : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
     signal pcie_sysclk_gt_buf       : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
@@ -213,9 +213,62 @@ architecture USP of PCIE_CORE is
     signal s_axis_rq_tready         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(3 downto 0);
     signal s_axis_cc_tready         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(3 downto 0);
 
+    --==============================================================================================
+    -- Inserting Debug nets:
+    --==============================================================================================
+    signal cfg_phy_link_down        : std_logic_vector(PCIE_ENDPOINTS -1 downto 0);
+    signal pcie_phy_rdy_out         : std_logic_vector(PCIE_ENDPOINTS -1 downto 0);
+    signal cfg_negotiated_width     : slv_array_t(PCIE_ENDPOINTS -1 downto 0)(2 downto 0);
+    signal cfg_current_speed        : slv_array_t(PCIE_ENDPOINTS -1 downto 0)(1 downto 0);
+    signal cfg_function_status      : slv_array_t(PCIE_ENDPOINTS -1 downto 0)(15 downto 0);
+    signal cfg_function_power_state : slv_array_t(PCIE_ENDPOINTS -1 downto 0)(11 downto 0);
+    signal cfg_link_power_state     : slv_array_t(PCIE_ENDPOINTS -1 downto 0)(1 downto 0);
+    signal cfg_local_error_out      : slv_array_t(PCIE_ENDPOINTS -1 downto 0)(4 downto 0);
+    signal cfg_local_error_valid    : std_logic_vector(PCIE_ENDPOINTS -1 downto 0);
+    signal cfg_rx_pm_state          : slv_array_t(PCIE_ENDPOINTS -1 downto 0)(1 downto 0);
+    signal cfg_tx_pm_state          : slv_array_t(PCIE_ENDPOINTS -1 downto 0)(1 downto 0);
+    signal cfg_ltssm_state          : slv_array_t(PCIE_ENDPOINTS -1 downto 0)(5 downto 0);
+
+    signal tag_assign_int       : slv_array_t(PCIE_ENDPOINTS -1 downto 0)(16 -1 downto 0);
+    signal tag_assign_vld_int   : slv_array_t(PCIE_ENDPOINTS -1 downto 0)(2 -1 downto 0);
+
+    -- attribute mark_debug                 : string;
+    -- -- special signals for debugging
+    -- attribute mark_debug of RQ_AXI_DATA  : signal is "true";
+    -- attribute mark_debug of RQ_AXI_USER  : signal is "true";
+    -- attribute mark_debug of RQ_AXI_KEEP  : signal is "true";
+    -- attribute mark_debug of RQ_AXI_LAST  : signal is "true";
+    -- attribute mark_debug of RQ_AXI_READY : signal is "true";
+    -- attribute mark_debug of RQ_AXI_VALID : signal is "true";
+
+    -- attribute mark_debug of RC_AXI_DATA  : signal is "true";
+    -- attribute mark_debug of RC_AXI_USER  : signal is "true";
+    -- attribute mark_debug of RC_AXI_KEEP  : signal is "true";
+    -- attribute mark_debug of RC_AXI_LAST  : signal is "true";
+    -- attribute mark_debug of RC_AXI_READY : signal is "true";
+    -- attribute mark_debug of RC_AXI_VALID : signal is "true";
+
+    -- attribute mark_debug of cfg_phy_link_down        : signal is "true";
+    -- attribute mark_debug of cfg_phy_link_status      : signal is "true";
+    -- attribute mark_debug of pcie_phy_rdy_out         : signal is "true";
+    -- attribute mark_debug of cfg_max_payload          : signal is "true";
+    -- attribute mark_debug of cfg_max_read_req         : signal is "true";
+
+    -- attribute mark_debug of cfg_negotiated_width    : signal is "true";
+    -- attribute mark_debug of cfg_current_speed        : signal is "true";
+    -- attribute mark_debug of cfg_function_status      : signal is "true";
+    -- attribute mark_debug of cfg_function_power_state : signal is "true";
+    -- attribute mark_debug of cfg_link_power_state     : signal is "true";
+    -- attribute mark_debug of cfg_rx_pm_state          : signal is "true";
+    -- attribute mark_debug of cfg_tx_pm_state          : signal is "true";
+    -- attribute mark_debug of cfg_ltssm_state          : signal is "true";
+    -- attribute mark_debug of cfg_local_error_out      : signal is "true";
+    -- attribute mark_debug of cfg_local_error_valid    : signal is "true";
+    --==============================================================================================
+
 begin
 
-    assert ENDPOINT_MODE=0 report "Xilinx USP PCIe Wrapper: Only ENDPOINT_MODE=0 is now supported!"
+    assert (ENDPOINT_MODE = 0 or ENDPOINT_MODE = 2) report "Xilinx USP PCIe Wrapper: Only ENDPOINT_MODE=0 is now supported!"
         severity failure;
 
     assert DEVICE="ULTRASCALE" report "Xilinx USP PCIe Wrapper: Only ULTRASCALE+ device is supported!"
@@ -225,7 +278,7 @@ begin
     --  PCIE IP CORE
     -- =========================================================================
 
-    pcie_g : for i in 0 to PCIE_HIPS-1 generate
+    pcie_mult_endp_g : for i in 0 to PCIE_HIPS-1 generate
         pcie_ibuf_i : IBUFDS_GTE4
         generic map (
             REFCLK_HROW_CK_SEL => "00"
@@ -238,12 +291,15 @@ begin
             CEB   => '0'
         );
 
-        gen3_1x16_g : if ENDPOINT_MODE = 0 generate
+        pcie_endp_g : if (ENDPOINT_MODE = 0 or ENDPOINT_MODE = 2) generate
 
             RQ_AXI_READY(i) <= s_axis_rq_tready(i)(0);
             CC_AXI_READY(i) <= s_axis_cc_tready(i)(0);
 
             pcie_clk(i) <= pcie_hip_clk(i);
+
+            TAG_ASSIGN(i)     <= tag_assign_int(i)(PCIE_UP_REGIONS*8 -1 downto 0);
+            TAG_ASSIGN_VLD(i) <= tag_assign_vld_int(i)(PCIE_UP_REGIONS -1 downto 0);
 
             pcie_i : pcie4_uscale_plus
             port map (
@@ -284,25 +340,28 @@ begin
                 s_axis_cc_tkeep                   => CC_AXI_KEEP(i),
                 s_axis_cc_tvalid                  => CC_AXI_VALID(i),
                 s_axis_cc_tready                  => s_axis_cc_tready(i),
+
                 pcie_rq_seq_num0                  => open,
                 pcie_rq_seq_num_vld0              => open,
-                pcie_rq_tag0                      => TAG_ASSIGN(i)(7 downto 0),
-                pcie_rq_tag_vld0                  => TAG_ASSIGN_VLD(i)(0),
-                pcie_rq_tag1                      => TAG_ASSIGN(i)(15 downto 8),
-                pcie_rq_tag_vld1                  => TAG_ASSIGN_VLD(i)(1),
+                pcie_rq_tag0                      => tag_assign_int(i)(7 downto 0),
+                pcie_rq_tag_vld0                  => tag_assign_vld_int(i)(0),
+                pcie_rq_tag1                      => tag_assign_int(i)(15 downto 8),
+                pcie_rq_tag_vld1                  => tag_assign_vld_int(i)(1),
+
                 pcie_cq_np_req                    => (others => '1'),
                 pcie_cq_np_req_count              => open,
-                cfg_phy_link_down                 => open,
+
+                cfg_phy_link_down                 => cfg_phy_link_down(i),
                 cfg_phy_link_status               => cfg_phy_link_status(i),
-                cfg_negotiated_width              => open,
-                cfg_current_speed                 => open,
+                cfg_negotiated_width              => cfg_negotiated_width(i),
+                cfg_current_speed                 => cfg_current_speed(i),
                 cfg_max_payload                   => cfg_max_payload(i),
                 cfg_max_read_req                  => cfg_max_read_req(i),
-                cfg_function_status               => open,
-                cfg_function_power_state          => open,
+                cfg_function_status               => cfg_function_status(i),
+                cfg_function_power_state          => cfg_function_power_state(i),
                 cfg_vf_status                     => open,
                 cfg_vf_power_state                => open,
-                cfg_link_power_state              => open,
+                cfg_link_power_state              => cfg_link_power_state(i),
                 cfg_mgmt_addr                     => (others => '0'),
                 cfg_mgmt_function_number          => (others => '0'),
                 cfg_mgmt_write                    => '0',
@@ -315,11 +374,11 @@ begin
                 cfg_err_cor_out                   => open,
                 cfg_err_nonfatal_out              => open,
                 cfg_err_fatal_out                 => open,
-                cfg_local_error_valid             => open,
-                cfg_local_error_out               => open,
-                cfg_ltssm_state                   => open,
-                cfg_rx_pm_state                   => open,
-                cfg_tx_pm_state                   => open,
+                cfg_local_error_valid             => cfg_local_error_valid(i),
+                cfg_local_error_out               => cfg_local_error_out(i),
+                cfg_ltssm_state                   => cfg_ltssm_state(i),
+                cfg_rx_pm_state                   => cfg_rx_pm_state(i),
+                cfg_tx_pm_state                   => cfg_tx_pm_state(i),
                 cfg_rcb_status                    => cfg_rcb_status(i),
                 cfg_obff_enable                   => open,
                 cfg_pl_status_change              => open,
@@ -385,7 +444,7 @@ begin
                 cfg_ds_port_number                => (others => '0'),
                 cfg_ds_bus_number                 => (others => '0'),
                 cfg_ds_device_number              => (others => '0'),
-                phy_rdy_out                       => open
+                phy_rdy_out                       => pcie_phy_rdy_out(i)
             );
         end generate;
     end generate;

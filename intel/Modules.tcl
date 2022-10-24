@@ -1,6 +1,7 @@
 # Modules.tcl: script to compile single module
 # Copyright (C) 2019 CESNET z. s. p. o.
 # Author(s): Jakub Cabal <cabal@cesnet.cz>
+#           Vladislav Valek <valekv@cesnet.cz>
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
@@ -14,7 +15,7 @@ set ASYNC_RESET_BASE     "$OFM_PATH/comp/base/async/reset"
 set ASYNC_OPEN_LOOP_BASE "$OFM_PATH/comp/base/async/open_loop"
 set TSU_BASE             "$OFM_PATH/comp/tsu/tsu_gen"
 set PCIE_BASE            "$ENTITY_BASE/src/comp/pcie"
-set DMA_BUS_BASE         "$ENTITY_BASE/src/comp/dma"
+set DMA_BASE             "$ENTITY_BASE/src/comp/dma"
 set NETWORK_MOD_BASE     "$ENTITY_BASE/src/comp/network_mod"
 set CLOCK_GEN_BASE       "$ENTITY_BASE/src/comp/clk_gen"
 set SDM_CTRL_BASE        "$ENTITY_BASE/src/comp/sdm_ctrl"
@@ -36,10 +37,12 @@ if { $ARCHGRP_ARR(APPLICATION_CORE_ENTITY_ONLY) } {
   lappend MOD "$ENTITY_BASE/src/application_ent.vhd"
 } else {
 
-  set DMA_BUS_ARCH "EMPTY"
+  set DMA_ARCH "EMPTY"
 
-  if {$ARCHGRP_ARR(DMA_TYPE) == 3} {
-      set DMA_BUS_ARCH "FULL"
+  if { $ARCHGRP_ARR(DMA_TYPE) == 3 } {
+      set DMA_ARCH "MEDUSA"
+  } elseif {$ARCHGRP_ARR(DMA_TYPE) == 4} {
+      set DMA_ARCH "CALYPTE"
   }
 
   lappend COMPONENTS [list "CLOCK_GEN"       $CLOCK_GEN_BASE       $ARCHGRP_ARR(CLOCK_GEN_ARCH) ]
@@ -53,7 +56,7 @@ if { $ARCHGRP_ARR(APPLICATION_CORE_ENTITY_ONLY) } {
   lappend COMPONENTS [list "MI_SPLITTER"     $MI_SPLITTER_BASE     "FULL"                       ]
   lappend COMPONENTS [list "MI_TEST_SPACE"   $MI_TEST_SPACE_BASE   "FULL"                       ]
   lappend COMPONENTS [list "NETWORK_MOD"     $NETWORK_MOD_BASE     $ARCHGRP_ARR(NET_MOD_ARCH)   ]
-  lappend COMPONENTS [list "DMA_BUS"         $DMA_BUS_BASE         $DMA_BUS_ARCH                ]
+  lappend COMPONENTS [list "DMA"             $DMA_BASE             $DMA_ARCH                    ]
   lappend COMPONENTS [list "DMA_GENERATOR"   $DMA_GENERATOR_BASE   "FULL"                       ]
 
   lappend MOD "$ENTITY_BASE/src/application_ent.vhd"

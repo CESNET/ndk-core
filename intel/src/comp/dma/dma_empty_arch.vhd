@@ -18,9 +18,9 @@ architecture EMPTY of DMA is
     constant IUSR_MFB_REGIONS  : natural := tsel(DMA_400G_DEMO,4,USR_MFB_REGIONS);
 
     function gls_mi_addr_base_f return slv_array_t is
-        variable mi_addr_base_var : slv_array_t(NUM_DMA-1 downto 0)(32-1 downto 0);
+        variable mi_addr_base_var : slv_array_t(DMA_STREAMS-1 downto 0)(32-1 downto 0);
     begin
-        for i in 0 to NUM_DMA-1 loop
+        for i in 0 to DMA_STREAMS-1 loop
             mi_addr_base_var(i) := std_logic_vector(resize(i*unsigned(GLS_MI_OFFSET), 32));
         end loop;
         return mi_addr_base_var;
@@ -30,67 +30,67 @@ architecture EMPTY of DMA is
     --  MI Splitting
     -- =====================================================================
 
-    signal gls_mi_addr  : slv_array_t     (NUM_DMA-1 downto 0)(32-1 downto 0);
-    signal gls_mi_dwr   : slv_array_t     (NUM_DMA-1 downto 0)(32-1 downto 0);
-    signal gls_mi_be    : slv_array_t     (NUM_DMA-1 downto 0)(32/8-1 downto 0);
-    signal gls_mi_rd    : std_logic_vector(NUM_DMA-1 downto 0);
-    signal gls_mi_wr    : std_logic_vector(NUM_DMA-1 downto 0);
-    signal gls_mi_drd   : slv_array_t     (NUM_DMA-1 downto 0)(32-1 downto 0);
-    signal gls_mi_ardy  : std_logic_vector(NUM_DMA-1 downto 0);
-    signal gls_mi_drdy  : std_logic_vector(NUM_DMA-1 downto 0);
+    signal gls_mi_addr  : slv_array_t     (DMA_STREAMS-1 downto 0)(32-1 downto 0);
+    signal gls_mi_dwr   : slv_array_t     (DMA_STREAMS-1 downto 0)(32-1 downto 0);
+    signal gls_mi_be    : slv_array_t     (DMA_STREAMS-1 downto 0)(32/8-1 downto 0);
+    signal gls_mi_rd    : std_logic_vector(DMA_STREAMS-1 downto 0);
+    signal gls_mi_wr    : std_logic_vector(DMA_STREAMS-1 downto 0);
+    signal gls_mi_drd   : slv_array_t     (DMA_STREAMS-1 downto 0)(32-1 downto 0);
+    signal gls_mi_ardy  : std_logic_vector(DMA_STREAMS-1 downto 0);
+    signal gls_mi_drdy  : std_logic_vector(DMA_STREAMS-1 downto 0);
 
     -- =====================================================================
 
-    signal rx_usr_arr_mvb_len       : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS*log2(USR_RX_PKT_SIZE_MAX+1)-1 downto 0);
-    signal rx_usr_arr_mvb_hdr_meta  : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS*HDR_META_WIDTH          -1 downto 0);
-    signal rx_usr_arr_mvb_channel   : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS*log2(RX_CHANNELS)       -1 downto 0);
-    signal rx_usr_arr_mvb_discard   : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS*1                       -1 downto 0);
-    signal rx_usr_arr_mvb_vld       : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS                         -1 downto 0);
-    signal rx_usr_arr_mvb_src_rdy   : std_logic_vector(NUM_DMA-1 downto 0);
-    signal rx_usr_arr_mvb_dst_rdy   : std_logic_vector(NUM_DMA-1 downto 0);
+    signal rx_usr_arr_mvb_len       : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MVB_ITEMS*log2(USR_RX_PKT_SIZE_MAX+1)-1 downto 0);
+    signal rx_usr_arr_mvb_hdr_meta  : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MVB_ITEMS*HDR_META_WIDTH          -1 downto 0);
+    signal rx_usr_arr_mvb_channel   : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MVB_ITEMS*log2(RX_CHANNELS)       -1 downto 0);
+    signal rx_usr_arr_mvb_discard   : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MVB_ITEMS*1                       -1 downto 0);
+    signal rx_usr_arr_mvb_vld       : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MVB_ITEMS                         -1 downto 0);
+    signal rx_usr_arr_mvb_src_rdy   : std_logic_vector(DMA_STREAMS-1 downto 0);
+    signal rx_usr_arr_mvb_dst_rdy   : std_logic_vector(DMA_STREAMS-1 downto 0);
 
-    signal rx_usr_arr_mfb_data      : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MFB_REGIONS*USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE*USR_MFB_ITEM_WIDTH-1 downto 0);
-    signal rx_usr_arr_mfb_sof       : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MFB_REGIONS                                                          -1 downto 0);
-    signal rx_usr_arr_mfb_eof       : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MFB_REGIONS                                                          -1 downto 0);
-    signal rx_usr_arr_mfb_sof_pos   : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE))                         -1 downto 0);
-    signal rx_usr_arr_mfb_eof_pos   : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE))      -1 downto 0);
-    signal rx_usr_arr_mfb_src_rdy   : std_logic_vector(NUM_DMA-1 downto 0);
-    signal rx_usr_arr_mfb_dst_rdy   : std_logic_vector(NUM_DMA-1 downto 0);
+    signal rx_usr_arr_mfb_data      : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MFB_REGIONS*USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE*USR_MFB_ITEM_WIDTH-1 downto 0);
+    signal rx_usr_arr_mfb_sof       : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MFB_REGIONS                                                          -1 downto 0);
+    signal rx_usr_arr_mfb_eof       : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MFB_REGIONS                                                          -1 downto 0);
+    signal rx_usr_arr_mfb_sof_pos   : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE))                         -1 downto 0);
+    signal rx_usr_arr_mfb_eof_pos   : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE))      -1 downto 0);
+    signal rx_usr_arr_mfb_src_rdy   : std_logic_vector(DMA_STREAMS-1 downto 0);
+    signal rx_usr_arr_mfb_dst_rdy   : std_logic_vector(DMA_STREAMS-1 downto 0);
 
-    signal tx_usr_arr_mvb_len       : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS*log2(USR_TX_PKT_SIZE_MAX+1)-1 downto 0);
-    signal tx_usr_arr_mvb_hdr_meta  : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS*HDR_META_WIDTH          -1 downto 0);
-    signal tx_usr_arr_mvb_channel   : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS*log2(TX_CHANNELS)       -1 downto 0);
-    signal tx_usr_arr_mvb_vld       : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS                         -1 downto 0);
-    signal tx_usr_arr_mvb_src_rdy   : std_logic_vector(NUM_DMA-1 downto 0);
-    signal tx_usr_arr_mvb_dst_rdy   : std_logic_vector(NUM_DMA-1 downto 0);
+    signal tx_usr_arr_mvb_len       : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MVB_ITEMS*log2(USR_TX_PKT_SIZE_MAX+1)-1 downto 0);
+    signal tx_usr_arr_mvb_hdr_meta  : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MVB_ITEMS*HDR_META_WIDTH          -1 downto 0);
+    signal tx_usr_arr_mvb_channel   : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MVB_ITEMS*log2(TX_CHANNELS)       -1 downto 0);
+    signal tx_usr_arr_mvb_vld       : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MVB_ITEMS                         -1 downto 0);
+    signal tx_usr_arr_mvb_src_rdy   : std_logic_vector(DMA_STREAMS-1 downto 0);
+    signal tx_usr_arr_mvb_dst_rdy   : std_logic_vector(DMA_STREAMS-1 downto 0);
 
-    signal tx_usr_arr_mfb_data      : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MFB_REGIONS*USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE*USR_MFB_ITEM_WIDTH-1 downto 0);
-    signal tx_usr_arr_mfb_sof       : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MFB_REGIONS                                                          -1 downto 0);
-    signal tx_usr_arr_mfb_eof       : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MFB_REGIONS                                                          -1 downto 0);
-    signal tx_usr_arr_mfb_sof_pos   : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE))                         -1 downto 0);
-    signal tx_usr_arr_mfb_eof_pos   : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE))      -1 downto 0);
-    signal tx_usr_arr_mfb_src_rdy   : std_logic_vector(NUM_DMA-1 downto 0);
-    signal tx_usr_arr_mfb_dst_rdy   : std_logic_vector(NUM_DMA-1 downto 0);
+    signal tx_usr_arr_mfb_data      : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MFB_REGIONS*USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE*USR_MFB_ITEM_WIDTH-1 downto 0);
+    signal tx_usr_arr_mfb_sof       : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MFB_REGIONS                                                          -1 downto 0);
+    signal tx_usr_arr_mfb_eof       : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MFB_REGIONS                                                          -1 downto 0);
+    signal tx_usr_arr_mfb_sof_pos   : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE))                         -1 downto 0);
+    signal tx_usr_arr_mfb_eof_pos   : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE))      -1 downto 0);
+    signal tx_usr_arr_mfb_src_rdy   : std_logic_vector(DMA_STREAMS-1 downto 0);
+    signal tx_usr_arr_mfb_dst_rdy   : std_logic_vector(DMA_STREAMS-1 downto 0);
 
     -- =====================================================================
     --  GEN_LOOP_SWITCH -> DMA Module interface
     -- =====================================================================
 
-    signal dma_rx_usr_mvb_len       : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS*log2(USR_RX_PKT_SIZE_MAX+1)-1 downto 0);
-    signal dma_rx_usr_mvb_hdr_meta  : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS*HDR_META_WIDTH          -1 downto 0);
-    signal dma_rx_usr_mvb_channel   : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS*log2(RX_CHANNELS)       -1 downto 0);
-    signal dma_rx_usr_mvb_discard   : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS*1                       -1 downto 0);
-    signal dma_rx_usr_mvb_vld       : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS                         -1 downto 0);
-    signal dma_rx_usr_mvb_src_rdy   : std_logic_vector(NUM_DMA-1 downto 0);
-    signal dma_rx_usr_mvb_dst_rdy   : std_logic_vector(NUM_DMA-1 downto 0);
+    signal dma_rx_usr_mvb_len       : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MVB_ITEMS*log2(USR_RX_PKT_SIZE_MAX+1)-1 downto 0);
+    signal dma_rx_usr_mvb_hdr_meta  : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MVB_ITEMS*HDR_META_WIDTH          -1 downto 0);
+    signal dma_rx_usr_mvb_channel   : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MVB_ITEMS*log2(RX_CHANNELS)       -1 downto 0);
+    signal dma_rx_usr_mvb_discard   : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MVB_ITEMS*1                       -1 downto 0);
+    signal dma_rx_usr_mvb_vld       : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MVB_ITEMS                         -1 downto 0);
+    signal dma_rx_usr_mvb_src_rdy   : std_logic_vector(DMA_STREAMS-1 downto 0);
+    signal dma_rx_usr_mvb_dst_rdy   : std_logic_vector(DMA_STREAMS-1 downto 0);
 
-    signal dma_rx_usr_mfb_data      : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MFB_REGIONS*USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE*USR_MFB_ITEM_WIDTH-1 downto 0);
-    signal dma_rx_usr_mfb_sof       : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MFB_REGIONS                                                          -1 downto 0);
-    signal dma_rx_usr_mfb_eof       : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MFB_REGIONS                                                          -1 downto 0);
-    signal dma_rx_usr_mfb_sof_pos   : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE))                         -1 downto 0);
-    signal dma_rx_usr_mfb_eof_pos   : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE))      -1 downto 0);
-    signal dma_rx_usr_mfb_src_rdy   : std_logic_vector(NUM_DMA-1 downto 0);
-    signal dma_rx_usr_mfb_dst_rdy   : std_logic_vector(NUM_DMA-1 downto 0);
+    signal dma_rx_usr_mfb_data      : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MFB_REGIONS*USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE*USR_MFB_ITEM_WIDTH-1 downto 0);
+    signal dma_rx_usr_mfb_sof       : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MFB_REGIONS                                                          -1 downto 0);
+    signal dma_rx_usr_mfb_eof       : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MFB_REGIONS                                                          -1 downto 0);
+    signal dma_rx_usr_mfb_sof_pos   : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE))                         -1 downto 0);
+    signal dma_rx_usr_mfb_eof_pos   : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE))      -1 downto 0);
+    signal dma_rx_usr_mfb_src_rdy   : std_logic_vector(DMA_STREAMS-1 downto 0);
+    signal dma_rx_usr_mfb_dst_rdy   : std_logic_vector(DMA_STREAMS-1 downto 0);
 
     -- =====================================================================
 
@@ -98,20 +98,20 @@ architecture EMPTY of DMA is
     --  DMA Module -> GEN_LOOP_SWITCH interface
     -- =====================================================================
 
-    signal dma_tx_usr_mvb_len       : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS*log2(USR_TX_PKT_SIZE_MAX+1)-1 downto 0);
-    signal dma_tx_usr_mvb_hdr_meta  : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS*HDR_META_WIDTH          -1 downto 0);
-    signal dma_tx_usr_mvb_channel   : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS*log2(TX_CHANNELS)       -1 downto 0);
-    signal dma_tx_usr_mvb_vld       : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MVB_ITEMS                         -1 downto 0);
-    signal dma_tx_usr_mvb_src_rdy   : std_logic_vector(NUM_DMA-1 downto 0);
-    signal dma_tx_usr_mvb_dst_rdy   : std_logic_vector(NUM_DMA-1 downto 0);
+    signal dma_tx_usr_mvb_len       : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MVB_ITEMS*log2(USR_TX_PKT_SIZE_MAX+1)-1 downto 0);
+    signal dma_tx_usr_mvb_hdr_meta  : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MVB_ITEMS*HDR_META_WIDTH          -1 downto 0);
+    signal dma_tx_usr_mvb_channel   : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MVB_ITEMS*log2(TX_CHANNELS)       -1 downto 0);
+    signal dma_tx_usr_mvb_vld       : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MVB_ITEMS                         -1 downto 0);
+    signal dma_tx_usr_mvb_src_rdy   : std_logic_vector(DMA_STREAMS-1 downto 0);
+    signal dma_tx_usr_mvb_dst_rdy   : std_logic_vector(DMA_STREAMS-1 downto 0);
 
-    signal dma_tx_usr_mfb_data      : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MFB_REGIONS*USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE*USR_MFB_ITEM_WIDTH-1 downto 0);
-    signal dma_tx_usr_mfb_sof       : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MFB_REGIONS                                                          -1 downto 0);
-    signal dma_tx_usr_mfb_eof       : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MFB_REGIONS                                                          -1 downto 0);
-    signal dma_tx_usr_mfb_sof_pos   : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE))                         -1 downto 0);
-    signal dma_tx_usr_mfb_eof_pos   : slv_array_t(NUM_DMA-1 downto 0)(IUSR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE))      -1 downto 0);
-    signal dma_tx_usr_mfb_src_rdy   : std_logic_vector(NUM_DMA-1 downto 0);
-    signal dma_tx_usr_mfb_dst_rdy   : std_logic_vector(NUM_DMA-1 downto 0);
+    signal dma_tx_usr_mfb_data      : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MFB_REGIONS*USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE*USR_MFB_ITEM_WIDTH-1 downto 0);
+    signal dma_tx_usr_mfb_sof       : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MFB_REGIONS                                                          -1 downto 0);
+    signal dma_tx_usr_mfb_eof       : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MFB_REGIONS                                                          -1 downto 0);
+    signal dma_tx_usr_mfb_sof_pos   : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE))                         -1 downto 0);
+    signal dma_tx_usr_mfb_eof_pos   : slv_array_t(DMA_STREAMS-1 downto 0)(IUSR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE))      -1 downto 0);
+    signal dma_tx_usr_mfb_src_rdy   : std_logic_vector(DMA_STREAMS-1 downto 0);
+    signal dma_tx_usr_mfb_dst_rdy   : std_logic_vector(DMA_STREAMS-1 downto 0);
 
     -- =====================================================================
 
@@ -134,19 +134,19 @@ begin
     --  DMA USER INPUT PACK/UNPACK
     -- =====================================================================
 
-    rx_usr_arr_mvb_len      <= slv_array_deser(RX_USR_MVB_LEN,NUM_DMA);
-    rx_usr_arr_mvb_hdr_meta <= slv_array_deser(RX_USR_MVB_HDR_META,NUM_DMA);
-    rx_usr_arr_mvb_channel  <= slv_array_deser(RX_USR_MVB_CHANNEL,NUM_DMA);
-    rx_usr_arr_mvb_discard  <= slv_array_deser(RX_USR_MVB_DISCARD,NUM_DMA);
-    rx_usr_arr_mvb_vld      <= slv_array_deser(RX_USR_MVB_VLD,NUM_DMA);
+    rx_usr_arr_mvb_len      <= slv_array_deser(RX_USR_MVB_LEN,DMA_STREAMS);
+    rx_usr_arr_mvb_hdr_meta <= slv_array_deser(RX_USR_MVB_HDR_META,DMA_STREAMS);
+    rx_usr_arr_mvb_channel  <= slv_array_deser(RX_USR_MVB_CHANNEL,DMA_STREAMS);
+    rx_usr_arr_mvb_discard  <= slv_array_deser(RX_USR_MVB_DISCARD,DMA_STREAMS);
+    rx_usr_arr_mvb_vld      <= slv_array_deser(RX_USR_MVB_VLD,DMA_STREAMS);
     rx_usr_arr_mvb_src_rdy  <= RX_USR_MVB_SRC_RDY;
     RX_USR_MVB_DST_RDY      <= rx_usr_arr_mvb_dst_rdy;
     
-    rx_usr_arr_mfb_data     <= slv_array_deser(RX_USR_MFB_DATA,NUM_DMA);
-    rx_usr_arr_mfb_sof      <= slv_array_deser(RX_USR_MFB_SOF,NUM_DMA);
-    rx_usr_arr_mfb_eof      <= slv_array_deser(RX_USR_MFB_EOF,NUM_DMA);
-    rx_usr_arr_mfb_sof_pos  <= slv_array_deser(RX_USR_MFB_SOF_POS,NUM_DMA);
-    rx_usr_arr_mfb_eof_pos  <= slv_array_deser(RX_USR_MFB_EOF_POS,NUM_DMA);
+    rx_usr_arr_mfb_data     <= slv_array_deser(RX_USR_MFB_DATA,DMA_STREAMS);
+    rx_usr_arr_mfb_sof      <= slv_array_deser(RX_USR_MFB_SOF,DMA_STREAMS);
+    rx_usr_arr_mfb_eof      <= slv_array_deser(RX_USR_MFB_EOF,DMA_STREAMS);
+    rx_usr_arr_mfb_sof_pos  <= slv_array_deser(RX_USR_MFB_SOF_POS,DMA_STREAMS);
+    rx_usr_arr_mfb_eof_pos  <= slv_array_deser(RX_USR_MFB_EOF_POS,DMA_STREAMS);
     rx_usr_arr_mfb_src_rdy  <= RX_USR_MFB_SRC_RDY;
     RX_USR_MFB_DST_RDY      <= rx_usr_arr_mfb_dst_rdy;
 
@@ -194,7 +194,7 @@ begin
         ADDR_WIDTH  => 32,
         DATA_WIDTH  => 32,
         META_WIDTH  => 0,
-        PORTS       => NUM_DMA,
+        PORTS       => DMA_STREAMS,
         ADDR_BASE   => gls_mi_addr_base_f,
         DEVICE      => DEVICE
     )
@@ -221,7 +221,7 @@ begin
         TX_DRDY     => gls_mi_drdy
     );
 
-    gls_g : for i in 0 to NUM_DMA-1 generate
+    gls_g : for i in 0 to DMA_STREAMS-1 generate
         gls_en_g : if (GEN_LOOP_EN) generate
             gen_loop_switch_i : entity work.GEN_LOOP_SWITCH
             generic map(

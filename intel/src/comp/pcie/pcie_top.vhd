@@ -63,6 +63,7 @@ entity PCIE is
         PCIE_LANES          : natural := 16;
 
         CARD_ID_WIDTH       : natural := 0;
+        PTC_DISABLE         : boolean := true;
 
         -- FPGA device
         DEVICE              : string  := "STRATIX10"
@@ -158,10 +159,49 @@ architecture FULL of PCIE is
 
     constant DMA_PORTS_PER_EP    : natural := DMA_ENDPOINTS/PCIE_ENDPOINTS;
     constant RTILE_DEVICE        : boolean := (DEVICE="AGILEX" and ENDPOINT_TYPE="R_TILE");
-    constant PCIEX8_UP_REGIONS   : natural := tsel(RTILE_DEVICE,MFB_UP_REGIONS,MFB_UP_REGIONS/2);
-    constant PCIE_UP_REGIONS     : natural := tsel((ENDPOINT_MODE=1),PCIEX8_UP_REGIONS,2*PCIEX8_UP_REGIONS);
+
+    function pcie_up_regions_calc_f
+        return natural is
+    begin
+
+        if (DEVICE = "AGILEX") then
+            if (ENDPOINT_TYPE="R_TILE") then
+                if (ENDPOINT_MODE = 1) then
+                    return MFB_UP_REGIONS;
+                else
+                    return 2*MFB_UP_REGIONS;
+                end if;
+            else
+                if (ENDPOINT_MODE = 1) then
+                    return MFB_UP_REGIONS/2;
+                else
+                    return MFB_UP_REGIONS;
+                end if;
+            end if;
+        elsif (DEVICE = "ULTRASCALE") then
+            if (ENDPOINT_MODE = 1) then
+                return MFB_UP_REGIONS/2;
+            else
+                return MFB_UP_REGIONS;
+            end if;
+        elsif (DEVICE = "STRATIX10") then
+            if (ENDPOINT_MODE = 1) then
+                return MFB_UP_REGIONS/2;
+            else
+                return MFB_UP_REGIONS;
+            end if;
+        end if;
+
+        return 0;
+    end function;
+
+    -- constant PCIEX8_UP_REGIONS   : natural := tsel(RTILE_DEVICE,MFB_UP_REGIONS,MFB_UP_REGIONS/2);
+    -- constant PCIE_UP_REGIONS     : natural := tsel((ENDPOINT_MODE=1),PCIEX8_UP_REGIONS,2*PCIEX8_UP_REGIONS);
+    constant PCIE_UP_REGIONS     : natural := pcie_up_regions_calc_f;
+
     constant PCIEX8_DOWN_REGIONS : natural := tsel(RTILE_DEVICE,MFB_DOWN_REGIONS,MFB_DOWN_REGIONS/2);
     constant PCIE_DOWN_REGIONS   : natural := tsel((ENDPOINT_MODE=1),PCIEX8_DOWN_REGIONS,2*PCIEX8_DOWN_REGIONS);
+
     constant RESET_WIDTH         : natural := 6;
     constant MAX_PAYLOAD_SIZE    : natural := 512;
     -- MPS_CODE:
@@ -176,11 +216,12 @@ architecture FULL of PCIE is
     constant MTC_FIFO_ITEMS   : natural := 512;
     constant MTC_FIFO_CRDT    : natural := MTC_FIFO_ITEMS*AVST_WORD_CRDT;
     constant CRDT_TOTAL_XPH   : natural := MTC_FIFO_CRDT/(MAX_PAYLOAD_SIZE/16);
+
     constant AXI_DATA_WIDTH   : natural := PCIE_UP_REGIONS*256;
-    constant AXI_CQUSER_WIDTH : natural := 183;
-    constant AXI_CCUSER_WIDTH : natural := 81;
-    constant AXI_RQUSER_WIDTH : natural := 137;
-    constant AXI_RCUSER_WIDTH : natural := 161;
+    constant AXI_CQUSER_WIDTH : natural := tsel((ENDPOINT_MODE = 0), 183, 88);
+    constant AXI_CCUSER_WIDTH : natural := tsel((ENDPOINT_MODE = 0), 81, 33);
+    constant AXI_RQUSER_WIDTH : natural := tsel((ENDPOINT_MODE = 0), 137, 62);
+    constant AXI_RCUSER_WIDTH : natural := tsel((ENDPOINT_MODE = 0), 161, 75);
 
     signal pcie_clk                 : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
     signal pcie_reset               : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(RESET_WIDTH-1 downto 0);
@@ -442,6 +483,8 @@ begin
 
             MTC_FIFO_ITEMS      => MTC_FIFO_ITEMS,
             RESET_WIDTH         => RESET_WIDTH,
+
+            PTC_DISABLE         => PTC_DISABLE,
 
             ENDPOINT_TYPE       => ENDPOINT_TYPE,
             ENABLE_MI           => true,

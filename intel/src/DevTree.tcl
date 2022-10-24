@@ -67,6 +67,15 @@ proc dts_build_netcope {} {
         append ret [dts_dmamod_open $ADDR_DMA_MOD $DMA_TYPE [expr $DMA_RX_CHANNELS / $PCIE_ENDPOINTS] [expr $DMA_TX_CHANNELS / $PCIE_ENDPOINTS] "0" $DMA_RX_FRAME_SIZE_MAX $DMA_TX_FRAME_SIZE_MAX $DMA_RX_FRAME_SIZE_MIN $DMA_TX_FRAME_SIZE_MIN]
     }
 
+    # -----------------------------------------------------------------------------------------
+    # WARNING: DMA TSU is for testing purposes only. Otherwise the corruption of data could
+    # occur.
+    # -----------------------------------------------------------------------------------------
+    global DMA_TSU_ENABLE
+    if {$DMA_TSU_ENABLE && $DMA_TYPE == 4} {
+        append ret "tsu1:" [dts_tsugen [expr $ADDR_DMA_MOD + 0x40000] "tsu1"]
+    }
+
     # Network module
     global NET_MOD_ARCH ETH_PORTS ETH_PORT_SPEED ETH_PORT_CHAN ETH_PORT_LANES ETH_PORT_RX_MTU ETH_PORT_TX_MTU
     if {$NET_MOD_ARCH != "EMPTY"} {
