@@ -11,85 +11,101 @@ use IEEE.numeric_std.all;
 use work.math_pack.all;
 use work.type_pack.all;
 use work.dma_bus_pack.all;
+use work.pcie_meta_pack.all;
 
 entity PCIE is
     generic(
-        -- BAR0 base address for PCIE->MI32 transalation
-        BAR0_BASE_ADDR      : std_logic_vector(31 downto 0) := X"01000000";
-        -- BAR1 base address for PCIE->MI32 transalation
-        BAR1_BASE_ADDR      : std_logic_vector(31 downto 0) := X"02000000";
-        -- BAR2 base address for PCIE->MI32 transalation
-        BAR2_BASE_ADDR      : std_logic_vector(31 downto 0) := X"03000000";
-        -- BAR3 base address for PCIE->MI32 transalation
-        BAR3_BASE_ADDR      : std_logic_vector(31 downto 0) := X"04000000";
-        -- BAR4 base address for PCIE->MI32 transalation
-        BAR4_BASE_ADDR      : std_logic_vector(31 downto 0) := X"05000000";
-        -- BAR5 base address for PCIE->MI32 transalation
-        BAR5_BASE_ADDR      : std_logic_vector(31 downto 0) := X"06000000";
-        -- Expansion ROM base address for PCIE->MI32 transalation
-        EXP_ROM_BASE_ADDR   : std_logic_vector(31 downto 0) := X"0A000000";
+        -- =====================================================================
+        -- BAR base address configuration
+        -- =====================================================================
+        BAR0_BASE_ADDR     : std_logic_vector(31 downto 0) := X"01000000";
+        BAR1_BASE_ADDR     : std_logic_vector(31 downto 0) := X"02000000";
+        BAR2_BASE_ADDR     : std_logic_vector(31 downto 0) := X"03000000";
+        BAR3_BASE_ADDR     : std_logic_vector(31 downto 0) := X"04000000";
+        BAR4_BASE_ADDR     : std_logic_vector(31 downto 0) := X"05000000";
+        BAR5_BASE_ADDR     : std_logic_vector(31 downto 0) := X"06000000";
+        EXP_ROM_BASE_ADDR  : std_logic_vector(31 downto 0) := X"0A000000";
 
-        VENDOR_ID           : std_logic_vector(15 downto 0) := X"18EC";
-        DEVICE_ID           : std_logic_vector(15 downto 0) := X"C400";
-        SUBVENDOR_ID        : std_logic_vector(15 downto 0) := X"0000";
-        SUBDEVICE_ID        : std_logic_vector(15 downto 0) := X"0000";
-        XVC_ENABLE          : boolean := false;
-        PF0_TOTAL_VF        : natural := 0;
+        -- =====================================================================
+        -- MFB configuration
+        -- =====================================================================
+        CQ_MFB_REGIONS     : natural := 2;
+        CQ_MFB_REGION_SIZE : natural := 1;
+        CQ_MFB_BLOCK_SIZE  : natural := 8;
+        CQ_MFB_ITEM_WIDTH  : natural := 32;
+        RC_MFB_REGIONS     : natural := 2;
+        RC_MFB_REGION_SIZE : natural := 1;
+        RC_MFB_BLOCK_SIZE  : natural := 8;
+        RC_MFB_ITEM_WIDTH  : natural := 32;
+        CC_MFB_REGIONS     : natural := 2;
+        CC_MFB_REGION_SIZE : natural := 1;
+        CC_MFB_BLOCK_SIZE  : natural := 8;
+        CC_MFB_ITEM_WIDTH  : natural := 32;
+        RQ_MFB_REGIONS     : natural := 2;
+        RQ_MFB_REGION_SIZE : natural := 1;
+        RQ_MFB_BLOCK_SIZE  : natural := 8;
+        RQ_MFB_ITEM_WIDTH  : natural := 32;
 
-        DMA_ENDPOINTS       : natural := 1; -- total number of DMA_EP, DMA_EP=PCIE_EP or 2*DMA_EP=PCIE_EP
-
-        MVB_UP_ITEMS        : natural := 2;   -- Number of items (headers) in word
-        MFB_UP_REGIONS      : natural := 2;   -- Number of regions in word
-        MFB_UP_REG_SIZE     : natural := 1;   -- Number of blocks in region
-        MFB_UP_BLOCK_SIZE   : natural := 8;   -- Number of items in block
-        MFB_UP_ITEM_WIDTH   : natural := 32;  -- Width of one item (in bits)
-
-        MVB_DOWN_ITEMS      : natural := 2;   -- Number of items (headers) in word
-        MFB_DOWN_REGIONS    : natural := 2;   -- Number of regions in word
-        MFB_DOWN_REG_SIZE   : natural := 1;   -- Number of blocks in region
-        MFB_DOWN_BLOCK_SIZE : natural := 8;   -- Number of items in block
-        MFB_DOWN_ITEM_WIDTH : natural := 32;  -- Width of one item (in bits)
-        
-        -- Connected PCIe endpoint type ("H_TILE" or "P_TILE" or "R_TILE")
-        ENDPOINT_TYPE       : string  := "P_TILE";
-        -- Connected PCIe endpoint mode: 0 = 1x16 lanes, 1 = 2x8 lanes
-        ENDPOINT_MODE       : natural := 0;
-        -- Number of instantiated PCIe endpoints
-            -- When ENDPOINT_MODE = 0: PCIE_ENDPOINTS=PCIE_CONS
-            -- When ENDPOINT_MODE = 1: PCIE_ENDPOINTS=2*PCIE_CONS
-        PCIE_ENDPOINTS      : natural := 1;
-        PCIE_CLKS           : natural := 1;
-        PCIE_CONS           : natural := 1;
-        PCIE_LANES          : natural := 16;
-
-        CARD_ID_WIDTH       : natural := 0;
-        PTC_DISABLE         : boolean := true;
-
+        -- =====================================================================
+        -- Other configuration
+        -- =====================================================================
+        -- Total number of DMA_EP, DMA_EP=PCIE_EP or 2*DMA_EP=PCIE_EP
+        DMA_PORTS          : natural := 2;
+        -- Connected PCIe endpoint type
+        PCIE_ENDPOINT_TYPE : string  := "P_TILE";
+        -- Connected PCIe endpoint mode: 0=x16, 1=x8x8, 2=x8
+        PCIE_ENDPOINT_MODE : natural := 0;
+        -- Number of PCIe endpoints
+        PCIE_ENDPOINTS     : natural := 1;
+        -- Number of PCIe clocks per PCIe connector
+        PCIE_CLKS          : natural := 2;
+        -- Number of PCIe connectors
+        PCIE_CONS          : natural := 1;
+        -- Number of PCIe lanes in each PCIe connector
+        PCIE_LANES         : natural := 16;
+        -- Width of CARD/FPGA ID number
+        CARD_ID_WIDTH      : natural := 0;
+        -- Disable PTC module and allows direct connection of the DMA module to
+        -- the PCIe IP RQ and RC interfaces.
+        PTC_DISABLE        : boolean := false;
+        -- Enable CQ/CC interface for DMA-BAR, condition DMA_PORTS=PCIE_ENDPOINTS
+        DMA_BAR_ENABLE     : boolean := false;
+        -- Enable of XCV IP, for Xilinx only
+        XVC_ENABLE         : boolean := false;
         -- FPGA device
-        DEVICE              : string  := "STRATIX10"
+        DEVICE             : string  := "STRATIX10"
     );
     port(
         -- =====================================================================
-        --  PCIE INTERFACE
+        -- CLOCKS AND RESETS
         -- =====================================================================
         -- Clock from PCIe port, 100 MHz
-        PCIE_SYSCLK_P    : in  std_logic_vector(PCIE_CONS*PCIE_CLKS-1 downto 0);
-        PCIE_SYSCLK_N    : in  std_logic_vector(PCIE_CONS*PCIE_CLKS-1 downto 0);
+        PCIE_SYSCLK_P       : in  std_logic_vector(PCIE_CONS*PCIE_CLKS-1 downto 0);
+        PCIE_SYSCLK_N       : in  std_logic_vector(PCIE_CONS*PCIE_CLKS-1 downto 0);
         -- PCIe reset from PCIe port
-        PCIE_SYSRST_N    : in  std_logic_vector(PCIE_CONS-1 downto 0);
+        PCIE_SYSRST_N       : in  std_logic_vector(PCIE_CONS-1 downto 0);
         -- nINIT_DONE output of the Reset Release Intel Stratix 10 FPGA IP
-        INIT_DONE_N      : in  std_logic;
-        -- Receive data
-        PCIE_RX_P        : in  std_logic_vector(PCIE_CONS*PCIE_LANES-1 downto 0);
-        PCIE_RX_N        : in  std_logic_vector(PCIE_CONS*PCIE_LANES-1 downto 0);
-        -- Transmit data
-        PCIE_TX_P        : out std_logic_vector(PCIE_CONS*PCIE_LANES-1 downto 0);
-        PCIE_TX_N        : out std_logic_vector(PCIE_CONS*PCIE_LANES-1 downto 0);
+        INIT_DONE_N         : in  std_logic;
         -- PCIe user clock and reset
-        PCIE_USER_CLK    : out std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
-        PCIE_USER_RESET  : out std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+        PCIE_USER_CLK       : out std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+        PCIE_USER_RESET     : out std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+        -- DMA module clock and reset
+        DMA_CLK             : in  std_logic;
+        DMA_RESET           : in  std_logic;
+
+        -- =====================================================================
+        -- PCIE SERIAL INTERFACE
+        -- =====================================================================
+        -- Receive data
+        PCIE_RX_P           : in  std_logic_vector(PCIE_CONS*PCIE_LANES-1 downto 0);
+        PCIE_RX_N           : in  std_logic_vector(PCIE_CONS*PCIE_LANES-1 downto 0);
+        -- Transmit data
+        PCIE_TX_P           : out std_logic_vector(PCIE_CONS*PCIE_LANES-1 downto 0);
+        PCIE_TX_N           : out std_logic_vector(PCIE_CONS*PCIE_LANES-1 downto 0);
+
+        -- =====================================================================
         -- Configuration status interface (PCIE_USER_CLK)
-        -- ----------------------------------------------
+        -- =====================================================================
         -- PCIe link up flag per PCIe endpoint
         PCIE_LINK_UP        : out std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
         -- PCIe maximum payload size
@@ -102,240 +118,224 @@ entity PCIE is
         PCIE_10B_TAG_REQ_EN : out std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
         -- PCIe RCB size control
         PCIE_RCB_SIZE       : out std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
-
         -- Card ID / PCIe Device Serial Number
         CARD_ID             : in slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CARD_ID_WIDTH-1 downto 0) := (others => (others => '0'));
 
         -- =====================================================================
-        --  DMA BUS - DOWN/UP - MFB/MVB Streams (DMA_CLK)
+        -- DMA RQ MFB+MVB interface (PCIE_CLK or DMA_CLK)
+        --
+        -- PTC ENABLE: MFB+MVB bus for transferring RQ PTC-DMA transactions.
+        -- MFB+MVB bus is clocked at DMA_CLK.
+        -- PTC DISABLE: MFB bus only for transferring RQ PCIe transactions 
+        -- (format according to the PCIe IP used). Compared to the standard MFB
+        -- specification, it does not allow gaps (SRC_RDY=0) inside transactions
+        -- and requires that the first transaction in a word starts at byte 0.
+        -- MFB bus is clocked at PCIE_CLK.
         -- =====================================================================
-        DMA_CLK          : in  std_logic;
-        DMA_RESET        : in  std_logic;
+        DMA_RQ_MFB_DATA     : in  slv_array_t(DMA_PORTS-1 downto 0)(RQ_MFB_REGIONS*RQ_MFB_REGION_SIZE*RQ_MFB_BLOCK_SIZE*RQ_MFB_ITEM_WIDTH-1 downto 0);
+        DMA_RQ_MFB_META     : in  slv_array_t(DMA_PORTS-1 downto 0)(RQ_MFB_REGIONS*PCIE_RQ_META_WIDTH-1 downto 0);
+        DMA_RQ_MFB_SOF      : in  slv_array_t(DMA_PORTS-1 downto 0)(RQ_MFB_REGIONS-1 downto 0);
+        DMA_RQ_MFB_EOF      : in  slv_array_t(DMA_PORTS-1 downto 0)(RQ_MFB_REGIONS-1 downto 0);
+        DMA_RQ_MFB_SOF_POS  : in  slv_array_t(DMA_PORTS-1 downto 0)(RQ_MFB_REGIONS*max(1,log2(RQ_MFB_REGION_SIZE))-1 downto 0);
+        DMA_RQ_MFB_EOF_POS  : in  slv_array_t(DMA_PORTS-1 downto 0)(RQ_MFB_REGIONS*max(1,log2(RQ_MFB_REGION_SIZE*RQ_MFB_BLOCK_SIZE))-1 downto 0);
+        DMA_RQ_MFB_SRC_RDY  : in  std_logic_vector(DMA_PORTS-1 downto 0);
+        DMA_RQ_MFB_DST_RDY  : out std_logic_vector(DMA_PORTS-1 downto 0);
 
-        UP_MVB_DATA      : in  slv_array_t(DMA_ENDPOINTS-1 downto 0)(MVB_UP_ITEMS*DMA_UPHDR_WIDTH-1 downto 0);
-        UP_MVB_VLD       : in  slv_array_t(DMA_ENDPOINTS-1 downto 0)(MVB_UP_ITEMS-1 downto 0);
-        UP_MVB_SRC_RDY   : in  std_logic_vector(DMA_ENDPOINTS-1 downto 0);
-        UP_MVB_DST_RDY   : out std_logic_vector(DMA_ENDPOINTS-1 downto 0);
-
-        UP_MFB_DATA      : in  slv_array_t(DMA_ENDPOINTS-1 downto 0)(MFB_UP_REGIONS*MFB_UP_REG_SIZE*MFB_UP_BLOCK_SIZE*MFB_UP_ITEM_WIDTH-1 downto 0);
-        UP_MFB_SOF       : in  slv_array_t(DMA_ENDPOINTS-1 downto 0)(MFB_UP_REGIONS-1 downto 0);
-        UP_MFB_EOF       : in  slv_array_t(DMA_ENDPOINTS-1 downto 0)(MFB_UP_REGIONS-1 downto 0);
-        UP_MFB_SOF_POS   : in  slv_array_t(DMA_ENDPOINTS-1 downto 0)(MFB_UP_REGIONS*max(1,log2(MFB_UP_REG_SIZE))-1 downto 0);
-        UP_MFB_EOF_POS   : in  slv_array_t(DMA_ENDPOINTS-1 downto 0)(MFB_UP_REGIONS*max(1,log2(MFB_UP_REG_SIZE*MFB_UP_BLOCK_SIZE))-1 downto 0);
-        UP_MFB_SRC_RDY   : in  std_logic_vector(DMA_ENDPOINTS-1 downto 0);
-        UP_MFB_DST_RDY   : out std_logic_vector(DMA_ENDPOINTS-1 downto 0);
-
-        DOWN_MVB_DATA    : out slv_array_t(DMA_ENDPOINTS-1 downto 0)(MVB_DOWN_ITEMS*DMA_DOWNHDR_WIDTH-1 downto 0);
-        DOWN_MVB_VLD     : out slv_array_t(DMA_ENDPOINTS-1 downto 0)(MVB_DOWN_ITEMS-1 downto 0);
-        DOWN_MVB_SRC_RDY : out std_logic_vector(DMA_ENDPOINTS-1 downto 0);
-        DOWN_MVB_DST_RDY : in  std_logic_vector(DMA_ENDPOINTS-1 downto 0);
-
-        DOWN_MFB_DATA    : out slv_array_t(DMA_ENDPOINTS-1 downto 0)(MFB_DOWN_REGIONS*MFB_DOWN_REG_SIZE*MFB_DOWN_BLOCK_SIZE*MFB_DOWN_ITEM_WIDTH-1 downto 0);
-        DOWN_MFB_SOF     : out slv_array_t(DMA_ENDPOINTS-1 downto 0)(MFB_DOWN_REGIONS-1 downto 0);
-        DOWN_MFB_EOF     : out slv_array_t(DMA_ENDPOINTS-1 downto 0)(MFB_DOWN_REGIONS-1 downto 0);
-        DOWN_MFB_SOF_POS : out slv_array_t(DMA_ENDPOINTS-1 downto 0)(MFB_DOWN_REGIONS*max(1,log2(MFB_DOWN_REG_SIZE))-1 downto 0);
-        DOWN_MFB_EOF_POS : out slv_array_t(DMA_ENDPOINTS-1 downto 0)(MFB_DOWN_REGIONS*max(1,log2(MFB_DOWN_REG_SIZE*MFB_DOWN_BLOCK_SIZE))-1 downto 0);
-        DOWN_MFB_SRC_RDY : out std_logic_vector(DMA_ENDPOINTS-1 downto 0);
-        DOWN_MFB_DST_RDY : in  std_logic_vector(DMA_ENDPOINTS-1 downto 0);
+        DMA_RQ_MVB_DATA     : in  slv_array_t(DMA_PORTS-1 downto 0)(RQ_MFB_REGIONS*DMA_UPHDR_WIDTH-1 downto 0);
+        DMA_RQ_MVB_VLD      : in  slv_array_t(DMA_PORTS-1 downto 0)(RQ_MFB_REGIONS-1 downto 0);
+        DMA_RQ_MVB_SRC_RDY  : in  std_logic_vector(DMA_PORTS-1 downto 0);
+        DMA_RQ_MVB_DST_RDY  : out std_logic_vector(DMA_PORTS-1 downto 0);
 
         -- =====================================================================
-        -- MI32 interface - root of the MI32 bus tree (MI_CLK)
+        -- DMA RC MFB+MVB interface (PCIE_CLK or DMA_CLK)
+        --
+        -- PTC ENABLE: MFB+MVB bus for transferring RC PTC-DMA transactions.
+        -- MFB+MVB bus is clocked at DMA_CLK.
+        -- PTC DISABLE: MFB bus only for transferring RC PCIe transactions 
+        -- (format according to the PCIe IP used). Compared to the standard MFB
+        -- specification, it does not allow gaps (SRC_RDY=0) inside transactions
+        -- and requires that the first transaction in a word starts at byte 0.
+        -- MFB bus is clocked at PCIE_CLK.
         -- =====================================================================
-        MI_CLK           : in  std_logic;
-        MI_RESET         : in  std_logic;
+        DMA_RC_MFB_DATA     : out slv_array_t(DMA_PORTS-1 downto 0)(RC_MFB_REGIONS*RC_MFB_REGION_SIZE*RC_MFB_BLOCK_SIZE*RC_MFB_ITEM_WIDTH-1 downto 0);
+        DMA_RC_MFB_META     : out slv_array_t(DMA_PORTS-1 downto 0)(RC_MFB_REGIONS*PCIE_RC_META_WIDTH-1 downto 0);
+        DMA_RC_MFB_SOF      : out slv_array_t(DMA_PORTS-1 downto 0)(RC_MFB_REGIONS-1 downto 0);
+        DMA_RC_MFB_EOF      : out slv_array_t(DMA_PORTS-1 downto 0)(RC_MFB_REGIONS-1 downto 0);
+        DMA_RC_MFB_SOF_POS  : out slv_array_t(DMA_PORTS-1 downto 0)(RC_MFB_REGIONS*max(1,log2(RC_MFB_REGION_SIZE))-1 downto 0);
+        DMA_RC_MFB_EOF_POS  : out slv_array_t(DMA_PORTS-1 downto 0)(RC_MFB_REGIONS*max(1,log2(RC_MFB_REGION_SIZE*RC_MFB_BLOCK_SIZE))-1 downto 0);
+        DMA_RC_MFB_SRC_RDY  : out std_logic_vector(DMA_PORTS-1 downto 0);
+        DMA_RC_MFB_DST_RDY  : in  std_logic_vector(DMA_PORTS-1 downto 0);
 
-        MI_DWR           : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(32-1 downto 0);
-        MI_ADDR          : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(32-1 downto 0);
-        MI_BE            : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(32/8-1 downto 0);
-        MI_RD            : out std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
-        MI_WR            : out std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
-        MI_DRD           : in  slv_array_t(PCIE_ENDPOINTS-1 downto 0)(32-1 downto 0);
-        MI_ARDY          : in  std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
-        MI_DRDY          : in  std_logic_vector(PCIE_ENDPOINTS-1 downto 0)
+        DMA_RC_MVB_DATA     : out slv_array_t(DMA_PORTS-1 downto 0)(RC_MFB_REGIONS*DMA_DOWNHDR_WIDTH-1 downto 0);
+        DMA_RC_MVB_VLD      : out slv_array_t(DMA_PORTS-1 downto 0)(RC_MFB_REGIONS-1 downto 0);
+        DMA_RC_MVB_SRC_RDY  : out std_logic_vector(DMA_PORTS-1 downto 0);
+        DMA_RC_MVB_DST_RDY  : in  std_logic_vector(DMA_PORTS-1 downto 0);
+
+        -- =====================================================================
+        -- DMA CQ MFB interface - DMA-BAR (PCIE_CLK)
+        --
+        -- MFB bus for transferring CQ DMA-BAR PCIe transactions (format
+        -- according to the PCIe IP used). Compared to the standard MFB
+        -- specification, it does not allow gaps (SRC_RDY=0) inside transactions
+        -- and requires that the first transaction in a word starts at byte 0.
+        -- =====================================================================
+        DMA_CQ_MFB_DATA     : out slv_array_t(DMA_PORTS-1 downto 0)(CQ_MFB_REGIONS*CQ_MFB_REGION_SIZE*CQ_MFB_BLOCK_SIZE*CQ_MFB_ITEM_WIDTH-1 downto 0);
+        DMA_CQ_MFB_META     : out slv_array_t(DMA_PORTS-1 downto 0)(CQ_MFB_REGIONS*PCIE_CQ_META_WIDTH-1 downto 0);
+        DMA_CQ_MFB_SOF      : out slv_array_t(DMA_PORTS-1 downto 0)(CQ_MFB_REGIONS-1 downto 0);
+        DMA_CQ_MFB_EOF      : out slv_array_t(DMA_PORTS-1 downto 0)(CQ_MFB_REGIONS-1 downto 0);
+        DMA_CQ_MFB_SOF_POS  : out slv_array_t(DMA_PORTS-1 downto 0)(CQ_MFB_REGIONS*max(1,log2(CQ_MFB_REGION_SIZE))-1 downto 0);
+        DMA_CQ_MFB_EOF_POS  : out slv_array_t(DMA_PORTS-1 downto 0)(CQ_MFB_REGIONS*max(1,log2(CQ_MFB_REGION_SIZE*CQ_MFB_BLOCK_SIZE))-1 downto 0);
+        DMA_CQ_MFB_SRC_RDY  : out std_logic_vector(DMA_PORTS-1 downto 0);
+        DMA_CQ_MFB_DST_RDY  : in  std_logic_vector(DMA_PORTS-1 downto 0);
+
+        -- =====================================================================
+        -- PCIE CC MFB interface - DMA-BAR (PCIE_CLK)
+        --
+        -- MFB bus for transferring CC DMA-BAR PCIe transactions (format
+        -- according to the PCIe IP used). Compared to the standard MFB
+        -- specification, it does not allow gaps (SRC_RDY=0) inside transactions
+        -- and requires that the first transaction in a word starts at byte 0.
+        -- =====================================================================
+        DMA_CC_MFB_DATA     : in  slv_array_t(DMA_PORTS-1 downto 0)(CC_MFB_REGIONS*CC_MFB_REGION_SIZE*CC_MFB_BLOCK_SIZE*CC_MFB_ITEM_WIDTH-1 downto 0);
+        DMA_CC_MFB_META     : in  slv_array_t(DMA_PORTS-1 downto 0)(CC_MFB_REGIONS*PCIE_CC_META_WIDTH-1 downto 0);
+        DMA_CC_MFB_SOF      : in  slv_array_t(DMA_PORTS-1 downto 0)(CC_MFB_REGIONS-1 downto 0);
+        DMA_CC_MFB_EOF      : in  slv_array_t(DMA_PORTS-1 downto 0)(CC_MFB_REGIONS-1 downto 0);
+        DMA_CC_MFB_SOF_POS  : in  slv_array_t(DMA_PORTS-1 downto 0)(CC_MFB_REGIONS*max(1,log2(CC_MFB_REGION_SIZE))-1 downto 0);
+        DMA_CC_MFB_EOF_POS  : in  slv_array_t(DMA_PORTS-1 downto 0)(CC_MFB_REGIONS*max(1,log2(CC_MFB_REGION_SIZE*CC_MFB_BLOCK_SIZE))-1 downto 0);
+        DMA_CC_MFB_SRC_RDY  : in  std_logic_vector(DMA_PORTS-1 downto 0);
+        DMA_CC_MFB_DST_RDY  : out std_logic_vector(DMA_PORTS-1 downto 0);
+
+        -- =====================================================================
+        -- MI32 interfaces (MI_CLK)
+        --
+        -- Root of the MI32 bus tree for each PCIe endpoint
+        -- =====================================================================
+        MI_CLK              : in  std_logic;
+        MI_RESET            : in  std_logic;
+        MI_DWR              : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(32-1 downto 0);
+        MI_ADDR             : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(32-1 downto 0);
+        MI_BE               : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(32/8-1 downto 0);
+        MI_RD               : out std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+        MI_WR               : out std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+        MI_DRD              : in  slv_array_t(PCIE_ENDPOINTS-1 downto 0)(32-1 downto 0);
+        MI_ARDY             : in  std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+        MI_DRDY             : in  std_logic_vector(PCIE_ENDPOINTS-1 downto 0)
     );
 end entity;
 
 architecture FULL of PCIE is
 
-    constant DMA_PORTS_PER_EP    : natural := DMA_ENDPOINTS/PCIE_ENDPOINTS;
-    constant RTILE_DEVICE        : boolean := (DEVICE="AGILEX" and ENDPOINT_TYPE="R_TILE");
-
-    function pcie_up_regions_calc_f
-        return natural is
+    function core_regions_f(MFB_REGIONS : natural) return natural is
+        variable pcie_mfb_regions : natural;
     begin
-
-        if (DEVICE = "AGILEX") then
-            if (ENDPOINT_TYPE="R_TILE") then
-                if (ENDPOINT_MODE = 1) then
-                    return MFB_UP_REGIONS;
-                else
-                    return 2*MFB_UP_REGIONS;
-                end if;
-            else
-                if (ENDPOINT_MODE = 1) then
-                    return MFB_UP_REGIONS/2;
-                else
-                    return MFB_UP_REGIONS;
-                end if;
+        pcie_mfb_regions := MFB_REGIONS;
+        
+        -- PTC conversion
+        if ((not PTC_DISABLE)) then
+            if (PCIE_ENDPOINT_TYPE="P_TILE" and PCIE_ENDPOINT_MODE = 1) then
+                -- 256b PTC-DMA stream to 512b PCIe stream 
+                pcie_mfb_regions := pcie_mfb_regions/2;
             end if;
-        elsif (DEVICE = "ULTRASCALE") then
-            if (ENDPOINT_MODE = 1) then
-                return MFB_UP_REGIONS/2;
-            else
-                return MFB_UP_REGIONS;
-            end if;
-        elsif (DEVICE = "STRATIX10") then
-            if (ENDPOINT_MODE = 1) then
-                return MFB_UP_REGIONS/2;
-            else
-                return MFB_UP_REGIONS;
+            if (PCIE_ENDPOINT_TYPE="R_TILE" and PCIE_ENDPOINT_MODE = 0) then
+                -- 512b PTC-DMA stream to 1024b PCIe stream 
+                pcie_mfb_regions := pcie_mfb_regions*2;
             end if;
         end if;
 
-        return 0;
+        return pcie_mfb_regions;
     end function;
 
-    -- constant PCIEX8_UP_REGIONS   : natural := tsel(RTILE_DEVICE,MFB_UP_REGIONS,MFB_UP_REGIONS/2);
-    -- constant PCIE_UP_REGIONS     : natural := tsel((ENDPOINT_MODE=1),PCIEX8_UP_REGIONS,2*PCIEX8_UP_REGIONS);
-    constant PCIE_UP_REGIONS     : natural := pcie_up_regions_calc_f;
-
-    constant PCIEX8_DOWN_REGIONS : natural := tsel(RTILE_DEVICE,MFB_DOWN_REGIONS,MFB_DOWN_REGIONS/2);
-    constant PCIE_DOWN_REGIONS   : natural := tsel((ENDPOINT_MODE=1),PCIEX8_DOWN_REGIONS,2*PCIEX8_DOWN_REGIONS);
-
+    constant DMA_PORTS_PER_EP    : natural := DMA_PORTS/PCIE_ENDPOINTS;
+    constant CORE_RQ_MFB_REGIONS : natural := core_regions_f(RQ_MFB_REGIONS);
+    constant CORE_RC_MFB_REGIONS : natural := core_regions_f(RC_MFB_REGIONS);
     constant RESET_WIDTH         : natural := 6;
-    constant MAX_PAYLOAD_SIZE    : natural := 512;
-    -- MPS_CODE:
-    -- 000b: 128 bytes maximum payload size
-    -- 001b: 256 bytes maximum payload size
-    -- 010b: 512 bytes maximum payload size
-    -- 011b: 1024 bytes maximum payload size
-    constant MPS_CODE         : std_logic_vector(2 downto 0) := std_logic_vector(to_unsigned((log2(MAX_PAYLOAD_SIZE)-7),3));
-    constant BAR_APERTURE     : natural := 26;
-    -- 1credit = 16B = 128b = 4DW
-    constant AVST_WORD_CRDT   : natural := (PCIE_DOWN_REGIONS*MFB_DOWN_REG_SIZE*MFB_DOWN_BLOCK_SIZE*MFB_DOWN_ITEM_WIDTH)/128;
-    constant MTC_FIFO_ITEMS   : natural := 512;
-    constant MTC_FIFO_CRDT    : natural := MTC_FIFO_ITEMS*AVST_WORD_CRDT;
-    constant CRDT_TOTAL_XPH   : natural := MTC_FIFO_CRDT/(MAX_PAYLOAD_SIZE/16);
+    constant BAR_APERTURE        : natural := 26;
 
-    constant AXI_DATA_WIDTH   : natural := PCIE_UP_REGIONS*256;
-    constant AXI_CQUSER_WIDTH : natural := tsel((ENDPOINT_MODE = 0), 183, 88);
-    constant AXI_CCUSER_WIDTH : natural := tsel((ENDPOINT_MODE = 0), 81, 33);
-    constant AXI_RQUSER_WIDTH : natural := tsel((ENDPOINT_MODE = 0), 137, 62);
-    constant AXI_RCUSER_WIDTH : natural := tsel((ENDPOINT_MODE = 0), 161, 75);
+    signal pcie_clk                : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal pcie_reset              : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(RESET_WIDTH-1 downto 0);
 
-    signal pcie_clk                 : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
-    signal pcie_reset               : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(RESET_WIDTH-1 downto 0);
+    signal pcie_cfg_mps            : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(3-1 downto 0);
+    signal pcie_cfg_mrrs           : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(3-1 downto 0);
+    signal pcie_cfg_ext_tag_en     : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal pcie_cfg_10b_tag_req_en : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal pcie_cfg_rcb_size       : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
 
-    signal pcie_cfg_mps             : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(3-1 downto 0);
-    signal pcie_cfg_mrrs            : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(3-1 downto 0);
-    signal pcie_cfg_ext_tag_en      : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
-    signal pcie_cfg_10b_tag_req_en  : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
-    signal pcie_cfg_rcb_size        : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
-
-    signal crdt_up_init_done        : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
-    signal crdt_up_update           : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(6-1 downto 0);
-    signal crdt_up_cnt_ph           : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(2-1 downto 0);
-    signal crdt_up_cnt_nph          : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(2-1 downto 0);
-    signal crdt_up_cnt_cplh         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(2-1 downto 0);
-    signal crdt_up_cnt_pd           : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(4-1 downto 0);
-    signal crdt_up_cnt_npd          : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(4-1 downto 0);
-    signal crdt_up_cnt_cpld         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(4-1 downto 0);
-
-    signal crdt_down_init_done      : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
-    signal crdt_down_update         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(6-1 downto 0);
-    signal crdt_down_cnt_ph         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(2-1 downto 0);
-    signal crdt_down_cnt_nph        : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(2-1 downto 0);
-    signal crdt_down_cnt_cplh       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(2-1 downto 0);
-    signal crdt_down_cnt_pd         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(4-1 downto 0);
-    signal crdt_down_cnt_npd        : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(4-1 downto 0);
-    signal crdt_down_cnt_cpld       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(4-1 downto 0);
-
-    signal pcie_avst_down_data      : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS*256-1 downto 0);
-    signal pcie_avst_down_hdr       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS*128-1 downto 0);
-    signal pcie_avst_down_prefix    : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS*32-1 downto 0);
-	signal pcie_avst_down_sop       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS-1 downto 0);
-	signal pcie_avst_down_eop       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS-1 downto 0);
-    signal pcie_avst_down_empty     : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS*3-1 downto 0);
-    signal pcie_avst_down_bar_range : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS*3-1 downto 0);
-    signal pcie_avst_down_valid     : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS-1 downto 0);
-	signal pcie_avst_down_ready     : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
-
-    signal pcie_avst_up_data        : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS*256-1 downto 0);
-    signal pcie_avst_up_hdr         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS*128-1 downto 0);
-    signal pcie_avst_up_prefix      : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS*32-1 downto 0);
-	signal pcie_avst_up_sop         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS-1 downto 0);
-	signal pcie_avst_up_eop         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS-1 downto 0);
-    signal pcie_avst_up_error       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS-1 downto 0);
-    signal pcie_avst_up_valid       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS-1 downto 0);
-	signal pcie_avst_up_ready       : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
-
-    signal pcie_cq_axi_data         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_DATA_WIDTH-1 downto 0);
-    signal pcie_cq_axi_user         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_CQUSER_WIDTH-1 downto 0);
-    signal pcie_cq_axi_last         : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
-    signal pcie_cq_axi_keep         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_DATA_WIDTH/32-1 downto 0);
-    signal pcie_cq_axi_valid        : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
-    signal pcie_cq_axi_ready        : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
-
-    signal pcie_cc_axi_data         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_DATA_WIDTH-1 downto 0);
-    signal pcie_cc_axi_user         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_CCUSER_WIDTH-1 downto 0);
-    signal pcie_cc_axi_last         : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
-    signal pcie_cc_axi_keep         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_DATA_WIDTH/32-1 downto 0);
-    signal pcie_cc_axi_valid        : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
-    signal pcie_cc_axi_ready        : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
-
-    signal pcie_rq_axi_data         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_DATA_WIDTH-1 downto 0);
-    signal pcie_rq_axi_user         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_RQUSER_WIDTH-1 downto 0);
-    signal pcie_rq_axi_last         : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
-    signal pcie_rq_axi_keep         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_DATA_WIDTH/32-1 downto 0);
-    signal pcie_rq_axi_valid        : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
-    signal pcie_rq_axi_ready        : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
-
-    signal pcie_rc_axi_data         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_DATA_WIDTH-1 downto 0);
-    signal pcie_rc_axi_user         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_RCUSER_WIDTH-1 downto 0);
-    signal pcie_rc_axi_last         : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
-    signal pcie_rc_axi_keep         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_DATA_WIDTH/32-1 downto 0);
-    signal pcie_rc_axi_valid        : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
-    signal pcie_rc_axi_ready        : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
-
-    signal pcie_tag_assign          : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS*8-1 downto 0);
-    signal pcie_tag_assign_vld      : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS-1 downto 0);
+    signal core_rq_mfb_data        : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CORE_RQ_MFB_REGIONS*RQ_MFB_REGION_SIZE*RQ_MFB_BLOCK_SIZE*RQ_MFB_ITEM_WIDTH-1 downto 0);
+    signal core_rq_mfb_meta        : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CORE_RQ_MFB_REGIONS*PCIE_RQ_META_WIDTH-1 downto 0);
+    signal core_rq_mfb_sof         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CORE_RQ_MFB_REGIONS-1 downto 0);
+    signal core_rq_mfb_eof         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CORE_RQ_MFB_REGIONS-1 downto 0);
+    signal core_rq_mfb_sof_pos     : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CORE_RQ_MFB_REGIONS*max(1,log2(RQ_MFB_REGION_SIZE))-1 downto 0);
+    signal core_rq_mfb_eof_pos     : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CORE_RQ_MFB_REGIONS*max(1,log2(RQ_MFB_REGION_SIZE*RQ_MFB_BLOCK_SIZE))-1 downto 0);
+    signal core_rq_mfb_src_rdy     : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal core_rq_mfb_dst_rdy     : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal core_rc_mfb_data        : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CORE_RC_MFB_REGIONS*RC_MFB_REGION_SIZE*RC_MFB_BLOCK_SIZE*RC_MFB_ITEM_WIDTH-1 downto 0);
+    signal core_rc_mfb_meta        : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CORE_RC_MFB_REGIONS*PCIE_RC_META_WIDTH-1 downto 0);
+    signal core_rc_mfb_sof         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CORE_RC_MFB_REGIONS-1 downto 0);
+    signal core_rc_mfb_eof         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CORE_RC_MFB_REGIONS-1 downto 0);
+    signal core_rc_mfb_sof_pos     : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CORE_RC_MFB_REGIONS*max(1,log2(RC_MFB_REGION_SIZE))-1 downto 0);
+    signal core_rc_mfb_eof_pos     : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CORE_RC_MFB_REGIONS*max(1,log2(RC_MFB_REGION_SIZE*RC_MFB_BLOCK_SIZE))-1 downto 0);
+    signal core_rc_mfb_src_rdy     : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal core_rc_mfb_dst_rdy     : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal core_cq_mfb_data        : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CQ_MFB_REGIONS*CQ_MFB_REGION_SIZE*CQ_MFB_BLOCK_SIZE*CQ_MFB_ITEM_WIDTH-1 downto 0);
+    signal core_cq_mfb_meta        : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CQ_MFB_REGIONS*PCIE_CQ_META_WIDTH-1 downto 0);
+    signal core_cq_mfb_sof         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CQ_MFB_REGIONS-1 downto 0);
+    signal core_cq_mfb_eof         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CQ_MFB_REGIONS-1 downto 0);
+    signal core_cq_mfb_sof_pos     : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CQ_MFB_REGIONS*max(1,log2(CQ_MFB_REGION_SIZE))-1 downto 0);
+    signal core_cq_mfb_eof_pos     : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CQ_MFB_REGIONS*max(1,log2(CQ_MFB_REGION_SIZE*CQ_MFB_BLOCK_SIZE))-1 downto 0);
+    signal core_cq_mfb_src_rdy     : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal core_cq_mfb_dst_rdy     : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal core_cc_mfb_data        : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CC_MFB_REGIONS*CC_MFB_REGION_SIZE*CC_MFB_BLOCK_SIZE*CC_MFB_ITEM_WIDTH-1 downto 0);
+    signal core_cc_mfb_meta        : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CC_MFB_REGIONS*PCIE_CC_META_WIDTH-1 downto 0);
+    signal core_cc_mfb_sof         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CC_MFB_REGIONS-1 downto 0);
+    signal core_cc_mfb_eof         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CC_MFB_REGIONS-1 downto 0);
+    signal core_cc_mfb_sof_pos     : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CC_MFB_REGIONS*max(1,log2(CC_MFB_REGION_SIZE))-1 downto 0);
+    signal core_cc_mfb_eof_pos     : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CC_MFB_REGIONS*max(1,log2(CC_MFB_REGION_SIZE*CC_MFB_BLOCK_SIZE))-1 downto 0);
+    signal core_cc_mfb_src_rdy     : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal core_cc_mfb_dst_rdy     : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal core_rq_tag_assign      : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CORE_RQ_MFB_REGIONS*8-1 downto 0);
+    signal core_rq_tag_assign_vld  : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CORE_RQ_MFB_REGIONS-1 downto 0);
 
 begin
+
+    assert (CORE_RQ_MFB_REGIONS /= 0) report "PCIE: Unsupported CORE_RQ_MFB_REGIONS configuration!"
+        severity failure;
+
+    assert (CORE_RC_MFB_REGIONS /= 0) report "PCIE: Unsupported CORE_RC_MFB_REGIONS configuration!"
+        severity failure;
 
     -- =========================================================================
     --  PCIE CORE
     -- =========================================================================
 
-    -- the architecture depends on the selected board, see Modules.tcl
+    -- The architecture depends on the selected PCIe Hard IP (or used FPGA),
+    -- see Modules.tcl of PCIE_CORE.
     pcie_core_i : entity work.PCIE_CORE
     generic map (
-        PCIE_UP_REGIONS   => PCIE_UP_REGIONS,
-        PCIE_DOWN_REGIONS => PCIE_DOWN_REGIONS,
-        AXI_DATA_WIDTH    => AXI_DATA_WIDTH,
-        AXI_CQUSER_WIDTH  => AXI_CQUSER_WIDTH,
-        AXI_CCUSER_WIDTH  => AXI_CCUSER_WIDTH,
-        AXI_RQUSER_WIDTH  => AXI_RQUSER_WIDTH,
-        AXI_RCUSER_WIDTH  => AXI_RCUSER_WIDTH,
-        ENDPOINT_MODE     => ENDPOINT_MODE,
-        PCIE_ENDPOINTS    => PCIE_ENDPOINTS,
-        PCIE_CLKS         => PCIE_CLKS,
-        PCIE_CONS         => PCIE_CONS,
-        PCIE_LANES        => PCIE_LANES,
-        VENDOR_ID         => VENDOR_ID,
-        DEVICE_ID         => DEVICE_ID,
-        SUBVENDOR_ID      => SUBVENDOR_ID,
-        SUBDEVICE_ID      => SUBDEVICE_ID,
-        XVC_ENABLE        => XVC_ENABLE,
-        PF0_TOTAL_VF      => PF0_TOTAL_VF,
-        CRDT_TOTAL_PH     => CRDT_TOTAL_XPH/2,
-        CRDT_TOTAL_NPH    => CRDT_TOTAL_XPH/2,
-        CRDT_TOTAL_CPLH   => 0,
-        CRDT_TOTAL_PD     => MTC_FIFO_CRDT/2,
-        CRDT_TOTAL_NPD    => MTC_FIFO_CRDT/2,
-        CRDT_TOTAL_CPLD   => 0,
-        CARD_ID_WIDTH     => CARD_ID_WIDTH,
-        RESET_WIDTH       => RESET_WIDTH,
-        DEVICE            => DEVICE
+        CQ_MFB_REGIONS     => CQ_MFB_REGIONS,
+        CQ_MFB_REGION_SIZE => CQ_MFB_REGION_SIZE,
+        CQ_MFB_BLOCK_SIZE  => CQ_MFB_BLOCK_SIZE,
+        CQ_MFB_ITEM_WIDTH  => CQ_MFB_ITEM_WIDTH,
+        RC_MFB_REGIONS     => CORE_RC_MFB_REGIONS,
+        RC_MFB_REGION_SIZE => RC_MFB_REGION_SIZE,
+        RC_MFB_BLOCK_SIZE  => RC_MFB_BLOCK_SIZE,
+        RC_MFB_ITEM_WIDTH  => RC_MFB_ITEM_WIDTH,
+        CC_MFB_REGIONS     => CC_MFB_REGIONS,
+        CC_MFB_REGION_SIZE => CC_MFB_REGION_SIZE,
+        CC_MFB_BLOCK_SIZE  => CC_MFB_BLOCK_SIZE,
+        CC_MFB_ITEM_WIDTH  => CC_MFB_ITEM_WIDTH,
+        RQ_MFB_REGIONS     => CORE_RQ_MFB_REGIONS,
+        RQ_MFB_REGION_SIZE => RQ_MFB_REGION_SIZE,
+        RQ_MFB_BLOCK_SIZE  => RQ_MFB_BLOCK_SIZE,
+        RQ_MFB_ITEM_WIDTH  => RQ_MFB_ITEM_WIDTH,
+        ENDPOINT_MODE      => PCIE_ENDPOINT_MODE,
+        PCIE_ENDPOINTS     => PCIE_ENDPOINTS,
+        PCIE_CLKS          => PCIE_CLKS,
+        PCIE_CONS          => PCIE_CONS,
+        PCIE_LANES         => PCIE_LANES,
+        XVC_ENABLE         => XVC_ENABLE,
+        CARD_ID_WIDTH      => CARD_ID_WIDTH,
+        RESET_WIDTH        => RESET_WIDTH,
+        DEVICE             => DEVICE
     )
     port map (
         PCIE_SYSCLK_P       => PCIE_SYSCLK_P,
@@ -360,78 +360,49 @@ begin
 
         CARD_ID             => CARD_ID,
 
-        CRDT_UP_INIT_DONE   => crdt_up_init_done,
-        CRDT_UP_UPDATE      => crdt_up_update,
-        CRDT_UP_CNT_PH      => crdt_up_cnt_ph,
-        CRDT_UP_CNT_NPH     => crdt_up_cnt_nph,
-        CRDT_UP_CNT_CPLH    => crdt_up_cnt_cplh,
-        CRDT_UP_CNT_PD      => crdt_up_cnt_pd,
-        CRDT_UP_CNT_NPD     => crdt_up_cnt_npd,
-        CRDT_UP_CNT_CPLD    => crdt_up_cnt_cpld,
+        CQ_MFB_DATA         => core_cq_mfb_data,
+        CQ_MFB_META         => core_cq_mfb_meta,
+        CQ_MFB_SOF          => core_cq_mfb_sof,
+        CQ_MFB_EOF          => core_cq_mfb_eof,
+        CQ_MFB_SOF_POS      => core_cq_mfb_sof_pos,
+        CQ_MFB_EOF_POS      => core_cq_mfb_eof_pos,
+        CQ_MFB_SRC_RDY      => core_cq_mfb_src_rdy,
+        CQ_MFB_DST_RDY      => core_cq_mfb_dst_rdy,
 
-        CRDT_DOWN_INIT_DONE => crdt_down_init_done,
-        CRDT_DOWN_UPDATE    => crdt_down_update,
-        CRDT_DOWN_CNT_PH    => crdt_down_cnt_ph,
-        CRDT_DOWN_CNT_NPH   => crdt_down_cnt_nph,
-        CRDT_DOWN_CNT_CPLH  => crdt_down_cnt_cplh,
-        CRDT_DOWN_CNT_PD    => crdt_down_cnt_pd,
-        CRDT_DOWN_CNT_NPD   => crdt_down_cnt_npd,
-        CRDT_DOWN_CNT_CPLD  => crdt_down_cnt_cpld,
+        RC_MFB_DATA         => core_rc_mfb_data,
+        RC_MFB_META         => core_rc_mfb_meta,
+        RC_MFB_SOF          => core_rc_mfb_sof,
+        RC_MFB_EOF          => core_rc_mfb_eof,
+        RC_MFB_SOF_POS      => core_rc_mfb_sof_pos,
+        RC_MFB_EOF_POS      => core_rc_mfb_eof_pos,
+        RC_MFB_SRC_RDY      => core_rc_mfb_src_rdy,
+        RC_MFB_DST_RDY      => core_rc_mfb_dst_rdy,
 
-        AVST_DOWN_DATA      => pcie_avst_down_data,
-        AVST_DOWN_HDR       => pcie_avst_down_hdr,
-        AVST_DOWN_PREFIX    => pcie_avst_down_prefix,
-        AVST_DOWN_BAR_RANGE => pcie_avst_down_bar_range,
-		AVST_DOWN_SOP       => pcie_avst_down_sop,
-		AVST_DOWN_EOP       => pcie_avst_down_eop,
-        AVST_DOWN_EMPTY     => pcie_avst_down_empty,
-        AVST_DOWN_VALID     => pcie_avst_down_valid,
-		AVST_DOWN_READY     => pcie_avst_down_ready,
+        CC_MFB_DATA         => core_cc_mfb_data,
+        CC_MFB_META         => core_cc_mfb_meta,
+        CC_MFB_SOF          => core_cc_mfb_sof,
+        CC_MFB_EOF          => core_cc_mfb_eof,
+        CC_MFB_SOF_POS      => core_cc_mfb_sof_pos,
+        CC_MFB_EOF_POS      => core_cc_mfb_eof_pos,
+        CC_MFB_SRC_RDY      => core_cc_mfb_src_rdy,
+        CC_MFB_DST_RDY      => core_cc_mfb_dst_rdy,
 
-        AVST_UP_DATA        => pcie_avst_up_data,
-        AVST_UP_HDR         => pcie_avst_up_hdr,
-        AVST_UP_PREFIX      => pcie_avst_up_prefix,
-        AVST_UP_SOP         => pcie_avst_up_sop,
-        AVST_UP_EOP         => pcie_avst_up_eop, 
-        AVST_UP_ERROR       => pcie_avst_up_error, 
-        AVST_UP_VALID       => pcie_avst_up_valid,
-        AVST_UP_READY       => pcie_avst_up_ready,
+        RQ_MFB_DATA         => core_rq_mfb_data,
+        RQ_MFB_META         => core_rq_mfb_meta,
+        RQ_MFB_SOF          => core_rq_mfb_sof,
+        RQ_MFB_EOF          => core_rq_mfb_eof,
+        RQ_MFB_SOF_POS      => core_rq_mfb_sof_pos,
+        RQ_MFB_EOF_POS      => core_rq_mfb_eof_pos,
+        RQ_MFB_SRC_RDY      => core_rq_mfb_src_rdy,
+        RQ_MFB_DST_RDY      => core_rq_mfb_dst_rdy,
 
-        CQ_AXI_DATA         => pcie_cq_axi_data,
-        CQ_AXI_USER         => pcie_cq_axi_user,
-        CQ_AXI_LAST         => pcie_cq_axi_last,
-        CQ_AXI_KEEP         => pcie_cq_axi_keep,
-        CQ_AXI_VALID        => pcie_cq_axi_valid,
-        CQ_AXI_READY        => pcie_cq_axi_ready,
-
-        CC_AXI_DATA         => pcie_cc_axi_data,
-        CC_AXI_USER         => pcie_cc_axi_user,
-        CC_AXI_LAST         => pcie_cc_axi_last,
-        CC_AXI_KEEP         => pcie_cc_axi_keep,
-        CC_AXI_VALID        => pcie_cc_axi_valid,
-        CC_AXI_READY        => pcie_cc_axi_ready,
-
-        RQ_AXI_DATA         => pcie_rq_axi_data,
-        RQ_AXI_USER         => pcie_rq_axi_user,
-        RQ_AXI_LAST         => pcie_rq_axi_last,
-        RQ_AXI_KEEP         => pcie_rq_axi_keep,
-        RQ_AXI_VALID        => pcie_rq_axi_valid,
-        RQ_AXI_READY        => pcie_rq_axi_ready,
-
-        RC_AXI_DATA         => pcie_rc_axi_data,
-        RC_AXI_USER         => pcie_rc_axi_user,
-        RC_AXI_LAST         => pcie_rc_axi_last,
-        RC_AXI_KEEP         => pcie_rc_axi_keep,
-        RC_AXI_VALID        => pcie_rc_axi_valid,
-        RC_AXI_READY        => pcie_rc_axi_ready,
-
-        TAG_ASSIGN          => pcie_tag_assign,
-        TAG_ASSIGN_VLD      => pcie_tag_assign_vld
+        TAG_ASSIGN          => core_rq_tag_assign,
+        TAG_ASSIGN_VLD      => core_rq_tag_assign_vld
     );
 
     PCIE_USER_CLK <= pcie_clk;
     pcie_user_reset_g: for i in 0 to PCIE_ENDPOINTS-1 generate
-        PCIE_USER_RESET(i) <= pcie_reset(i)(0);
+        PCIE_USER_RESET(i) <= pcie_reset(i)(RESET_WIDTH-1);
     end generate;
 
     PCIE_MPS            <= pcie_cfg_mps;
@@ -445,58 +416,46 @@ begin
     -- =========================================================================
 
     pcie_ctrl_g: for i in 0 to PCIE_ENDPOINTS-1 generate
+        subtype DPE is natural range (i+1)*DMA_PORTS_PER_EP-1 downto i*DMA_PORTS_PER_EP;
+    begin
         pcie_ctrl_i : entity work.PCIE_CTRL
         generic map (
-            AXI_DATA_WIDTH       => AXI_DATA_WIDTH,
-            AXI_CQUSER_WIDTH     => AXI_CQUSER_WIDTH,
-            AXI_CCUSER_WIDTH     => AXI_CCUSER_WIDTH,
-            AXI_RQUSER_WIDTH     => AXI_RQUSER_WIDTH,
-            AXI_RCUSER_WIDTH     => AXI_RCUSER_WIDTH,
-
-            BAR0_BASE_ADDR       => BAR0_BASE_ADDR,
-            BAR1_BASE_ADDR       => BAR1_BASE_ADDR,
-            BAR2_BASE_ADDR       => BAR2_BASE_ADDR,
-            BAR3_BASE_ADDR       => BAR3_BASE_ADDR,
-            BAR4_BASE_ADDR       => BAR4_BASE_ADDR,
-            BAR5_BASE_ADDR       => BAR5_BASE_ADDR,
-            EXP_ROM_BASE_ADDR    => EXP_ROM_BASE_ADDR,
-
-            DMA_PORTS            => DMA_PORTS_PER_EP,
-    
-            MVB_UP_ITEMS         => PCIE_UP_REGIONS,
-            DMA_MVB_UP_ITEMS     => MVB_UP_ITEMS,
-            MVB_UP_ITEM_WIDTH    => DMA_UPHDR_WIDTH,
-            MFB_UP_REGIONS       => PCIE_UP_REGIONS,
-            DMA_MFB_UP_REGIONS   => MFB_UP_REGIONS,
-            MFB_UP_REG_SIZE      => MFB_UP_REG_SIZE,
-            MFB_UP_BLOCK_SIZE    => MFB_UP_BLOCK_SIZE,
-            MFB_UP_ITEM_WIDTH    => MFB_UP_ITEM_WIDTH,
-
-            MVB_DOWN_ITEMS       => PCIE_DOWN_REGIONS,
-            DMA_MVB_DOWN_ITEMS   => MVB_DOWN_ITEMS,
-            MVB_DOWN_ITEM_WIDTH  => DMA_DOWNHDR_WIDTH,
-            MFB_DOWN_REGIONS     => PCIE_DOWN_REGIONS,
-            DMA_MFB_DOWN_REGIONS => MFB_DOWN_REGIONS,
-            MFB_DOWN_REG_SIZE    => MFB_DOWN_REG_SIZE,
-            MFB_DOWN_BLOCK_SIZE  => MFB_DOWN_BLOCK_SIZE,
-            MFB_DOWN_ITEM_WIDTH  => MFB_DOWN_ITEM_WIDTH,
-
-            MTC_FIFO_ITEMS      => MTC_FIFO_ITEMS,
-            RESET_WIDTH         => RESET_WIDTH,
-
+            BAR0_BASE_ADDR      => BAR0_BASE_ADDR,
+            BAR1_BASE_ADDR      => BAR1_BASE_ADDR,
+            BAR2_BASE_ADDR      => BAR2_BASE_ADDR,
+            BAR3_BASE_ADDR      => BAR3_BASE_ADDR,
+            BAR4_BASE_ADDR      => BAR4_BASE_ADDR,
+            BAR5_BASE_ADDR      => BAR5_BASE_ADDR,
+            EXP_ROM_BASE_ADDR   => EXP_ROM_BASE_ADDR,
+            CQ_MFB_REGIONS      => CQ_MFB_REGIONS,
+            CQ_MFB_REGION_SIZE  => CQ_MFB_REGION_SIZE,
+            CQ_MFB_BLOCK_SIZE   => CQ_MFB_BLOCK_SIZE,
+            CQ_MFB_ITEM_WIDTH   => CQ_MFB_ITEM_WIDTH,
+            RC_MFB_REGIONS      => CORE_RC_MFB_REGIONS,
+            RC_MFB_REGION_SIZE  => RC_MFB_REGION_SIZE,
+            RC_MFB_BLOCK_SIZE   => RC_MFB_BLOCK_SIZE,
+            RC_MFB_ITEM_WIDTH   => RC_MFB_ITEM_WIDTH,
+            RC_MFB_REGIONS_DMA  => RC_MFB_REGIONS,
+            CC_MFB_REGIONS      => CC_MFB_REGIONS,
+            CC_MFB_REGION_SIZE  => CC_MFB_REGION_SIZE,
+            CC_MFB_BLOCK_SIZE   => CC_MFB_BLOCK_SIZE,
+            CC_MFB_ITEM_WIDTH   => CC_MFB_ITEM_WIDTH,
+            RQ_MFB_REGIONS      => CORE_RQ_MFB_REGIONS,
+            RQ_MFB_REGION_SIZE  => RQ_MFB_REGION_SIZE,
+            RQ_MFB_BLOCK_SIZE   => RQ_MFB_BLOCK_SIZE,
+            RQ_MFB_ITEM_WIDTH   => RQ_MFB_ITEM_WIDTH,
+            RQ_MFB_REGIONS_DMA  => RQ_MFB_REGIONS,
+            DMA_PORTS           => DMA_PORTS_PER_EP,
             PTC_DISABLE         => PTC_DISABLE,
-
-            ENDPOINT_TYPE       => ENDPOINT_TYPE,
-            ENABLE_MI           => true,
+            DMA_BAR_ENABLE      => DMA_BAR_ENABLE,
+            ENDPOINT_TYPE       => PCIE_ENDPOINT_TYPE,
             DEVICE              => DEVICE
         )
         port map (
             PCIE_CLK            => pcie_clk(i),
-            PCIE_RESET          => pcie_reset(i),
-
+            PCIE_RESET          => pcie_reset(i)(5-1 downto 0),
             DMA_CLK             => DMA_CLK,
             DMA_RESET           => DMA_RESET,
-
             MI_CLK              => MI_CLK,
             MI_RESET            => MI_RESET,
 
@@ -504,96 +463,90 @@ begin
             CTL_BAR_APERTURE    => std_logic_vector(to_unsigned(BAR_APERTURE,6)),
             CTL_RCB_SIZE        => pcie_cfg_rcb_size(i),
 
-            CRDT_UP_INIT_DONE   => crdt_up_init_done(i),
-            CRDT_UP_UPDATE      => crdt_up_update(i),
-            CRDT_UP_CNT_PH      => crdt_up_cnt_ph(i),
-            CRDT_UP_CNT_NPH     => crdt_up_cnt_nph(i),
-            CRDT_UP_CNT_CPLH    => crdt_up_cnt_cplh(i),
-            CRDT_UP_CNT_PD      => crdt_up_cnt_pd(i),
-            CRDT_UP_CNT_NPD     => crdt_up_cnt_npd(i),
-            CRDT_UP_CNT_CPLD    => crdt_up_cnt_cpld(i),
+            PCIE_RQ_MFB_DATA    => core_rq_mfb_data(i),
+            PCIE_RQ_MFB_META    => core_rq_mfb_meta(i),
+            PCIE_RQ_MFB_SOF     => core_rq_mfb_sof(i),
+            PCIE_RQ_MFB_EOF     => core_rq_mfb_eof(i),
+            PCIE_RQ_MFB_SOF_POS => core_rq_mfb_sof_pos(i),
+            PCIE_RQ_MFB_EOF_POS => core_rq_mfb_eof_pos(i),
+            PCIE_RQ_MFB_SRC_RDY => core_rq_mfb_src_rdy(i),
+            PCIE_RQ_MFB_DST_RDY => core_rq_mfb_dst_rdy(i),
 
-            CRDT_DOWN_INIT_DONE => crdt_down_init_done(i),
-            CRDT_DOWN_UPDATE    => crdt_down_update(i),
-            CRDT_DOWN_CNT_PH    => crdt_down_cnt_ph(i),
-            CRDT_DOWN_CNT_NPH   => crdt_down_cnt_nph(i),
-            CRDT_DOWN_CNT_CPLH  => crdt_down_cnt_cplh(i),
-            CRDT_DOWN_CNT_PD    => crdt_down_cnt_pd(i),
-            CRDT_DOWN_CNT_NPD   => crdt_down_cnt_npd(i),
-            CRDT_DOWN_CNT_CPLD  => crdt_down_cnt_cpld(i),
+            PCIE_RC_MFB_DATA    => core_rc_mfb_data(i),
+            PCIE_RC_MFB_META    => core_rc_mfb_meta(i),
+            PCIE_RC_MFB_SOF     => core_rc_mfb_sof(i),
+            PCIE_RC_MFB_EOF     => core_rc_mfb_eof(i),
+            PCIE_RC_MFB_SOF_POS => core_rc_mfb_sof_pos(i),
+            PCIE_RC_MFB_EOF_POS => core_rc_mfb_eof_pos(i),
+            PCIE_RC_MFB_SRC_RDY => core_rc_mfb_src_rdy(i),
+            PCIE_RC_MFB_DST_RDY => core_rc_mfb_dst_rdy(i),
 
-            AVST_DOWN_DATA      => pcie_avst_down_data(i),
-            AVST_DOWN_HDR       => pcie_avst_down_hdr(i),
-            AVST_DOWN_PREFIX    => pcie_avst_down_prefix(i),
-            AVST_DOWN_BAR_RANGE => pcie_avst_down_bar_range(i),
-            AVST_DOWN_SOP       => pcie_avst_down_sop(i),
-            AVST_DOWN_EOP       => pcie_avst_down_eop(i),
-            AVST_DOWN_EMPTY     => pcie_avst_down_empty(i),
-            AVST_DOWN_VALID     => pcie_avst_down_valid(i),
-            AVST_DOWN_READY     => pcie_avst_down_ready(i),
+            PCIE_CQ_MFB_DATA    => core_cq_mfb_data(i),
+            PCIE_CQ_MFB_META    => core_cq_mfb_meta(i),
+            PCIE_CQ_MFB_SOF     => core_cq_mfb_sof(i),
+            PCIE_CQ_MFB_EOF     => core_cq_mfb_eof(i),
+            PCIE_CQ_MFB_SOF_POS => core_cq_mfb_sof_pos(i),
+            PCIE_CQ_MFB_EOF_POS => core_cq_mfb_eof_pos(i),
+            PCIE_CQ_MFB_SRC_RDY => core_cq_mfb_src_rdy(i),
+            PCIE_CQ_MFB_DST_RDY => core_cq_mfb_dst_rdy(i),
 
-            AVST_UP_DATA        => pcie_avst_up_data(i),
-            AVST_UP_HDR         => pcie_avst_up_hdr(i),
-            AVST_UP_PREFIX      => pcie_avst_up_prefix(i),
-            AVST_UP_SOP         => pcie_avst_up_sop(i),
-            AVST_UP_EOP         => pcie_avst_up_eop(i), 
-            AVST_UP_ERROR       => pcie_avst_up_error(i), 
-            AVST_UP_VALID       => pcie_avst_up_valid(i),
-            AVST_UP_READY       => pcie_avst_up_ready(i),
+            PCIE_CC_MFB_DATA    => core_cc_mfb_data(i),
+            PCIE_CC_MFB_META    => core_cc_mfb_meta(i),
+            PCIE_CC_MFB_SOF     => core_cc_mfb_sof(i),
+            PCIE_CC_MFB_EOF     => core_cc_mfb_eof(i),
+            PCIE_CC_MFB_SOF_POS => core_cc_mfb_sof_pos(i),
+            PCIE_CC_MFB_EOF_POS => core_cc_mfb_eof_pos(i),
+            PCIE_CC_MFB_SRC_RDY => core_cc_mfb_src_rdy(i),
+            PCIE_CC_MFB_DST_RDY => core_cc_mfb_dst_rdy(i),
 
-            CQ_AXI_DATA         => pcie_cq_axi_data(i),
-            CQ_AXI_USER         => pcie_cq_axi_user(i),
-            CQ_AXI_LAST         => pcie_cq_axi_last(i),
-            CQ_AXI_KEEP         => pcie_cq_axi_keep(i),
-            CQ_AXI_VALID        => pcie_cq_axi_valid(i),
-            CQ_AXI_READY        => pcie_cq_axi_ready(i),
-    
-            CC_AXI_DATA         => pcie_cc_axi_data(i),
-            CC_AXI_USER         => pcie_cc_axi_user(i),
-            CC_AXI_LAST         => pcie_cc_axi_last(i),
-            CC_AXI_KEEP         => pcie_cc_axi_keep(i),
-            CC_AXI_VALID        => pcie_cc_axi_valid(i),
-            CC_AXI_READY        => pcie_cc_axi_ready(i),
+            DMA_RQ_MFB_DATA     => DMA_RQ_MFB_DATA(DPE),
+            DMA_RQ_MFB_META     => DMA_RQ_MFB_META(DPE),
+            DMA_RQ_MFB_SOF      => DMA_RQ_MFB_SOF(DPE),
+            DMA_RQ_MFB_EOF      => DMA_RQ_MFB_EOF(DPE),
+            DMA_RQ_MFB_SOF_POS  => DMA_RQ_MFB_SOF_POS(DPE),
+            DMA_RQ_MFB_EOF_POS  => DMA_RQ_MFB_EOF_POS(DPE),
+            DMA_RQ_MFB_SRC_RDY  => DMA_RQ_MFB_SRC_RDY(DPE),
+            DMA_RQ_MFB_DST_RDY  => DMA_RQ_MFB_DST_RDY(DPE),
 
-            RQ_AXI_DATA         => pcie_rq_axi_data(i),
-            RQ_AXI_USER         => pcie_rq_axi_user(i),
-            RQ_AXI_LAST         => pcie_rq_axi_last(i),
-            RQ_AXI_KEEP         => pcie_rq_axi_keep(i),
-            RQ_AXI_VALID        => pcie_rq_axi_valid(i),
-            RQ_AXI_READY        => pcie_rq_axi_ready(i),
+            DMA_RQ_MVB_DATA     => DMA_RQ_MVB_DATA(DPE),
+            DMA_RQ_MVB_VLD      => DMA_RQ_MVB_VLD(DPE),
+            DMA_RQ_MVB_SRC_RDY  => DMA_RQ_MVB_SRC_RDY(DPE),
+            DMA_RQ_MVB_DST_RDY  => DMA_RQ_MVB_DST_RDY(DPE),
 
-            RC_AXI_DATA         => pcie_rc_axi_data(i),
-            RC_AXI_USER         => pcie_rc_axi_user(i),
-            RC_AXI_LAST         => pcie_rc_axi_last(i),
-            RC_AXI_KEEP         => pcie_rc_axi_keep(i),
-            RC_AXI_VALID        => pcie_rc_axi_valid(i),
-            RC_AXI_READY        => pcie_rc_axi_ready(i),
+            DMA_RC_MFB_DATA     => DMA_RC_MFB_DATA(DPE),
+            DMA_RC_MFB_META     => DMA_RC_MFB_META(DPE),
+            DMA_RC_MFB_SOF      => DMA_RC_MFB_SOF(DPE),
+            DMA_RC_MFB_EOF      => DMA_RC_MFB_EOF(DPE),
+            DMA_RC_MFB_SOF_POS  => DMA_RC_MFB_SOF_POS(DPE),
+            DMA_RC_MFB_EOF_POS  => DMA_RC_MFB_EOF_POS(DPE),
+            DMA_RC_MFB_SRC_RDY  => DMA_RC_MFB_SRC_RDY(DPE),
+            DMA_RC_MFB_DST_RDY  => DMA_RC_MFB_DST_RDY(DPE),
 
-            TAG_ASSIGN          => pcie_tag_assign(i),
-            TAG_ASSIGN_VLD      => pcie_tag_assign_vld(i),
+            DMA_RC_MVB_DATA     => DMA_RC_MVB_DATA(DPE),
+            DMA_RC_MVB_VLD      => DMA_RC_MVB_VLD(DPE),
+            DMA_RC_MVB_SRC_RDY  => DMA_RC_MVB_SRC_RDY(DPE),
+            DMA_RC_MVB_DST_RDY  => DMA_RC_MVB_DST_RDY(DPE),
 
-            UP_MVB_DATA         => UP_MVB_DATA((i+1)*DMA_PORTS_PER_EP-1 downto i*DMA_PORTS_PER_EP),
-            UP_MVB_VLD          => UP_MVB_VLD((i+1)*DMA_PORTS_PER_EP-1 downto i*DMA_PORTS_PER_EP),
-            UP_MVB_SRC_RDY      => UP_MVB_SRC_RDY((i+1)*DMA_PORTS_PER_EP-1 downto i*DMA_PORTS_PER_EP),
-            UP_MVB_DST_RDY      => UP_MVB_DST_RDY((i+1)*DMA_PORTS_PER_EP-1 downto i*DMA_PORTS_PER_EP),
-            UP_MFB_DATA         => UP_MFB_DATA((i+1)*DMA_PORTS_PER_EP-1 downto i*DMA_PORTS_PER_EP),
-            UP_MFB_SOF          => UP_MFB_SOF((i+1)*DMA_PORTS_PER_EP-1 downto i*DMA_PORTS_PER_EP),
-            UP_MFB_EOF          => UP_MFB_EOF((i+1)*DMA_PORTS_PER_EP-1 downto i*DMA_PORTS_PER_EP),
-            UP_MFB_SOF_POS      => UP_MFB_SOF_POS((i+1)*DMA_PORTS_PER_EP-1 downto i*DMA_PORTS_PER_EP),
-            UP_MFB_EOF_POS      => UP_MFB_EOF_POS((i+1)*DMA_PORTS_PER_EP-1 downto i*DMA_PORTS_PER_EP),
-            UP_MFB_SRC_RDY      => UP_MFB_SRC_RDY((i+1)*DMA_PORTS_PER_EP-1 downto i*DMA_PORTS_PER_EP),
-            UP_MFB_DST_RDY      => UP_MFB_DST_RDY((i+1)*DMA_PORTS_PER_EP-1 downto i*DMA_PORTS_PER_EP),
-            DOWN_MVB_DATA       => DOWN_MVB_DATA((i+1)*DMA_PORTS_PER_EP-1 downto i*DMA_PORTS_PER_EP),
-            DOWN_MVB_VLD        => DOWN_MVB_VLD((i+1)*DMA_PORTS_PER_EP-1 downto i*DMA_PORTS_PER_EP),
-            DOWN_MVB_SRC_RDY    => DOWN_MVB_SRC_RDY((i+1)*DMA_PORTS_PER_EP-1 downto i*DMA_PORTS_PER_EP),
-            DOWN_MVB_DST_RDY    => DOWN_MVB_DST_RDY((i+1)*DMA_PORTS_PER_EP-1 downto i*DMA_PORTS_PER_EP),
-            DOWN_MFB_DATA       => DOWN_MFB_DATA((i+1)*DMA_PORTS_PER_EP-1 downto i*DMA_PORTS_PER_EP),
-            DOWN_MFB_SOF        => DOWN_MFB_SOF((i+1)*DMA_PORTS_PER_EP-1 downto i*DMA_PORTS_PER_EP),
-            DOWN_MFB_EOF        => DOWN_MFB_EOF((i+1)*DMA_PORTS_PER_EP-1 downto i*DMA_PORTS_PER_EP),
-            DOWN_MFB_SOF_POS    => DOWN_MFB_SOF_POS((i+1)*DMA_PORTS_PER_EP-1 downto i*DMA_PORTS_PER_EP),
-            DOWN_MFB_EOF_POS    => DOWN_MFB_EOF_POS((i+1)*DMA_PORTS_PER_EP-1 downto i*DMA_PORTS_PER_EP),
-            DOWN_MFB_SRC_RDY    => DOWN_MFB_SRC_RDY((i+1)*DMA_PORTS_PER_EP-1 downto i*DMA_PORTS_PER_EP),
-            DOWN_MFB_DST_RDY    => DOWN_MFB_DST_RDY((i+1)*DMA_PORTS_PER_EP-1 downto i*DMA_PORTS_PER_EP),
+            DMA_CQ_MFB_DATA     => DMA_CQ_MFB_DATA(DPE),
+            DMA_CQ_MFB_META     => DMA_CQ_MFB_META(DPE),
+            DMA_CQ_MFB_SOF      => DMA_CQ_MFB_SOF(DPE),
+            DMA_CQ_MFB_EOF      => DMA_CQ_MFB_EOF(DPE),
+            DMA_CQ_MFB_SOF_POS  => DMA_CQ_MFB_SOF_POS(DPE),
+            DMA_CQ_MFB_EOF_POS  => DMA_CQ_MFB_EOF_POS(DPE),
+            DMA_CQ_MFB_SRC_RDY  => DMA_CQ_MFB_SRC_RDY(DPE),
+            DMA_CQ_MFB_DST_RDY  => DMA_CQ_MFB_DST_RDY(DPE),
+
+            DMA_CC_MFB_DATA     => DMA_CC_MFB_DATA(DPE),
+            DMA_CC_MFB_META     => DMA_CC_MFB_META(DPE),
+            DMA_CC_MFB_SOF      => DMA_CC_MFB_SOF(DPE),
+            DMA_CC_MFB_EOF      => DMA_CC_MFB_EOF(DPE),
+            DMA_CC_MFB_SOF_POS  => DMA_CC_MFB_SOF_POS(DPE),
+            DMA_CC_MFB_EOF_POS  => DMA_CC_MFB_EOF_POS(DPE),
+            DMA_CC_MFB_SRC_RDY  => DMA_CC_MFB_SRC_RDY(DPE),
+            DMA_CC_MFB_DST_RDY  => DMA_CC_MFB_DST_RDY(DPE),
+
+            RQ_TAG_ASSIGN       => core_rq_tag_assign(i),
+            RQ_TAG_ASSIGN_VLD   => core_rq_tag_assign_vld(i),
 
             MI_DWR              => MI_DWR (i),
             MI_ADDR             => MI_ADDR(i),
