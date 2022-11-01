@@ -209,41 +209,75 @@ architecture FULL of FPGA_COMMON is
         return 8;
     end function;
 
+    function pcie_mfb_regions_calc_f(PCIE_DIR : string) return natural is
+        variable pcie_mfb_regions : natural;
+    begin
+        pcie_mfb_regions := 0;
+
+        if (PCIE_ENDPOINT_TYPE="P_TILE") then -- Gen4 mode only
+            if (PCIE_ENDPOINT_MODE = 0) then -- x16
+                pcie_mfb_regions := 2; --2x256b AVST
+            elsif (PCIE_ENDPOINT_MODE = 1) then --x8x8
+                pcie_mfb_regions := 1; --1x256b AVST
+            end if;
+        end if;
+
+        if (PCIE_ENDPOINT_TYPE="R_TILE") then -- Gen5 mode only
+            if (PCIE_ENDPOINT_MODE = 0) then -- x16
+                pcie_mfb_regions := 4; --4x256b AVST
+            elsif (PCIE_ENDPOINT_MODE = 1) then --x8x8
+                pcie_mfb_regions := 2; --2x256b AVST
+            end if;
+        end if;
+
+        if (PCIE_ENDPOINT_TYPE="USP") then -- Gen3 mode only
+            if (PCIE_ENDPOINT_MODE = 0) then -- x16
+                pcie_mfb_regions := 2; --2x256b AXI
+            elsif (PCIE_ENDPOINT_MODE = 2) then --x8
+                pcie_mfb_regions := 1; --1x256b AXI
+            end if;
+            if (PCIE_DIR="RC") then -- USP RC support up to 4 TLP in word
+                pcie_mfb_regions := pcie_mfb_regions*2;
+            end if;
+        end if;
+
+        -- PTC conversion to DMA streams for DMA_TYPE=3
+        if ((PCIE_DIR="RQ" or PCIE_DIR="RC") and (not PTC_DISABLE)) then
+            if (PCIE_ENDPOINT_TYPE="P_TILE" and PCIE_ENDPOINT_MODE = 1) then
+                -- 256b@~500MHz PCIe stream to 512b@200MHz PTC-DMA stream
+                pcie_mfb_regions := pcie_mfb_regions*2;
+            end if;
+            if (PCIE_ENDPOINT_TYPE="R_TILE" and PCIE_ENDPOINT_MODE = 0) then --TODO
+                -- 1024b@~250MHz PCIe stream to 512b@200MHz PTC-DMA stream
+                pcie_mfb_regions := pcie_mfb_regions/2;
+            end if;
+        end if;
+
+        return pcie_mfb_regions;
+    end function;
+
     -- MFB parameters
     constant MFB_REGIONS      : integer := ETH_MFB_REGION;  -- Number of regions in word - TODO
     constant MFB_REGION_SIZE  : integer := mfb_reg_size_calc_f;  -- Number of blocks in region
     constant MFB_BLOCK_SIZE   : integer := 8;  -- Number of items in block
     constant MFB_ITEM_WIDTH   : integer := 8;  -- Width of one item in bits
 
-    -- This function returns the number of required regions in MFB UP bus depending on multiple
-    -- parameters like PCIE configuration and device being used.
-    function dma_up_regions_calc_f
-        return natural is
-    begin
-        if (DEVICE = "ULTRASCALE" and DMA_TYPE = 4 and PCIE_ENDPOINTS = 1 and PCIE_ENDPOINT_MODE = 2) then
-            return 1;
-        end if;
-
-        return 2;
-    end function;
-
     -- DMA MVB UP parameters
-    constant DMA_UP_MVB_ITEMS        : integer := dma_up_regions_calc_f;  -- Number of items (headers) in word
-    constant DMA_UP_MVB_ITEM_WIDTH   : integer := DMA_UPHDR_WIDTH; -- Width of one item (header) in bits
+    constant DMA_UP_MVB_ITEMS         : natural := pcie_mfb_regions_calc_f("RQ");
+    constant DMA_UP_MVB_ITEM_WIDTH    : natural := DMA_UPHDR_WIDTH;
     -- DMA MFB UP parameters
-    constant DMA_UP_MFB_REGIONS      : integer := dma_up_regions_calc_f;  -- Number of regions in word
-    constant DMA_UP_MFB_REGION_SIZE  : integer := 1;  -- Number of blocks in region
-    constant DMA_UP_MFB_BLOCK_SIZE   : integer := 8;  -- Number of items in block
-    constant DMA_UP_MFB_ITEM_WIDTH   : integer := 32;  -- Width of one item in bits
-
+    constant DMA_UP_MFB_REGIONS       : natural := pcie_mfb_regions_calc_f("RQ");
+    constant DMA_UP_MFB_REGION_SIZE   : natural := 1;
+    constant DMA_UP_MFB_BLOCK_SIZE    : natural := 8;
+    constant DMA_UP_MFB_ITEM_WIDTH    : natural := 32;
     -- DMA MVB DOWN parameters
-    constant DMA_DOWN_MVB_ITEMS        : integer := tsel(DEVICE="ULTRASCALE" and PCIE_ENDPOINT_MODE = 0,4,2);  -- Number of items (headers) in word
-    constant DMA_DOWN_MVB_ITEM_WIDTH   : integer := DMA_DOWNHDR_WIDTH; -- Width of one item (header) in bits
+    constant DMA_DOWN_MVB_ITEMS       : natural := pcie_mfb_regions_calc_f("RC");
+    constant DMA_DOWN_MVB_ITEM_WIDTH  : natural := DMA_DOWNHDR_WIDTH;
     -- DMA MFB DOWN parameters
-    constant DMA_DOWN_MFB_REGIONS      : integer := tsel(DEVICE="ULTRASCALE" and PCIE_ENDPOINT_MODE = 0,4,2);  -- Number of regions in word
-    constant DMA_DOWN_MFB_REGION_SIZE  : integer := 1;  -- Number of blocks in region
-    constant DMA_DOWN_MFB_BLOCK_SIZE   : integer := tsel(DEVICE="ULTRASCALE",4,8);  -- Number of items in block
-    constant DMA_DOWN_MFB_ITEM_WIDTH   : integer := 32;  -- Width of one item in bits
+    constant DMA_DOWN_MFB_REGIONS     : natural := pcie_mfb_regions_calc_f("RC");
+    constant DMA_DOWN_MFB_REGION_SIZE : natural := 1;
+    constant DMA_DOWN_MFB_BLOCK_SIZE  : natural := tsel(PCIE_ENDPOINT_TYPE="USP",4,8);
+    constant DMA_DOWN_MFB_ITEM_WIDTH  : natural := 32;
 
     -- DMA CrossbarX clock selection
     constant DMA_CROX_CLK_SEL    : integer := 0;
@@ -548,37 +582,35 @@ begin
         BAR5_BASE_ADDR      => BAR5_BASE_ADDR,
         EXP_ROM_BASE_ADDR   => EXP_ROM_BASE_ADDR,
 
-        VENDOR_ID           => PCI_VENDOR_ID,
-        DEVICE_ID           => PCI_DEVICE_ID,
-        SUBVENDOR_ID        => PCI_SUBVENDOR_ID,
-        SUBDEVICE_ID        => PCI_SUBDEVICE_ID,
-        XVC_ENABLE          => false,
-        PF0_TOTAL_VF        => 0,
+        CQ_MFB_REGIONS      => pcie_mfb_regions_calc_f("CQ"),
+        CQ_MFB_REGION_SIZE  => DMA_UP_MFB_REGION_SIZE,
+        CQ_MFB_BLOCK_SIZE   => DMA_UP_MFB_BLOCK_SIZE,
+        CQ_MFB_ITEM_WIDTH   => DMA_UP_MFB_ITEM_WIDTH,
+        RC_MFB_REGIONS      => DMA_DOWN_MFB_REGIONS,
+        RC_MFB_REGION_SIZE  => DMA_DOWN_MFB_REGION_SIZE,
+        RC_MFB_BLOCK_SIZE   => DMA_DOWN_MFB_BLOCK_SIZE,
+        RC_MFB_ITEM_WIDTH   => DMA_DOWN_MFB_ITEM_WIDTH,
+        CC_MFB_REGIONS      => pcie_mfb_regions_calc_f("CC"),
+        CC_MFB_REGION_SIZE  => DMA_UP_MFB_REGION_SIZE,
+        CC_MFB_BLOCK_SIZE   => DMA_UP_MFB_BLOCK_SIZE,
+        CC_MFB_ITEM_WIDTH   => DMA_UP_MFB_ITEM_WIDTH,
+        RQ_MFB_REGIONS      => DMA_UP_MFB_REGIONS,
+        RQ_MFB_REGION_SIZE  => DMA_UP_MFB_REGION_SIZE,
+        RQ_MFB_BLOCK_SIZE   => DMA_UP_MFB_BLOCK_SIZE,
+        RQ_MFB_ITEM_WIDTH   => DMA_UP_MFB_ITEM_WIDTH,
 
-        CARD_ID_WIDTH       => CARD_ID_WIDTH,
-        DMA_ENDPOINTS       => DMA_ENDPOINTS,
-
-        MVB_UP_ITEMS        => DMA_UP_MVB_ITEMS,
-        MFB_UP_REGIONS      => DMA_UP_MFB_REGIONS,
-        MFB_UP_REG_SIZE     => DMA_UP_MFB_REGION_SIZE,
-        MFB_UP_BLOCK_SIZE   => DMA_UP_MFB_BLOCK_SIZE,
-        MFB_UP_ITEM_WIDTH   => DMA_UP_MFB_ITEM_WIDTH,
-
-        MVB_DOWN_ITEMS      => DMA_DOWN_MVB_ITEMS,
-        MFB_DOWN_REGIONS    => DMA_DOWN_MFB_REGIONS,
-        MFB_DOWN_REG_SIZE   => DMA_DOWN_MFB_REGION_SIZE,
-        MFB_DOWN_BLOCK_SIZE => DMA_DOWN_MFB_BLOCK_SIZE,
-        MFB_DOWN_ITEM_WIDTH => DMA_DOWN_MFB_ITEM_WIDTH,
-
-        ENDPOINT_TYPE       => PCIE_ENDPOINT_TYPE,
-        ENDPOINT_MODE       => PCIE_ENDPOINT_MODE,
+        DMA_PORTS           => DMA_ENDPOINTS,
+        PCIE_ENDPOINT_TYPE  => PCIE_ENDPOINT_TYPE,
+        PCIE_ENDPOINT_MODE  => PCIE_ENDPOINT_MODE,
         PCIE_ENDPOINTS      => PCIE_ENDPOINTS,
         PCIE_CLKS           => PCIE_CLKS,
         PCIE_CONS           => PCIE_CONS,
         PCIE_LANES          => PCIE_LANES,
 
         PTC_DISABLE         => PTC_DISABLE,
-
+        DMA_BAR_ENABLE      => false,
+        XVC_ENABLE          => false,
+        CARD_ID_WIDTH       => CARD_ID_WIDTH,
         DEVICE              => DEVICE
     )
     port map (
@@ -599,31 +631,51 @@ begin
         DMA_CLK            => clk_dma,
         DMA_RESET          => rst_dma(0),
         
-        UP_MFB_DATA        => dma_up_mfb_data,
-        UP_MFB_SOF         => dma_up_mfb_sof,
-        UP_MFB_EOF         => dma_up_mfb_eof,
-        UP_MFB_SOF_POS     => dma_up_mfb_sof_pos,
-        UP_MFB_EOF_POS     => dma_up_mfb_eof_pos,
-        UP_MFB_SRC_RDY     => dma_up_mfb_src_rdy,
-        UP_MFB_DST_RDY     => dma_up_mfb_dst_rdy,
+        DMA_RQ_MFB_DATA    => dma_up_mfb_data,
+        DMA_RQ_MFB_META    => (others => (others => '0')),
+        DMA_RQ_MFB_SOF     => dma_up_mfb_sof,
+        DMA_RQ_MFB_EOF     => dma_up_mfb_eof,
+        DMA_RQ_MFB_SOF_POS => dma_up_mfb_sof_pos,
+        DMA_RQ_MFB_EOF_POS => dma_up_mfb_eof_pos,
+        DMA_RQ_MFB_SRC_RDY => dma_up_mfb_src_rdy,
+        DMA_RQ_MFB_DST_RDY => dma_up_mfb_dst_rdy,
 
-        UP_MVB_DATA        => dma_up_mvb_data,
-        UP_MVB_VLD         => dma_up_mvb_vld,
-        UP_MVB_SRC_RDY     => dma_up_mvb_src_rdy,
-        UP_MVB_DST_RDY     => dma_up_mvb_dst_rdy,
+        DMA_RQ_MVB_DATA    => dma_up_mvb_data,
+        DMA_RQ_MVB_VLD     => dma_up_mvb_vld,
+        DMA_RQ_MVB_SRC_RDY => dma_up_mvb_src_rdy,
+        DMA_RQ_MVB_DST_RDY => dma_up_mvb_dst_rdy,
 
-        DOWN_MFB_DATA      => dma_down_mfb_data,
-        DOWN_MFB_SOF       => dma_down_mfb_sof,
-        DOWN_MFB_EOF       => dma_down_mfb_eof,
-        DOWN_MFB_SOF_POS   => dma_down_mfb_sof_pos,
-        DOWN_MFB_EOF_POS   => dma_down_mfb_eof_pos,
-        DOWN_MFB_SRC_RDY   => dma_down_mfb_src_rdy,
-        DOWN_MFB_DST_RDY   => dma_down_mfb_dst_rdy,
+        DMA_RC_MFB_DATA    => dma_down_mfb_data,
+        DMA_RC_MFB_META    => open,
+        DMA_RC_MFB_SOF     => dma_down_mfb_sof,
+        DMA_RC_MFB_EOF     => dma_down_mfb_eof,
+        DMA_RC_MFB_SOF_POS => dma_down_mfb_sof_pos,
+        DMA_RC_MFB_EOF_POS => dma_down_mfb_eof_pos,
+        DMA_RC_MFB_SRC_RDY => dma_down_mfb_src_rdy,
+        DMA_RC_MFB_DST_RDY => dma_down_mfb_dst_rdy,
 
-        DOWN_MVB_DATA      => dma_down_mvb_data,
-        DOWN_MVB_VLD       => dma_down_mvb_vld,
-        DOWN_MVB_SRC_RDY   => dma_down_mvb_src_rdy,
-        DOWN_MVB_DST_RDY   => dma_down_mvb_dst_rdy,
+        DMA_RC_MVB_DATA    => dma_down_mvb_data,
+        DMA_RC_MVB_VLD     => dma_down_mvb_vld,
+        DMA_RC_MVB_SRC_RDY => dma_down_mvb_src_rdy,
+        DMA_RC_MVB_DST_RDY => dma_down_mvb_dst_rdy,
+
+        DMA_CQ_MFB_DATA    => open,
+        DMA_CQ_MFB_META    => open,
+        DMA_CQ_MFB_SOF     => open,
+        DMA_CQ_MFB_EOF     => open,
+        DMA_CQ_MFB_SOF_POS => open,
+        DMA_CQ_MFB_EOF_POS => open,
+        DMA_CQ_MFB_SRC_RDY => open,
+        DMA_CQ_MFB_DST_RDY => (others => '0'),
+
+        DMA_CC_MFB_DATA    => (others => (others => '0')),
+        DMA_CC_MFB_META    => (others => (others => '0')),
+        DMA_CC_MFB_SOF     => (others => (others => '0')),
+        DMA_CC_MFB_EOF     => (others => (others => '0')),
+        DMA_CC_MFB_SOF_POS => (others => (others => '0')),
+        DMA_CC_MFB_EOF_POS => (others => (others => '0')),
+        DMA_CC_MFB_SRC_RDY => (others => '0'),
+        DMA_CC_MFB_DST_RDY => open,
 
         MI_CLK             => clk_mi,
         MI_RESET           => rst_mi(0),
