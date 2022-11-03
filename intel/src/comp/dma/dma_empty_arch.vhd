@@ -134,34 +134,34 @@ begin
     --  DMA USER INPUT PACK/UNPACK
     -- =====================================================================
 
-    rx_usr_arr_mvb_len      <= slv_array_deser(RX_USR_MVB_LEN,DMA_STREAMS);
-    rx_usr_arr_mvb_hdr_meta <= slv_array_deser(RX_USR_MVB_HDR_META,DMA_STREAMS);
-    rx_usr_arr_mvb_channel  <= slv_array_deser(RX_USR_MVB_CHANNEL,DMA_STREAMS);
-    rx_usr_arr_mvb_discard  <= slv_array_deser(RX_USR_MVB_DISCARD,DMA_STREAMS);
-    rx_usr_arr_mvb_vld      <= slv_array_deser(RX_USR_MVB_VLD,DMA_STREAMS);
+    rx_usr_arr_mvb_len      <= RX_USR_MVB_LEN;
+    rx_usr_arr_mvb_hdr_meta <= RX_USR_MVB_HDR_META;
+    rx_usr_arr_mvb_channel  <= RX_USR_MVB_CHANNEL;
+    rx_usr_arr_mvb_discard  <= RX_USR_MVB_DISCARD;
+    rx_usr_arr_mvb_vld      <= RX_USR_MVB_VLD;
     rx_usr_arr_mvb_src_rdy  <= RX_USR_MVB_SRC_RDY;
     RX_USR_MVB_DST_RDY      <= rx_usr_arr_mvb_dst_rdy;
     
-    rx_usr_arr_mfb_data     <= slv_array_deser(RX_USR_MFB_DATA,DMA_STREAMS);
-    rx_usr_arr_mfb_sof      <= slv_array_deser(RX_USR_MFB_SOF,DMA_STREAMS);
-    rx_usr_arr_mfb_eof      <= slv_array_deser(RX_USR_MFB_EOF,DMA_STREAMS);
-    rx_usr_arr_mfb_sof_pos  <= slv_array_deser(RX_USR_MFB_SOF_POS,DMA_STREAMS);
-    rx_usr_arr_mfb_eof_pos  <= slv_array_deser(RX_USR_MFB_EOF_POS,DMA_STREAMS);
+    rx_usr_arr_mfb_data     <= RX_USR_MFB_DATA;
+    rx_usr_arr_mfb_sof      <= RX_USR_MFB_SOF;
+    rx_usr_arr_mfb_eof      <= RX_USR_MFB_EOF;
+    rx_usr_arr_mfb_sof_pos  <= RX_USR_MFB_SOF_POS;
+    rx_usr_arr_mfb_eof_pos  <= RX_USR_MFB_EOF_POS;
     rx_usr_arr_mfb_src_rdy  <= RX_USR_MFB_SRC_RDY;
     RX_USR_MFB_DST_RDY      <= rx_usr_arr_mfb_dst_rdy;
 
-    TX_USR_MVB_LEN          <= slv_array_ser(tx_usr_arr_mvb_len);
-    TX_USR_MVB_HDR_META     <= slv_array_ser(tx_usr_arr_mvb_hdr_meta);
-    TX_USR_MVB_CHANNEL      <= slv_array_ser(tx_usr_arr_mvb_channel);
-    TX_USR_MVB_VLD          <= slv_array_ser(tx_usr_arr_mvb_vld);
+    TX_USR_MVB_LEN          <= tx_usr_arr_mvb_len;
+    TX_USR_MVB_HDR_META     <= tx_usr_arr_mvb_hdr_meta;
+    TX_USR_MVB_CHANNEL      <= tx_usr_arr_mvb_channel;
+    TX_USR_MVB_VLD          <= tx_usr_arr_mvb_vld;
     TX_USR_MVB_SRC_RDY      <= tx_usr_arr_mvb_src_rdy;
     tx_usr_arr_mvb_dst_rdy  <= TX_USR_MVB_DST_RDY;
 
-    TX_USR_MFB_DATA         <= slv_array_ser(tx_usr_arr_mfb_data);
-    TX_USR_MFB_SOF          <= slv_array_ser(tx_usr_arr_mfb_sof);
-    TX_USR_MFB_EOF          <= slv_array_ser(tx_usr_arr_mfb_eof);
-    TX_USR_MFB_SOF_POS      <= slv_array_ser(tx_usr_arr_mfb_sof_pos);
-    TX_USR_MFB_EOF_POS      <= slv_array_ser(tx_usr_arr_mfb_eof_pos);
+    TX_USR_MFB_DATA         <= tx_usr_arr_mfb_data;
+    TX_USR_MFB_SOF          <= tx_usr_arr_mfb_sof;
+    TX_USR_MFB_EOF          <= tx_usr_arr_mfb_eof;
+    TX_USR_MFB_SOF_POS      <= tx_usr_arr_mfb_sof_pos;
+    TX_USR_MFB_EOF_POS      <= tx_usr_arr_mfb_eof_pos;
     TX_USR_MFB_SRC_RDY      <= tx_usr_arr_mfb_src_rdy;
     tx_usr_arr_mfb_dst_rdy  <= TX_USR_MFB_DST_RDY;
 
