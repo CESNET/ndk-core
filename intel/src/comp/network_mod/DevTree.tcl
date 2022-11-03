@@ -7,8 +7,9 @@
 # 7.  ETH_PORT_LANES  - array of integer, number of lanes for all ports
 # 8.  ETH_PORT_RX_MTU - array of integer, RX MTU value for all ports
 # 9.  ETH_PORT_TX_MTU - array of integer, TX MTU value for all ports
-# 10. card_name - name of the card
-proc dts_network_mod { base_mac base_pcs base_pmd ports ETH_PORT_SPEED ETH_PORT_CHAN ETH_PORT_LANES ETH_PORT_RX_MTU ETH_PORT_TX_MTU card_name} {
+# 10. eth_ip_name - name of used IP (CMAC, E-Tile,...)
+# 11. card_name - name of the card
+proc dts_network_mod { base_mac base_pcs base_pmd ports ETH_PORT_SPEED ETH_PORT_CHAN ETH_PORT_LANES ETH_PORT_RX_MTU ETH_PORT_TX_MTU eth_ip_name card_name} {
 
     # use upvar to pass an array
     upvar $ETH_PORT_SPEED port_speed
@@ -53,13 +54,14 @@ proc dts_network_mod { base_mac base_pcs base_pmd ports ETH_PORT_SPEED ETH_PORT_
         append ret "pmdctrl$p:" [dts_pmd_ctrl $p [expr $base_pmd + $PMD_PORT_OFF * $p + 0x1c]]
         append ret "pmd$p:" [dts_eth_transciever $p "QSFP" "pmdctrl$p" "i2c$p" $QSFP_I2C_ADDR($p)]
         set channel_lanes [expr $port_lanes($p)/$port_chan($p)]
+        set pcspma_params "ip-name = \"$eth_ip_name\";"
         for {set ch 0} {$ch < $port_chan($p)} {incr ch} {
             set    eth_lanes ""
             for {set lan 0} {$lan < $channel_lanes} {incr lan} {
                 append eth_lanes "[expr $ch * $channel_lanes + $lan] "
             }
             append ret "regarr$ei:" [dts_pcs_regs $ei [expr $base_pcs + $MGMT_PORT_OFF * $p + $MGMT_CHAN_OFF * $ch]]
-            append ret "pcspma$ei:" [dts_mgmt $ei "$port_speed($p)G" "regarr$ei" ""]
+            append ret "pcspma$ei:" [dts_mgmt $ei "$port_speed($p)G" "regarr$ei" $pcspma_params]
             append ret "txmac$ei:" [dts_tx_mac_lite $ei $port_speed($p) [expr $base_mac + $p * $PORTS_OFF + $ch * $CHAN_OFF + $TX_RX_MAC_OFF * 0] $port_tx_mtu($p)]
             append ret "rxmac$ei:" [dts_rx_mac_lite $ei $port_speed($p) [expr $base_mac + $p * $PORTS_OFF + $ch * $CHAN_OFF + $TX_RX_MAC_OFF * 1] $port_rx_mtu($p)]
             append ret [dts_eth_channel $ei $p $ei $ei $ei $eth_lanes]
