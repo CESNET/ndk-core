@@ -9,9 +9,9 @@
 */
 
 
-class env #(ETH_STREAMS, ETH_CHANNELS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU,
+class env #(ETH_STREAMS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU,
             REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, MFB_ITEM_WIDTH, MEM_PORTS, MEM_ADDR_WIDTH, MEM_BURST_WIDTH, MEM_DATA_WIDTH, MI_DATA_WIDTH, MI_ADDR_WIDTH) extends uvm_env;
-    `uvm_component_param_utils(uvm_app_core::env#(ETH_STREAMS, ETH_CHANNELS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU,
+    `uvm_component_param_utils(uvm_app_core::env#(ETH_STREAMS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU,
             REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, MFB_ITEM_WIDTH, MEM_PORTS, MEM_ADDR_WIDTH, MEM_BURST_WIDTH, MEM_DATA_WIDTH, MI_DATA_WIDTH, MI_ADDR_WIDTH))
 
     // ETHERNET I/O
@@ -33,10 +33,10 @@ class env #(ETH_STREAMS, ETH_CHANNELS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR
     uvm_reset::env#(MEM_PORTS) m_resets_mem;
 
     //CONFIGURATION INTERFACE
-    uvm_mi::regmodel#(uvm_app_core::regmodel #(ETH_STREAMS, ETH_CHANNELS, DMA_RX_CHANNELS), MI_DATA_WIDTH, MI_ADDR_WIDTH) m_regmodel;
+    uvm_mi::regmodel#(uvm_app_core::regmodel, MI_DATA_WIDTH, MI_ADDR_WIDTH) m_regmodel;
 
     //SCOREBOARD
-    scoreboard #(ETH_STREAMS, ETH_CHANNELS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, REGIONS, MFB_ITEM_WIDTH, MI_DATA_WIDTH, MI_ADDR_WIDTH) m_scoreboard;
+    scoreboard #(ETH_STREAMS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, MFB_ITEM_WIDTH) m_scoreboard;
 
     function new(string name, uvm_component parent = null);
         super.new(name, parent);
@@ -171,11 +171,11 @@ class env #(ETH_STREAMS, ETH_CHANNELS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR
         m_mi_config.agent.active         = UVM_ACTIVE;
         m_mi_config.agent.interface_name = "MI_INTERFACE";
         uvm_config_db#(uvm_mi::regmodel_config)::set(this, "m_regmodel", "m_config", m_mi_config);
-        m_regmodel = uvm_mi::regmodel#(uvm_app_core::regmodel #(ETH_STREAMS, ETH_CHANNELS, DMA_RX_CHANNELS), MI_DATA_WIDTH, MI_ADDR_WIDTH)::type_id::create("m_regmodel", this);
+        m_regmodel = uvm_mi::regmodel#(uvm_app_core::regmodel, MI_DATA_WIDTH, MI_ADDR_WIDTH)::type_id::create("m_regmodel", this);
 
         ///////////////
         // SCOREBOARD
-        m_scoreboard = scoreboard #(ETH_STREAMS, ETH_CHANNELS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, REGIONS, MFB_ITEM_WIDTH, MI_DATA_WIDTH, MI_ADDR_WIDTH)::type_id::create("m_scoreboard", this);
+        m_scoreboard = scoreboard #(ETH_STREAMS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, MFB_ITEM_WIDTH)::type_id::create("m_scoreboard", this);
     endfunction
 
     function void delay_max_set(time delay_max);

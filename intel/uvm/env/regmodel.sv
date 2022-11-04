@@ -8,8 +8,8 @@
  * SPDX-License-Identifier: BSD-3-Clause
 */
 
-class regmodel #(STREAMS, CHANNELS, OUTPUT_CHANNELS) extends uvm_reg_block;
-    `uvm_object_param_utils(uvm_app_core::regmodel #(STREAMS, CHANNELS, OUTPUT_CHANNELS))
+class regmodel extends uvm_reg_block;
+    `uvm_object_utils(uvm_app_core::regmodel)
 
     function new(string name = "reg_block");
         super.new(name, build_coverage(UVM_NO_COVERAGE));

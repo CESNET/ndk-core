@@ -24,11 +24,11 @@ class packet_header #(WIDTH, CHANNELS, PKT_MTU);
 endclass
 
 
-class model #(ETH_STREAMS, ETH_CHANNELS, ETH_RX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, MVB_ITEMS, ITEM_WIDTH, MI_DATA_WIDTH, MI_ADDR_WIDTH) extends uvm_component;
-    `uvm_component_param_utils(uvm_app_core::model#(ETH_STREAMS, ETH_CHANNELS, ETH_RX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, MVB_ITEMS, ITEM_WIDTH, MI_DATA_WIDTH, MI_ADDR_WIDTH))
+class model #(ETH_STREAMS, ETH_RX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, ITEM_WIDTH) extends uvm_component;
+    `uvm_component_param_utils(uvm_app_core::model#(ETH_STREAMS, ETH_RX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, ITEM_WIDTH))
 
     //RESET
-    typedef model#(ETH_STREAMS, ETH_CHANNELS, ETH_RX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, MVB_ITEMS, ITEM_WIDTH, MI_DATA_WIDTH, MI_ADDR_WIDTH) this_type;
+    typedef model#(ETH_STREAMS, ETH_RX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, ITEM_WIDTH) this_type;
     uvm_analysis_imp_reset#(uvm_reset::sequence_item, this_type) analysis_imp_reset;
 
     //ETH
@@ -79,7 +79,7 @@ class model #(ETH_STREAMS, ETH_CHANNELS, ETH_RX_HDR_WIDTH, DMA_STREAMS, DMA_RX_C
         end
     endfunction
 
-    virtual function void regmodel_set(uvm_app_core::regmodel #(ETH_STREAMS, ETH_CHANNELS, DMA_RX_CHANNELS) m_regmodel_base);
+    virtual function void regmodel_set(uvm_app_core::regmodel m_regmodel_base);
     endfunction
 
     virtual function bit used();
