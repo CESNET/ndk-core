@@ -435,6 +435,18 @@ architecture RTILE of PCIE_CORE is
     
     constant VSEC_BASE_ADDRESS : integer := 16#D00#;
     constant PCIE_HIPS         : natural := tsel(ENDPOINT_MODE=0,PCIE_ENDPOINTS,PCIE_ENDPOINTS/2);
+    constant MAX_PAYLOAD_SIZE  : natural := 512;
+    -- MPS_CODE:
+    -- 000b: 128 bytes maximum payload size
+    -- 001b: 256 bytes maximum payload size
+    -- 010b: 512 bytes maximum payload size
+    -- 011b: 1024 bytes maximum payload size
+    constant MPS_CODE         : std_logic_vector(2 downto 0) := std_logic_vector(to_unsigned((log2(MAX_PAYLOAD_SIZE)-7),3));
+    -- 1credit = 16B = 128b = 4DW
+    constant AVST_WORD_CRDT   : natural := (CQ_MFB_REGIONS*256)/128;
+    constant CQ_FIFO_ITEMS   : natural := 512;
+    constant MTC_FIFO_CRDT    : natural := CQ_FIFO_ITEMS*AVST_WORD_CRDT;
+    constant CRDT_TOTAL_XPH   : natural := MTC_FIFO_CRDT/(MAX_PAYLOAD_SIZE/16);
 
     signal pcie_reset_status_n      : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
     signal pcie_reset_status        : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
@@ -446,28 +458,28 @@ architecture RTILE of PCIE_CORE is
     signal pcie_rst                 : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(RESET_WIDTH+1-1 downto 0);
     signal pcie_slow_rst            : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
 
-    signal pcie_avst_down_data      : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS*256-1 downto 0);
-    signal pcie_avst_down_hdr       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS*128-1 downto 0);
-    signal pcie_avst_down_prefix    : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS*32-1 downto 0);
-    signal pcie_avst_down_sop       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS-1 downto 0);
-    signal pcie_avst_down_eop       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS-1 downto 0);
-    signal pcie_avst_down_empty     : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS*3-1 downto 0);
-    signal pcie_avst_down_bar_range : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS*3-1 downto 0);
-    signal pcie_avst_down_valid     : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS-1 downto 0);
-    signal pcie_avst_down_dvalid    : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS-1 downto 0);
-    signal pcie_avst_down_hvalid    : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_DOWN_REGIONS-1 downto 0);
+    signal pcie_avst_down_data      : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CQ_MFB_REGIONS*256-1 downto 0);
+    signal pcie_avst_down_hdr       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CQ_MFB_REGIONS*128-1 downto 0);
+    signal pcie_avst_down_prefix    : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CQ_MFB_REGIONS*32-1 downto 0);
+    signal pcie_avst_down_sop       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CQ_MFB_REGIONS-1 downto 0);
+    signal pcie_avst_down_eop       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CQ_MFB_REGIONS-1 downto 0);
+    signal pcie_avst_down_empty     : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CQ_MFB_REGIONS*3-1 downto 0);
+    signal pcie_avst_down_bar_range : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CQ_MFB_REGIONS*3-1 downto 0);
+    signal pcie_avst_down_valid     : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CQ_MFB_REGIONS-1 downto 0);
+    signal pcie_avst_down_dvalid    : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CQ_MFB_REGIONS-1 downto 0);
+    signal pcie_avst_down_hvalid    : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CQ_MFB_REGIONS-1 downto 0);
     signal pcie_avst_down_ready     : std_logic_vector(PCIE_ENDPOINTS-1 downto 0) := (others => '1');
-    signal pcie_avst_up_data        : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS*256-1 downto 0);
-    signal pcie_avst_up_hdr         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS*128-1 downto 0);
-    signal pcie_avst_up_prefix      : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS*32-1 downto 0);
-    signal pcie_avst_up_sop         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS-1 downto 0);
-    signal pcie_avst_up_eop         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS-1 downto 0);
-    signal pcie_avst_up_error       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS-1 downto 0);
-    signal pcie_avst_up_valid       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS-1 downto 0) := (others => (others => '0'));
-    signal pcie_avst_up_dvalid      : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS-1 downto 0) := (others => (others => '0'));
-    signal pcie_avst_up_hvalid      : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS-1 downto 0) := (others => (others => '0'));
+    signal pcie_avst_up_data        : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CC_MFB_REGIONS*256-1 downto 0);
+    signal pcie_avst_up_hdr         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CC_MFB_REGIONS*128-1 downto 0);
+    signal pcie_avst_up_prefix      : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CC_MFB_REGIONS*32-1 downto 0);
+    signal pcie_avst_up_sop         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CC_MFB_REGIONS-1 downto 0);
+    signal pcie_avst_up_eop         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CC_MFB_REGIONS-1 downto 0);
+    signal pcie_avst_up_error       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CC_MFB_REGIONS-1 downto 0);
+    signal pcie_avst_up_valid       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CC_MFB_REGIONS-1 downto 0) := (others => (others => '0'));
+    signal pcie_avst_up_dvalid      : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CC_MFB_REGIONS-1 downto 0) := (others => (others => '0'));
+    signal pcie_avst_up_hvalid      : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CC_MFB_REGIONS-1 downto 0) := (others => (others => '0'));
     signal pcie_avst_up_ready       : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
-    signal pcie_avst_up_payload_lv  : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(PCIE_UP_REGIONS downto 0);
+    signal pcie_avst_up_payload_lv  : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CC_MFB_REGIONS downto 0);
 
     signal pcie_hcrdt_up_init       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(2 downto 0);
     signal pcie_hcrdt_up_update     : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(2 downto 0);
@@ -486,6 +498,24 @@ architecture RTILE of PCIE_CORE is
     signal pcie_dcrdt_dw_update     : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(2 downto 0);
     signal pcie_dcrdt_dw_update_cnt : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(11 downto 0);
     signal pcie_dcrdt_dw_init_ack   : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(2 downto 0);
+
+    signal crdt_up_init_done        : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal crdt_up_update           : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(6-1 downto 0);
+    signal crdt_up_cnt_ph           : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(2-1 downto 0);
+    signal crdt_up_cnt_nph          : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(2-1 downto 0);
+    signal crdt_up_cnt_cplh         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(2-1 downto 0);
+    signal crdt_up_cnt_pd           : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(4-1 downto 0);
+    signal crdt_up_cnt_npd          : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(4-1 downto 0);
+    signal crdt_up_cnt_cpld         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(4-1 downto 0);
+    
+    signal crdt_down_init_done      : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal crdt_down_update         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(6-1 downto 0);
+    signal crdt_down_cnt_ph         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(2-1 downto 0);
+    signal crdt_down_cnt_nph        : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(2-1 downto 0);
+    signal crdt_down_cnt_cplh       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(2-1 downto 0);
+    signal crdt_down_cnt_pd         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(4-1 downto 0);
+    signal crdt_down_cnt_npd        : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(4-1 downto 0);
+    signal crdt_down_cnt_cpld       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(4-1 downto 0);
 
     signal pcie_link_up_comb        : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
     signal pcie_link_up_reg         : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
@@ -975,51 +1005,169 @@ begin
     --  UP/DOWN AVALON-ST INTERFACE
     -- =========================================================================
 
-    pcie_avst_g : for i in 0 to PCIE_ENDPOINTS-1 generate
-        AVST_DOWN_DATA(i)       <= pcie_avst_down_data(i);
-        -- PCIe Header Format must be Enabled in R-Tile!
-        AVST_DOWN_HDR(i)        <= pcie_avst_down_hdr(i);
-        AVST_DOWN_PREFIX(i)     <= pcie_avst_down_prefix(i);
-        AVST_DOWN_SOP(i)        <= pcie_avst_down_sop(i);
-        AVST_DOWN_EOP(i)        <= pcie_avst_down_eop(i);
-        AVST_DOWN_EMPTY(i)      <= pcie_avst_down_empty(i);
-        AVST_DOWN_BAR_RANGE(i)  <= pcie_avst_down_bar_range(i);
+    pcie_adapter_g : for i in 0 to PCIE_ENDPOINTS-1 generate
+        --TODO insert pcie function to HDR
+    
         -- Global valid created as OR data and header valids
-        AVST_DOWN_VALID(i)      <= pcie_avst_down_dvalid(i) or pcie_avst_down_hvalid(i);
-        pcie_avst_down_ready(i) <= AVST_DOWN_READY(i);
-
-        pcie_avst_up_data(i)   <= AVST_UP_DATA(i);
-        pcie_avst_up_hdr(i)    <= AVST_UP_HDR(i);
-        pcie_avst_up_prefix(i) <= AVST_UP_PREFIX(i);
-        pcie_avst_up_sop(i)    <= AVST_UP_SOP(i);
-        pcie_avst_up_eop(i)    <= AVST_UP_EOP(i);
-        pcie_avst_up_error(i)  <= AVST_UP_ERROR(i);
-        pcie_avst_up_valid(i)  <= AVST_UP_VALID(i);
+        pcie_avst_down_valid(i) <= pcie_avst_down_dvalid(i) or pcie_avst_down_hvalid(i);
 
         process (pcie_clk(i))
         begin
             if (rising_edge(pcie_clk(i))) then
-                pcie_avst_up_payload_lv(i)(0) <= pcie_avst_up_payload_lv(i)(PCIE_UP_REGIONS);
+                pcie_avst_up_payload_lv(i)(0) <= pcie_avst_up_payload_lv(i)(CC_MFB_REGIONS);
             end if;
         end process;
 
-        pcie_avst_g : for r in 0 to PCIE_UP_REGIONS-1 generate
+        pcie_avst_g : for r in 0 to CC_MFB_REGIONS-1 generate
             process (all)
             begin
-                if (AVST_UP_VALID(i)(r) = '1' and AVST_UP_SOP(i)(r) = '1') then
+                if (pcie_avst_up_valid(i)(r) = '1' and pcie_avst_up_sop(i)(r) = '1') then
                     -- Valid for transaction data, second bit of Fmt field in PCIe
                     -- header (native format) indicates a data transaction.
-                    pcie_avst_up_payload_lv(i)(r+1) <= AVST_UP_HDR(i)(r*128+126);
+                    pcie_avst_up_payload_lv(i)(r+1) <= pcie_avst_up_hdr(i)(r*128+126);
                 else
                     pcie_avst_up_payload_lv(i)(r+1) <= pcie_avst_up_payload_lv(i)(r);
                 end if;
             end process;
 
-            pcie_avst_up_dvalid(i)(r) <= AVST_UP_VALID(i)(r) and pcie_avst_up_payload_lv(i)(r+1);
+            pcie_avst_up_dvalid(i)(r) <= pcie_avst_up_valid(i)(r) and pcie_avst_up_payload_lv(i)(r+1);
         end generate;
         -- Valid for transaction header, valid only with SOP
-        pcie_avst_up_hvalid(i) <= AVST_UP_VALID(i) and AVST_UP_SOP(i);
-        AVST_UP_READY(i)       <= pcie_avst_up_ready(i);
+        pcie_avst_up_hvalid(i) <= pcie_avst_up_valid(i) and pcie_avst_up_sop(i);
+
+        -- PCIe Header Format must be Enabled in R-Tile!
+        pcie_adapter_i : entity work.PCIE_ADAPTER
+        generic map (
+            CQ_MFB_REGIONS     => CQ_MFB_REGIONS,
+            CQ_MFB_REGION_SIZE => CQ_MFB_REGION_SIZE,
+            CQ_MFB_BLOCK_SIZE  => CQ_MFB_BLOCK_SIZE,
+            CQ_MFB_ITEM_WIDTH  => CQ_MFB_ITEM_WIDTH,
+            RC_MFB_REGIONS     => RC_MFB_REGIONS,
+            RC_MFB_REGION_SIZE => RC_MFB_REGION_SIZE,
+            RC_MFB_BLOCK_SIZE  => RC_MFB_BLOCK_SIZE,
+            RC_MFB_ITEM_WIDTH  => RC_MFB_ITEM_WIDTH,
+            CC_MFB_REGIONS     => CC_MFB_REGIONS,
+            CC_MFB_REGION_SIZE => CC_MFB_REGION_SIZE,
+            CC_MFB_BLOCK_SIZE  => CC_MFB_BLOCK_SIZE,
+            CC_MFB_ITEM_WIDTH  => CC_MFB_ITEM_WIDTH,
+            RQ_MFB_REGIONS     => RQ_MFB_REGIONS,
+            RQ_MFB_REGION_SIZE => RQ_MFB_REGION_SIZE,
+            RQ_MFB_BLOCK_SIZE  => RQ_MFB_BLOCK_SIZE,
+            RQ_MFB_ITEM_WIDTH  => RQ_MFB_ITEM_WIDTH,
+            ENDPOINT_TYPE      => "R_TILE",
+            DEVICE             => DEVICE,
+            CQ_FIFO_ITEMS      => CQ_FIFO_ITEMS,
+            AXI_CQUSER_WIDTH   => 183,
+            AXI_CCUSER_WIDTH   => 81,
+            AXI_RQUSER_WIDTH   => 137,
+            AXI_RCUSER_WIDTH   => 161,
+            AXI_STRADDLING     => false
+        )
+        port map (
+            PCIE_CLK            => pcie_clk(i),
+            PCIE_RESET          => pcie_rst(i)(0),
+    
+            AVST_DOWN_DATA      => pcie_avst_down_data(i),
+            AVST_DOWN_HDR       => pcie_avst_down_hdr(i),
+            AVST_DOWN_PREFIX    => pcie_avst_down_prefix(i),
+            AVST_DOWN_SOP       => pcie_avst_down_sop(i),
+            AVST_DOWN_EOP       => pcie_avst_down_eop(i),
+            AVST_DOWN_EMPTY     => pcie_avst_down_empty(i),
+            AVST_DOWN_BAR_RANGE => pcie_avst_down_bar_range(i),
+            AVST_DOWN_VALID     => pcie_avst_down_valid(i),
+            AVST_DOWN_READY     => pcie_avst_down_ready(i),
+    
+            AVST_UP_DATA        => pcie_avst_up_data(i),
+            AVST_UP_HDR         => pcie_avst_up_hdr(i),
+            AVST_UP_PREFIX      => pcie_avst_up_prefix(i),
+            AVST_UP_SOP         => pcie_avst_up_sop(i),
+            AVST_UP_EOP         => pcie_avst_up_eop(i),
+            AVST_UP_ERROR       => pcie_avst_up_error(i),
+            AVST_UP_VALID       => pcie_avst_up_valid(i),
+            AVST_UP_READY       => pcie_avst_up_ready(i),
+    
+            CRDT_DOWN_INIT_DONE => crdt_down_init_done(i),
+            CRDT_DOWN_UPDATE    => crdt_down_update(i),
+            CRDT_DOWN_CNT_PH    => crdt_down_cnt_ph(i),
+            CRDT_DOWN_CNT_NPH   => crdt_down_cnt_nph(i),
+            CRDT_DOWN_CNT_CPLH  => crdt_down_cnt_cplh(i),
+            CRDT_DOWN_CNT_PD    => crdt_down_cnt_pd(i),
+            CRDT_DOWN_CNT_NPD   => crdt_down_cnt_npd(i),
+            CRDT_DOWN_CNT_CPLD  => crdt_down_cnt_cpld(i),
+    
+            CRDT_UP_INIT_DONE   => crdt_up_init_done(i),
+            CRDT_UP_UPDATE      => crdt_up_update(i),
+            CRDT_UP_CNT_PH      => crdt_up_cnt_ph(i),
+            CRDT_UP_CNT_NPH     => crdt_up_cnt_nph(i),
+            CRDT_UP_CNT_CPLH    => crdt_up_cnt_cplh(i),
+            CRDT_UP_CNT_PD      => crdt_up_cnt_pd(i),
+            CRDT_UP_CNT_NPD     => crdt_up_cnt_npd(i),
+            CRDT_UP_CNT_CPLD    => crdt_up_cnt_cpld(i),
+    
+            CQ_AXI_DATA         => (others => '0'),
+            CQ_AXI_USER         => (others => '0'),
+            CQ_AXI_LAST         => '0',
+            CQ_AXI_KEEP         => (others => '0'),
+            CQ_AXI_VALID        => '0',
+            CQ_AXI_READY        => open,
+
+            RC_AXI_DATA         => (others => '0'),
+            RC_AXI_USER         => (others => '0'),
+            RC_AXI_LAST         => '0',
+            RC_AXI_KEEP         => (others => '0'),
+            RC_AXI_VALID        => '0',
+            RC_AXI_READY        => open,
+
+            CC_AXI_DATA         => open,
+            CC_AXI_USER         => open,
+            CC_AXI_LAST         => open,
+            CC_AXI_KEEP         => open,
+            CC_AXI_VALID        => open,
+            CC_AXI_READY        => '0',
+
+            RQ_AXI_DATA         => open,
+            RQ_AXI_USER         => open,
+            RQ_AXI_LAST         => open,
+            RQ_AXI_KEEP         => open,
+            RQ_AXI_VALID        => open,
+            RQ_AXI_READY        => '0',
+    
+            CQ_MFB_DATA         => CQ_MFB_DATA(i),
+            CQ_MFB_META         => CQ_MFB_META(i),
+            CQ_MFB_SOF          => CQ_MFB_SOF(i),
+            CQ_MFB_EOF          => CQ_MFB_EOF(i),
+            CQ_MFB_SOF_POS      => CQ_MFB_SOF_POS(i),
+            CQ_MFB_EOF_POS      => CQ_MFB_EOF_POS(i),
+            CQ_MFB_SRC_RDY      => CQ_MFB_SRC_RDY(i),
+            CQ_MFB_DST_RDY      => CQ_MFB_DST_RDY(i),
+
+            RC_MFB_DATA         => RC_MFB_DATA(i),
+            RC_MFB_META         => RC_MFB_META(i),
+            RC_MFB_SOF          => RC_MFB_SOF(i),
+            RC_MFB_EOF          => RC_MFB_EOF(i),
+            RC_MFB_SOF_POS      => RC_MFB_SOF_POS(i),
+            RC_MFB_EOF_POS      => RC_MFB_EOF_POS(i),
+            RC_MFB_SRC_RDY      => RC_MFB_SRC_RDY(i),
+            RC_MFB_DST_RDY      => RC_MFB_DST_RDY(i),
+
+            CC_MFB_DATA         => CC_MFB_DATA(i),
+            CC_MFB_META         => CC_MFB_META(i),
+            CC_MFB_SOF          => CC_MFB_SOF(i),
+            CC_MFB_EOF          => CC_MFB_EOF(i),
+            CC_MFB_SOF_POS      => CC_MFB_SOF_POS(i),
+            CC_MFB_EOF_POS      => CC_MFB_EOF_POS(i),
+            CC_MFB_SRC_RDY      => CC_MFB_SRC_RDY(i),
+            CC_MFB_DST_RDY      => CC_MFB_DST_RDY(i),
+
+            RQ_MFB_DATA         => RQ_MFB_DATA(i),
+            RQ_MFB_META         => RQ_MFB_META(i),
+            RQ_MFB_SOF          => RQ_MFB_SOF(i),
+            RQ_MFB_EOF          => RQ_MFB_EOF(i),
+            RQ_MFB_SOF_POS      => RQ_MFB_SOF_POS(i),
+            RQ_MFB_EOF_POS      => RQ_MFB_EOF_POS(i),
+            RQ_MFB_SRC_RDY      => RQ_MFB_SRC_RDY(i),
+            RQ_MFB_DST_RDY      => RQ_MFB_DST_RDY(i)
+        );
     end generate;
 
     -- =========================================================================
@@ -1029,12 +1177,12 @@ begin
     crdt_g : for i in 0 to PCIE_ENDPOINTS-1 generate
         crdt_i : entity work.PCIE_CRDT_LOGIC
         generic map (
-            CRDT_TOTAL_PH   => CRDT_TOTAL_PH,
-            CRDT_TOTAL_NPH  => CRDT_TOTAL_NPH,
-            CRDT_TOTAL_CPLH => CRDT_TOTAL_CPLH,
-            CRDT_TOTAL_PD   => CRDT_TOTAL_PD,
-            CRDT_TOTAL_NPD  => CRDT_TOTAL_NPD,
-            CRDT_TOTAL_CPLD => CRDT_TOTAL_CPLD
+            CRDT_TOTAL_PH   => CRDT_TOTAL_XPH/2,
+            CRDT_TOTAL_NPH  => CRDT_TOTAL_XPH/2,
+            CRDT_TOTAL_CPLH => 0,
+            CRDT_TOTAL_PD   => MTC_FIFO_CRDT/2,
+            CRDT_TOTAL_NPD  => MTC_FIFO_CRDT/2,
+            CRDT_TOTAL_CPLD => 0
         )
         port map (
             CLK                      => pcie_clk(i),
@@ -1058,23 +1206,23 @@ begin
             PCIE_DCRDT_DW_UPDATE     => pcie_dcrdt_dw_update(i),
             PCIE_DCRDT_DW_UPDATE_CNT => pcie_dcrdt_dw_update_cnt(i),
 
-            CRDT_UP_INIT_DONE        => CRDT_UP_INIT_DONE(i),
-            CRDT_UP_UPDATE           => CRDT_UP_UPDATE(i),
-            CRDT_UP_CNT_PH           => CRDT_UP_CNT_PH(i),
-            CRDT_UP_CNT_NPH          => CRDT_UP_CNT_NPH(i),
-            CRDT_UP_CNT_CPLH         => CRDT_UP_CNT_CPLH(i),
-            CRDT_UP_CNT_PD           => CRDT_UP_CNT_PD(i),
-            CRDT_UP_CNT_NPD          => CRDT_UP_CNT_NPD(i),
-            CRDT_UP_CNT_CPLD         => CRDT_UP_CNT_CPLD(i),
+            CRDT_UP_INIT_DONE        => crdt_up_init_done(i),
+            CRDT_UP_UPDATE           => crdt_up_update(i),
+            CRDT_UP_CNT_PH           => crdt_up_cnt_ph(i),
+            CRDT_UP_CNT_NPH          => crdt_up_cnt_nph(i),
+            CRDT_UP_CNT_CPLH         => crdt_up_cnt_cplh(i),
+            CRDT_UP_CNT_PD           => crdt_up_cnt_pd(i),
+            CRDT_UP_CNT_NPD          => crdt_up_cnt_npd(i),
+            CRDT_UP_CNT_CPLD         => crdt_up_cnt_cpld(i),
 
-            CRDT_DOWN_INIT_DONE      => CRDT_DOWN_INIT_DONE(i),
-            CRDT_DOWN_UPDATE         => CRDT_DOWN_UPDATE(i),
-            CRDT_DOWN_CNT_PH         => CRDT_DOWN_CNT_PH(i),
-            CRDT_DOWN_CNT_NPH        => CRDT_DOWN_CNT_NPH(i),
-            CRDT_DOWN_CNT_CPLH       => CRDT_DOWN_CNT_CPLH(i),
-            CRDT_DOWN_CNT_PD         => CRDT_DOWN_CNT_PD(i),
-            CRDT_DOWN_CNT_NPD        => CRDT_DOWN_CNT_NPD(i),
-            CRDT_DOWN_CNT_CPLD       => CRDT_DOWN_CNT_CPLD(i)
+            CRDT_DOWN_INIT_DONE      => crdt_down_init_done(i),
+            CRDT_DOWN_UPDATE         => crdt_down_update(i),
+            CRDT_DOWN_CNT_PH         => crdt_down_cnt_ph(i),
+            CRDT_DOWN_CNT_NPH        => crdt_down_cnt_nph(i),
+            CRDT_DOWN_CNT_CPLH       => crdt_down_cnt_cplh(i),
+            CRDT_DOWN_CNT_PD         => crdt_down_cnt_pd(i),
+            CRDT_DOWN_CNT_NPD        => crdt_down_cnt_npd(i),
+            CRDT_DOWN_CNT_CPLD       => crdt_down_cnt_cpld(i)
         );
     end generate;
 

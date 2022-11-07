@@ -16,6 +16,15 @@ use UNISIM.vcomponents.all;
 
 architecture USP of PCIE_CORE is
 
+    constant VSEC_BASE_ADDRESS : natural := 16#480#;
+    constant DTB_NEXT_POINTER  : natural := tsel(XVC_ENABLE, 16#4A0#, 0);
+    constant PCIE_HIPS         : natural := tsel((ENDPOINT_MODE = 0 or ENDPOINT_MODE = 2),PCIE_ENDPOINTS,PCIE_ENDPOINTS/2);
+    constant AXI_DATA_WIDTH    : natural := CQ_MFB_REGIONS*256;
+    constant AXI_CQUSER_WIDTH  : natural := tsel((ENDPOINT_MODE = 0), 183, 88);
+    constant AXI_CCUSER_WIDTH  : natural := tsel((ENDPOINT_MODE = 0), 81, 33);
+    constant AXI_RQUSER_WIDTH  : natural := tsel((ENDPOINT_MODE = 0), 137, 62);
+    constant AXI_RCUSER_WIDTH  : natural := tsel((ENDPOINT_MODE = 0), 161, 75);
+
     component pcie4_uscale_plus
     port (
         user_clk                               :  out  std_logic;
@@ -177,10 +186,6 @@ architecture USP of PCIE_CORE is
             pcie3_cfg_ext_write_received       : in    std_logic
     );
     end component;
-    
-    constant VSEC_BASE_ADDRESS : natural := 16#480#;
-    constant DTB_NEXT_POINTER  : natural := tsel(XVC_ENABLE, 16#4A0#, 0);
-    constant PCIE_HIPS         : natural := tsel((ENDPOINT_MODE = 0 or ENDPOINT_MODE = 2),PCIE_ENDPOINTS,PCIE_ENDPOINTS/2);
 
     signal pcie_sysclk_buf          : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
     signal pcie_sysclk_gt_buf       : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
@@ -209,6 +214,31 @@ architecture USP of PCIE_CORE is
     signal cfg_ext_read_dtb_dv      : std_logic_vector(PCIE_ENDPOINTS-1 downto 0) := (others => '0');
     signal cfg_ext_read_data        : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(31 downto 0);
     signal cfg_ext_read_dv          : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+
+    signal pcie_cq_axi_data         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_DATA_WIDTH-1 downto 0);
+    signal pcie_cq_axi_user         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_CQUSER_WIDTH-1 downto 0);
+    signal pcie_cq_axi_last         : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal pcie_cq_axi_keep         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_DATA_WIDTH/32-1 downto 0);
+    signal pcie_cq_axi_valid        : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal pcie_cq_axi_ready        : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal pcie_cc_axi_data         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_DATA_WIDTH-1 downto 0);
+    signal pcie_cc_axi_user         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_CCUSER_WIDTH-1 downto 0);
+    signal pcie_cc_axi_last         : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal pcie_cc_axi_keep         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_DATA_WIDTH/32-1 downto 0);
+    signal pcie_cc_axi_valid        : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal pcie_cc_axi_ready        : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal pcie_rq_axi_data         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_DATA_WIDTH-1 downto 0);
+    signal pcie_rq_axi_user         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_RQUSER_WIDTH-1 downto 0);
+    signal pcie_rq_axi_last         : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal pcie_rq_axi_keep         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_DATA_WIDTH/32-1 downto 0);
+    signal pcie_rq_axi_valid        : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal pcie_rq_axi_ready        : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal pcie_rc_axi_data         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_DATA_WIDTH-1 downto 0);
+    signal pcie_rc_axi_user         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_RCUSER_WIDTH-1 downto 0);
+    signal pcie_rc_axi_last         : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal pcie_rc_axi_keep         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(AXI_DATA_WIDTH/32-1 downto 0);
+    signal pcie_rc_axi_valid        : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal pcie_rc_axi_ready        : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
 
     signal s_axis_rq_tready         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(3 downto 0);
     signal s_axis_cc_tready         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(3 downto 0);
@@ -293,13 +323,13 @@ begin
 
         pcie_endp_g : if (ENDPOINT_MODE = 0 or ENDPOINT_MODE = 2) generate
 
-            RQ_AXI_READY(i) <= s_axis_rq_tready(i)(0);
-            CC_AXI_READY(i) <= s_axis_cc_tready(i)(0);
+            pcie_rq_axi_ready(i) <= s_axis_rq_tready(i)(0);
+            pcie_cc_axi_ready(i) <= s_axis_cc_tready(i)(0);
 
             pcie_clk(i) <= pcie_hip_clk(i);
 
-            TAG_ASSIGN(i)     <= tag_assign_int(i)(PCIE_UP_REGIONS*8 -1 downto 0);
-            TAG_ASSIGN_VLD(i) <= tag_assign_vld_int(i)(PCIE_UP_REGIONS -1 downto 0);
+            TAG_ASSIGN(i)     <= tag_assign_int(i)(RQ_MFB_REGIONS*8 -1 downto 0);
+            TAG_ASSIGN_VLD(i) <= tag_assign_vld_int(i)(RQ_MFB_REGIONS -1 downto 0);
 
             pcie_i : pcie4_uscale_plus
             port map (
@@ -316,29 +346,29 @@ begin
                 user_reset                        => pcie_hip_rst(i),
                 user_lnk_up                       => user_lnk_up(i),
         
-                s_axis_rq_tlast                   => RQ_AXI_LAST(i),
-                s_axis_rq_tdata                   => RQ_AXI_DATA(i),
-                s_axis_rq_tuser                   => RQ_AXI_USER(i),
-                s_axis_rq_tkeep                   => RQ_AXI_KEEP(i),
+                s_axis_rq_tlast                   => pcie_rq_axi_last(i),
+                s_axis_rq_tdata                   => pcie_rq_axi_data(i),
+                s_axis_rq_tuser                   => pcie_rq_axi_user(i),
+                s_axis_rq_tkeep                   => pcie_rq_axi_keep(i),
                 s_axis_rq_tready                  => s_axis_rq_tready(i),
-                s_axis_rq_tvalid                  => RQ_AXI_VALID(i),
-                m_axis_rc_tdata                   => RC_AXI_DATA(i),
-                m_axis_rc_tuser                   => RC_AXI_USER(i),
-                m_axis_rc_tlast                   => RC_AXI_LAST(i),
-                m_axis_rc_tkeep                   => RC_AXI_KEEP(i),
-                m_axis_rc_tvalid                  => RC_AXI_VALID(i),
-                m_axis_rc_tready                  => RC_AXI_READY(i),
-                m_axis_cq_tdata                   => CQ_AXI_DATA(i),
-                m_axis_cq_tuser                   => CQ_AXI_USER(i),
-                m_axis_cq_tlast                   => CQ_AXI_LAST(i),
-                m_axis_cq_tkeep                   => CQ_AXI_KEEP(i),
-                m_axis_cq_tvalid                  => CQ_AXI_VALID(i),
-                m_axis_cq_tready                  => CQ_AXI_READY(i),
-                s_axis_cc_tdata                   => CC_AXI_DATA(i),
-                s_axis_cc_tuser                   => CC_AXI_USER(i),
-                s_axis_cc_tlast                   => CC_AXI_LAST(i),
-                s_axis_cc_tkeep                   => CC_AXI_KEEP(i),
-                s_axis_cc_tvalid                  => CC_AXI_VALID(i),
+                s_axis_rq_tvalid                  => pcie_rq_axi_valid(i),
+                m_axis_rc_tdata                   => pcie_rc_axi_data(i),
+                m_axis_rc_tuser                   => pcie_rc_axi_user(i),
+                m_axis_rc_tlast                   => pcie_rc_axi_last(i),
+                m_axis_rc_tkeep                   => pcie_rc_axi_keep(i),
+                m_axis_rc_tvalid                  => pcie_rc_axi_valid(i),
+                m_axis_rc_tready                  => pcie_rc_axi_ready(i),
+                m_axis_cq_tdata                   => pcie_cq_axi_data(i),
+                m_axis_cq_tuser                   => pcie_cq_axi_user(i),
+                m_axis_cq_tlast                   => pcie_cq_axi_last(i),
+                m_axis_cq_tkeep                   => pcie_cq_axi_keep(i),
+                m_axis_cq_tvalid                  => pcie_cq_axi_valid(i),
+                m_axis_cq_tready                  => pcie_cq_axi_ready(i),
+                s_axis_cc_tdata                   => pcie_cc_axi_data(i),
+                s_axis_cc_tuser                   => pcie_cc_axi_user(i),
+                s_axis_cc_tlast                   => pcie_cc_axi_last(i),
+                s_axis_cc_tkeep                   => pcie_cc_axi_keep(i),
+                s_axis_cc_tvalid                  => pcie_cc_axi_valid(i),
                 s_axis_cc_tready                  => s_axis_cc_tready(i),
 
                 pcie_rq_seq_num0                  => open,
@@ -447,6 +477,144 @@ begin
                 phy_rdy_out                       => pcie_phy_rdy_out(i)
             );
         end generate;
+    end generate;
+
+    -- =========================================================================
+    --  PCIE ADAPTER
+    -- =========================================================================
+
+    pcie_adapter_g : for i in 0 to PCIE_ENDPOINTS-1 generate
+        pcie_adapter_i : entity work.PCIE_ADAPTER
+        generic map (
+            CQ_MFB_REGIONS     => CQ_MFB_REGIONS,
+            CQ_MFB_REGION_SIZE => CQ_MFB_REGION_SIZE,
+            CQ_MFB_BLOCK_SIZE  => CQ_MFB_BLOCK_SIZE,
+            CQ_MFB_ITEM_WIDTH  => CQ_MFB_ITEM_WIDTH,
+            RC_MFB_REGIONS     => RC_MFB_REGIONS,
+            RC_MFB_REGION_SIZE => RC_MFB_REGION_SIZE,
+            RC_MFB_BLOCK_SIZE  => RC_MFB_BLOCK_SIZE,
+            RC_MFB_ITEM_WIDTH  => RC_MFB_ITEM_WIDTH,
+            CC_MFB_REGIONS     => CC_MFB_REGIONS,
+            CC_MFB_REGION_SIZE => CC_MFB_REGION_SIZE,
+            CC_MFB_BLOCK_SIZE  => CC_MFB_BLOCK_SIZE,
+            CC_MFB_ITEM_WIDTH  => CC_MFB_ITEM_WIDTH,
+            RQ_MFB_REGIONS     => RQ_MFB_REGIONS,
+            RQ_MFB_REGION_SIZE => RQ_MFB_REGION_SIZE,
+            RQ_MFB_BLOCK_SIZE  => RQ_MFB_BLOCK_SIZE,
+            RQ_MFB_ITEM_WIDTH  => RQ_MFB_ITEM_WIDTH,
+            ENDPOINT_TYPE      => "USP",
+            DEVICE             => DEVICE,
+            AXI_CQUSER_WIDTH   => AXI_CQUSER_WIDTH,
+            AXI_CCUSER_WIDTH   => AXI_CCUSER_WIDTH,
+            AXI_RQUSER_WIDTH   => AXI_RQUSER_WIDTH,
+            AXI_RCUSER_WIDTH   => AXI_RCUSER_WIDTH,
+            AXI_STRADDLING     => false
+        )
+        port map (
+            PCIE_CLK            => pcie_clk(i),
+            PCIE_RESET          => pcie_rst(i)(0),
+    
+            AVST_DOWN_DATA      => (others => '0'),
+            AVST_DOWN_HDR       => (others => '0'),
+            AVST_DOWN_PREFIX    => (others => '0'),
+            AVST_DOWN_SOP       => (others => '0'),
+            AVST_DOWN_EOP       => (others => '0'),
+            AVST_DOWN_EMPTY     => (others => '0'),
+            AVST_DOWN_BAR_RANGE => (others => '0'),
+            AVST_DOWN_VALID     => (others => '0'),
+            AVST_DOWN_READY     => open,
+    
+            AVST_UP_DATA        => open,
+            AVST_UP_HDR         => open,
+            AVST_UP_PREFIX      => open,
+            AVST_UP_SOP         => open,
+            AVST_UP_EOP         => open,
+            AVST_UP_ERROR       => open,
+            AVST_UP_VALID       => open,
+            AVST_UP_READY       => '0',
+    
+            CRDT_DOWN_INIT_DONE => '0',
+            CRDT_DOWN_UPDATE    => open,
+            CRDT_DOWN_CNT_PH    => open,
+            CRDT_DOWN_CNT_NPH   => open,
+            CRDT_DOWN_CNT_CPLH  => open,
+            CRDT_DOWN_CNT_PD    => open,
+            CRDT_DOWN_CNT_NPD   => open,
+            CRDT_DOWN_CNT_CPLD  => open,
+    
+            CRDT_UP_INIT_DONE   => '0',
+            CRDT_UP_UPDATE      => (others => '0'),
+            CRDT_UP_CNT_PH      => (others => '0'),
+            CRDT_UP_CNT_NPH     => (others => '0'),
+            CRDT_UP_CNT_CPLH    => (others => '0'),
+            CRDT_UP_CNT_PD      => (others => '0'),
+            CRDT_UP_CNT_NPD     => (others => '0'),
+            CRDT_UP_CNT_CPLD    => (others => '0'),
+    
+            CQ_AXI_DATA         => pcie_cq_axi_data(i),
+            CQ_AXI_USER         => pcie_cq_axi_user(i),
+            CQ_AXI_LAST         => pcie_cq_axi_last(i),
+            CQ_AXI_KEEP         => pcie_cq_axi_keep(i),
+            CQ_AXI_VALID        => pcie_cq_axi_valid(i),
+            CQ_AXI_READY        => pcie_cq_axi_ready(i),
+
+            RC_AXI_DATA         => pcie_rc_axi_data(i),
+            RC_AXI_USER         => pcie_rc_axi_user(i),
+            RC_AXI_LAST         => pcie_rc_axi_last(i),
+            RC_AXI_KEEP         => pcie_rc_axi_keep(i),
+            RC_AXI_VALID        => pcie_rc_axi_valid(i),
+            RC_AXI_READY        => pcie_rc_axi_ready(i),
+
+            CC_AXI_DATA         => pcie_cc_axi_data(i),
+            CC_AXI_USER         => pcie_cc_axi_user(i),
+            CC_AXI_LAST         => pcie_cc_axi_last(i),
+            CC_AXI_KEEP         => pcie_cc_axi_keep(i),
+            CC_AXI_VALID        => pcie_cc_axi_valid(i),
+            CC_AXI_READY        => pcie_cc_axi_ready(i),
+
+            RQ_AXI_DATA         => pcie_rq_axi_data(i),
+            RQ_AXI_USER         => pcie_rq_axi_user(i),
+            RQ_AXI_LAST         => pcie_rq_axi_last(i),
+            RQ_AXI_KEEP         => pcie_rq_axi_keep(i),
+            RQ_AXI_VALID        => pcie_rq_axi_valid(i),
+            RQ_AXI_READY        => pcie_rq_axi_ready(i),
+    
+            CQ_MFB_DATA         => CQ_MFB_DATA(i),
+            CQ_MFB_META         => CQ_MFB_META(i),
+            CQ_MFB_SOF          => CQ_MFB_SOF(i),
+            CQ_MFB_EOF          => CQ_MFB_EOF(i),
+            CQ_MFB_SOF_POS      => CQ_MFB_SOF_POS(i),
+            CQ_MFB_EOF_POS      => CQ_MFB_EOF_POS(i),
+            CQ_MFB_SRC_RDY      => CQ_MFB_SRC_RDY(i),
+            CQ_MFB_DST_RDY      => CQ_MFB_DST_RDY(i),
+
+            RC_MFB_DATA         => RC_MFB_DATA(i),
+            RC_MFB_META         => RC_MFB_META(i),
+            RC_MFB_SOF          => RC_MFB_SOF(i),
+            RC_MFB_EOF          => RC_MFB_EOF(i),
+            RC_MFB_SOF_POS      => RC_MFB_SOF_POS(i),
+            RC_MFB_EOF_POS      => RC_MFB_EOF_POS(i),
+            RC_MFB_SRC_RDY      => RC_MFB_SRC_RDY(i),
+            RC_MFB_DST_RDY      => RC_MFB_DST_RDY(i),
+
+            CC_MFB_DATA         => CC_MFB_DATA(i),
+            CC_MFB_META         => CC_MFB_META(i),
+            CC_MFB_SOF          => CC_MFB_SOF(i),
+            CC_MFB_EOF          => CC_MFB_EOF(i),
+            CC_MFB_SOF_POS      => CC_MFB_SOF_POS(i),
+            CC_MFB_EOF_POS      => CC_MFB_EOF_POS(i),
+            CC_MFB_SRC_RDY      => CC_MFB_SRC_RDY(i),
+            CC_MFB_DST_RDY      => CC_MFB_DST_RDY(i),
+
+            RQ_MFB_DATA         => RQ_MFB_DATA(i),
+            RQ_MFB_META         => RQ_MFB_META(i),
+            RQ_MFB_SOF          => RQ_MFB_SOF(i),
+            RQ_MFB_EOF          => RQ_MFB_EOF(i),
+            RQ_MFB_SOF_POS      => RQ_MFB_SOF_POS(i),
+            RQ_MFB_EOF_POS      => RQ_MFB_EOF_POS(i),
+            RQ_MFB_SRC_RDY      => RQ_MFB_SRC_RDY(i),
+            RQ_MFB_DST_RDY      => RQ_MFB_DST_RDY(i)
+        );
     end generate;
 
     -- =========================================================================
