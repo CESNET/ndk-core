@@ -62,7 +62,7 @@ class UDP(base_node):
         protocol_next = [Payload(), Empty()];
         packet.append(scapy.all.UDP())
 
-        protocol = random.choice(protocol_next)
+        protocol = random.choices(protocol_next, config.l4_weight)[0]
         protocol.packet_gen(packet, config);
 
 class TCP(base_node):
@@ -73,7 +73,7 @@ class TCP(base_node):
         protocol_next = [Payload(), Empty()];
         packet.append(scapy.all.TCP())
 
-        protocol = random.choice(protocol_next)
+        protocol = random.choices(protocol_next, config.l4_weight)[0]
         protocol.packet_gen(packet, config);
 
 #################################
@@ -87,7 +87,7 @@ class IPv4(base_node):
         packet.append(scapy.all.IP(version=4))
         #randomize from list
         protocol_next = [Payload(), Empty(), ICMPv4(), UDP(), TCP()];
-        protocol = random.choice(protocol_next)
+        protocol = random.choices(protocol_next, config.l3_weight)[0]
         protocol.packet_gen(packet, config);
 
 class IPv6(base_node):
@@ -98,7 +98,7 @@ class IPv6(base_node):
         protocol_next = [Payload(), Empty(), ICMPv6(), UDP(), TCP()];
         packet.append(scapy.all.IPv6(version=6))
         #randomize from list
-        protocol = random.choice(protocol_next)
+        protocol = random.choices(protocol_next, config.l3_weight)[0]
         protocol.packet_gen(packet, config);
 
 #################################
@@ -112,14 +112,13 @@ class MPLS(base_node):
         if (config.mpls != 0):
             config.mpls -= 1
         mpls_weight     = (1, 0)[config.mpls == 0]
+        config.mpls_weight[2] = mpls_weight
 
         protocol_next   = [IPv4(), IPv6(), MPLS(), Empty()]
-        protocol_weight = [     1,      1, mpls_weight,  1]
 
         packet.append(scapy.contrib.mpls.MPLS())
         #randomize from list
-        #protocol = random.choice(self.next)
-        protocol = random.choices(protocol_next, protocol_weight)[0]
+        protocol = random.choices(protocol_next, config.mpls_weight)[0]
         protocol.packet_gen(packet, config);
 
 
@@ -132,8 +131,7 @@ class PPP(base_node):
 
         packet.append(scapy.all.PPP())
         #randomize from list
-        #protocol = random.choice(self.next)
-        protocol = random.choice(protocol_next)
+        protocol = random.choices(protocol_next, config.ppp_weight)[0]
         protocol.packet_gen(packet, config);
 
 class VLAN(base_node):
@@ -145,13 +143,13 @@ class VLAN(base_node):
             config.vlan -= 1
 
         vlan_weight     = (1, 0)[config.vlan == 0]
+        config.vlan_weight[2] = vlan_weight
+
         protocol_next   = [IPv4(), IPv6(), VLAN()     , MPLS(), Empty(), PPP()]
-        protocol_weight = [     1,      1, vlan_weight,      1,       1,     1]
 
         packet.append(scapy.all.Dot1Q())
         #randomize from list
-        #protocol = random.choice(self.next)
-        protocol = random.choices(protocol_next, protocol_weight)[0]
+        protocol = random.choices(protocol_next, config.vlan_weight)[0]
         protocol.packet_gen(packet, config);
 
 
@@ -164,7 +162,7 @@ class ethernet(base_node):
 
         packet.append(scapy.all.Ether())
         #randomize from list
-        protocol = random.choice(protocol_next)
+        protocol = random.choices(protocol_next, config.ethernet_weight)[0]
         protocol.packet_gen(packet, config);
 
 
