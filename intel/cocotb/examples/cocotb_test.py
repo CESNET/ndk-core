@@ -3,7 +3,10 @@ from cocotb.triggers import Timer, RisingEdge, Combine
 
 from ndk_core.intel import NFBDevice
 
+import sys
+sys.stderr = None # disable warnings from Scapy
 from scapy.all import TCP, Ether, IP, raw
+sys.stderr = sys.__stderr__
 
 def s2b(pkt):
     return list(bytes(raw(pkt)))

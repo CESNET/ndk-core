@@ -1,1 +1,2 @@
-git+ssh://git@gitlab.liberouter.org/ndk/cocotbext.git#egg=cocotbext-ofm
+git+https://github.com/martinspinler/cocotbext-axi4stream.git#egg=cocotbext.axi4stream
+git+ssh://git@gitlab.liberouter.org/ndk/cocotbext-ofm.git#egg=cocotbext-ofm

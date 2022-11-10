@@ -1,6 +1,6 @@
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import Timer, RisingEdge, Combine
+from cocotb.triggers import Timer, RisingEdge, FallingEdge, Combine
 
 from cocotbext.axi4stream.drivers import Axi4StreamMaster, Axi4StreamSlave
 from cocotbext.axi4stream.monitors import Axi4Stream
@@ -25,15 +25,23 @@ class Axi4StreamV(Axi4Stream):
 
 class NFBDevice(cocotbext.nfb.NFBDevice):
     def _init_clks(self):
-        cocotb.start_soon(Clock(self._dut.REFCLK, 20, 'ns').start())
+        if hasattr(self._dut, 'REFCLK'):
+            # Tivoli card
+            cocotb.start_soon(Clock(self._dut.REFCLK, 20, 'ns').start())
+        if hasattr(self._dut, 'SYSCLK_P'):
+            # NFB-200G2QL
+            cocotb.start_soon(Clock(self._dut.SYSCLK_P, 8, 'ns').start())
+            cocotb.start_soon(Clock(self._dut.SYSCLK_N, 8, 'ns').start(start_high=False))
 
-        for pcie_clk in self._dut.usp_i.pcie_i.pcie_core_i.pcie_hip_clk:
+        for pcie_clk in self._core.pcie_i.pcie_core_i.pcie_hip_clk:
             cocotb.start_soon(Clock(pcie_clk, 4, 'ns').start())
-        for eth_core in self._dut.usp_i.network_mod_i.eth_core_g:
+        for eth_core in self._core.network_mod_i.eth_core_g:
             cocotb.start_soon(Clock(eth_core.network_mod_core_i.cmac_clk_322m, 3106, 'ps').start())
 
     def _init_pcie(self):
-        pcie_i = self._dut.usp_i.pcie_i.pcie_core_i
+        self._core = [getattr(self._dut, core) for core in ["usp_i", "fpga_i"] if hasattr(self._dut, core)][0]
+
+        pcie_i = self._core.pcie_i.pcie_core_i
         self.mi = []
 
         for i, clk in enumerate(pcie_i.pcie_hip_clk):
@@ -54,7 +62,7 @@ class NFBDevice(cocotbext.nfb.NFBDevice):
 
         self._eth_rx_driver = []
         self._eth_tx_monitor = []
-        for i, eth_core in enumerate(self._dut.usp_i.network_mod_i.eth_core_g):
+        for i, eth_core in enumerate(self._core.network_mod_i.eth_core_g):
             eth_core.network_mod_core_i.cmac_tx_lbus_rdy.value = 1
             eth_core.network_mod_core_i.cmac_rx_local_fault.value = 0
 
@@ -66,17 +74,17 @@ class NFBDevice(cocotbext.nfb.NFBDevice):
         self.dtb = None
 
     async def _reset(self):
-        pcie_i = self._dut.usp_i.pcie_i.pcie_core_i
+        pcie_i = self._core.pcie_i.pcie_core_i
 
         for rst in pcie_i.pcie_hip_rst:
             rst.value = 1
         await Timer(40, units="ns")
         for rst in pcie_i.pcie_hip_rst:
             rst.value = 0
-        await Timer(2, units="us")
+        await cocotb.triggers.FallingEdge(self._dut.fpga_i.global_reset)
 
     async def _pcie_cfg_ext_reg_access(self, addr, index = 0, fn = 0, sync=True, data=None):
-        pcie_i = self._dut.usp_i.pcie_i.pcie_core_i
+        pcie_i = self._core.pcie_i.pcie_core_i
         clk = pcie_i.pcie_hip_clk[index]
 
         if sync:
