@@ -49,7 +49,7 @@ proc dts_build_netcope {} {
     if {$CARD_NAME == "FB2CGHH"} {
         set BOOT_TYPE 3
     }
-    if {$CARD_NAME == "FB4CGG3" || $CARD_NAME == "FB2CGG3" || $CARD_NAME == "FB2CGHH" || $CARD_NAME == "COMBO-400G1"} {
+    if {$CARD_NAME == "FB4CGG3" || $CARD_NAME == "FB2CGG3" || $CARD_NAME == "FB2CGHH" || $CARD_NAME == "COMBO-400G1" || $CARD_NAME == "NFB-200G2QL"} {
         append ret "boot:" [dts_boot_controller $ADDR_BOOT_CTRL $BOOT_TYPE]
     }
 
