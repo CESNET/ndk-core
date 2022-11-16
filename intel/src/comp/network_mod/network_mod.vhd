@@ -533,7 +533,7 @@ begin
        QSFP_INT_N     => QSFP_INT_N,
        QSFP_I2C_SCL   => QSFP_I2C_SCL,
        QSFP_I2C_SDA   => QSFP_I2C_SDA,
-       QSFP_I2C_DIR   => open,
+       QSFP_I2C_DIR   => QSFP_I2C_DIR,
        -- Select which QSFP port is targetting during MI read/writes
        MI_QSFP_SEL    => MI_ADDR_PMD(8+max(log2(ETH_PORTS),1)-1 downto 8),
        -- MI interface

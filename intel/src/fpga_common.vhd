@@ -115,6 +115,7 @@ port (
     -- QSFP management interface
     QSFP_I2C_SCL            : inout std_logic_vector(QSFP_I2C_PORTS-1 downto 0);
     QSFP_I2C_SDA            : inout std_logic_vector(QSFP_I2C_PORTS-1 downto 0);
+    QSFP_I2C_DIR            : out   std_logic_vector(QSFP_I2C_PORTS-1 downto 0);
     QSFP_MODSEL_N           : out   std_logic_vector(QSFP_PORTS-1 downto 0);
     QSFP_LPMODE             : out   std_logic_vector(QSFP_PORTS-1 downto 0);
     QSFP_RESET_N            : out   std_logic_vector(QSFP_PORTS-1 downto 0);
@@ -1194,6 +1195,7 @@ begin
 
         QSFP_I2C_SCL    => QSFP_I2C_SCL,
         QSFP_I2C_SDA    => QSFP_I2C_SDA,
+        QSFP_I2C_DIR    => QSFP_I2C_DIR,
         QSFP_MODSEL_N   => QSFP_MODSEL_N,
         QSFP_LPMODE     => QSFP_LPMODE,
         QSFP_RESET_N    => QSFP_RESET_N,
