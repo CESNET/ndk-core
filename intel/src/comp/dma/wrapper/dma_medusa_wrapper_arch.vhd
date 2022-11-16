@@ -20,6 +20,7 @@ architecture MEDUSA of DMA_WRAPPER is
     constant DMA_EP_PER_DMA    : natural := DMA_ENDPOINTS/DMA_STREAMS;
     constant DMA_RST_REPLICAS  : natural := DMA_STREAMS+PCIE_ENDPOINTS;
     constant CROX_RST_REPLICAS : natural := DMA_STREAMS;
+    constant TOTAL_CHANNELS    : natural := max(RX_CHANNELS,TX_CHANNELS)*DMA_STREAMS;
 
     signal dma_rst_dup  : std_logic_vector(DMA_RST_REPLICAS-1 downto 0);
     signal crox_rst_dup : std_logic_vector(CROX_RST_REPLICAS-1 downto 0);
@@ -151,8 +152,8 @@ begin
                 DATA_WIDTH    => 32,
                 ITEMS         => 2 ,
                 -- The splitting is determined by one of the top bits of DMA Channel selection
-                ADDR_CMP_MASK => (log2(max(RX_CHANNELS,TX_CHANNELS)/PCIE_ENDPOINTS)+7-1 downto log2(max(RX_CHANNELS,TX_CHANNELS)/DMA_ENDPOINTS)+7 => '1', others => '0'),
-                PORT1_BASE    => (log2(max(RX_CHANNELS,TX_CHANNELS)/PCIE_ENDPOINTS)+7-1 downto log2(max(RX_CHANNELS,TX_CHANNELS)/DMA_ENDPOINTS)+7 => '1', others => '0'),
+                ADDR_CMP_MASK => (log2(TOTAL_CHANNELS/PCIE_ENDPOINTS)+7-1 downto log2(TOTAL_CHANNELS/DMA_ENDPOINTS)+7 => '1', others => '0'),
+                PORT1_BASE    => (log2(TOTAL_CHANNELS/PCIE_ENDPOINTS)+7-1 downto log2(TOTAL_CHANNELS/DMA_ENDPOINTS)+7 => '1', others => '0'),
                 PIPE          => true  ,
                 PIPE_OUTREG   => false ,
                 DEVICE        => DEVICE
