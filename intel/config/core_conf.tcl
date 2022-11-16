@@ -50,6 +50,13 @@ set ETH_PORT_TX_MTU(0) 16383
 set ETH_PORT_TX_MTU(1) 16383
 set ETH_PORT_TX_MTU(2) 16383
 set ETH_PORT_TX_MTU(3) 16383
+# Total number of QSFP cages
+set QSFP_CAGES         4
+# I2C address of each QSFP cage
+set QSFP_I2C_ADDR(0)   "0xA0"
+set QSFP_I2C_ADDR(1)   "0xA0"
+set QSFP_I2C_ADDR(2)   "0xA0"
+set QSFP_I2C_ADDR(3)   "0xA0"
 
 # ------------------------------------------------------------------------------
 # PCIe parameters (not all combinations work):

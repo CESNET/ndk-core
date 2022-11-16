@@ -39,6 +39,7 @@ generic(
     -- Options: F_TILE      core: 8;
     --          E_TILE/CMAC core: 4.
     LANES             : natural := 4;
+    QSFP_PORTS        : natural := 2;
     QSFP_I2C_PORTS    : natural := 1; -- max 2
 
     -- =====================================================================
@@ -84,25 +85,25 @@ port(
     RESET_ETH       : in  std_logic_vector(ETH_PORTS-1 downto 0);
 
     -- =====================================================================
-    -- QSFP INTERFACES
+    -- ETH SERIAL INTERFACES
     -- =====================================================================
-    QSFP_REFCLK_P   : in  std_logic_vector(ETH_PORTS-1 downto 0);
-    QSFP_REFCLK_N   : in  std_logic_vector(ETH_PORTS-1 downto 0);
-    QSFP_RX_P       : in  std_logic_vector(ETH_PORTS*LANES-1 downto 0); -- QSFP XCVR RX Data
-    QSFP_RX_N       : in  std_logic_vector(ETH_PORTS*LANES-1 downto 0); -- QSFP XCVR RX Data
-    QSFP_TX_P       : out std_logic_vector(ETH_PORTS*LANES-1 downto 0); -- QSFP XCVR TX Data
-    QSFP_TX_N       : out std_logic_vector(ETH_PORTS*LANES-1 downto 0); -- QSFP XCVR TX Data
+    ETH_REFCLK_P    : in  std_logic_vector(ETH_PORTS-1 downto 0);
+    ETH_REFCLK_N    : in  std_logic_vector(ETH_PORTS-1 downto 0);
+    ETH_RX_P        : in  std_logic_vector(ETH_PORTS*LANES-1 downto 0);
+    ETH_RX_N        : in  std_logic_vector(ETH_PORTS*LANES-1 downto 0);
+    ETH_TX_P        : out std_logic_vector(ETH_PORTS*LANES-1 downto 0);
+    ETH_TX_N        : out std_logic_vector(ETH_PORTS*LANES-1 downto 0);
     -- =====================================================================
     -- QSFP Control
     -- =====================================================================        
     QSFP_I2C_SCL    : inout std_logic_vector(QSFP_I2C_PORTS-1 downto 0);
     QSFP_I2C_SDA    : inout std_logic_vector(QSFP_I2C_PORTS-1 downto 0);
     QSFP_I2C_DIR    : out   std_logic_vector(QSFP_I2C_PORTS-1 downto 0);
-    QSFP_MODSEL_N   : out   std_logic_vector(ETH_PORTS-1 downto 0);
-    QSFP_LPMODE     : out   std_logic_vector(ETH_PORTS-1 downto 0);
-    QSFP_RESET_N    : out   std_logic_vector(ETH_PORTS-1 downto 0);
-    QSFP_MODPRS_N   : in    std_logic_vector(ETH_PORTS-1 downto 0) := (others => '0');
-    QSFP_INT_N      : in    std_logic_vector(ETH_PORTS-1 downto 0) := (others => '1');
+    QSFP_MODSEL_N   : out   std_logic_vector(QSFP_PORTS-1 downto 0);
+    QSFP_LPMODE     : out   std_logic_vector(QSFP_PORTS-1 downto 0);
+    QSFP_RESET_N    : out   std_logic_vector(QSFP_PORTS-1 downto 0);
+    QSFP_MODPRS_N   : in    std_logic_vector(QSFP_PORTS-1 downto 0) := (others => '0');
+    QSFP_INT_N      : in    std_logic_vector(QSFP_PORTS-1 downto 0) := (others => '1');
 
     -- =====================================================================
     -- Link control/status - runs on CLK_ETH

@@ -410,13 +410,13 @@ begin
             -- clock and reset
             CLK_ETH         => CLK_ETH(p),
             RESET_ETH       => repl_rst_arr(p)(0),
-            -- QSFP interface
-            QSFP_REFCLK_P   => QSFP_REFCLK_P(p),
-            QSFP_REFCLK_N   => QSFP_REFCLK_N(p),
-            QSFP_RX_P       => QSFP_RX_P(p*LANES+LANES-1 downto p*LANES),
-            QSFP_RX_N       => QSFP_RX_N(p*LANES+LANES-1 downto p*LANES),
-            QSFP_TX_P       => QSFP_TX_P(p*LANES+LANES-1 downto p*LANES),
-            QSFP_TX_N       => QSFP_TX_N(p*LANES+LANES-1 downto p*LANES),
+            -- ETH serial interface
+            QSFP_REFCLK_P   => ETH_REFCLK_P(p),
+            QSFP_REFCLK_N   => ETH_REFCLK_N(p),
+            QSFP_RX_P       => ETH_RX_P(p*LANES+LANES-1 downto p*LANES),
+            QSFP_RX_N       => ETH_RX_N(p*LANES+LANES-1 downto p*LANES),
+            QSFP_TX_P       => ETH_TX_P(p*LANES+LANES-1 downto p*LANES),
+            QSFP_TX_N       => ETH_TX_N(p*LANES+LANES-1 downto p*LANES),
             -- RX interface (packets for transmit to Ethernet, recieved from TX MAC lite)
             RX_MFB_DATA     => tx_mfb_data_i   (p),
             RX_MFB_SOF_POS  => tx_mfb_sof_pos_i(p),
@@ -517,7 +517,7 @@ begin
 
     qsfp_ctrl_i : entity work.QSFP_CTRL
     generic map (
-       QSFP_PORTS     => ETH_PORTS,
+       QSFP_PORTS     => QSFP_PORTS,
        QSFP_I2C_PORTS => QSFP_I2C_PORTS,
        FPC202_INIT_EN => FPC202_INIT_EN
     )
@@ -535,7 +535,7 @@ begin
        QSFP_I2C_SDA   => QSFP_I2C_SDA,
        QSFP_I2C_DIR   => QSFP_I2C_DIR,
        -- Select which QSFP port is targetting during MI read/writes
-       MI_QSFP_SEL    => MI_ADDR_PMD(8+max(log2(ETH_PORTS),1)-1 downto 8),
+       MI_QSFP_SEL    => MI_ADDR_PMD(8+max(log2(QSFP_PORTS),1)-1 downto 8),
        -- MI interface
        MI_CLK_PHY     => MI_CLK_PMD  ,
        MI_RESET_PHY   => MI_RESET_PMD,

@@ -1161,6 +1161,7 @@ begin
         ETH_PORT_RX_MTU   => ETH_PORT_RX_MTU,
         ETH_PORT_TX_MTU   => ETH_PORT_TX_MTU,
         LANES             => ETH_LANES      ,
+        QSFP_PORTS        => QSFP_PORTS     ,
         QSFP_I2C_PORTS    => QSFP_I2C_PORTS ,
 
         REGIONS           => MFB_REGIONS    ,
@@ -1186,12 +1187,12 @@ begin
         RESET_USER(0)   => rst_app(2),
         RESET_ETH       => rst_eth_phy,
 
-        QSFP_REFCLK_P   => ETH_REFCLK_P,
-        QSFP_REFCLK_N   => ETH_REFCLK_N,
-        QSFP_RX_P       => ETH_RX_P,
-        QSFP_RX_N       => ETH_RX_N,
-        QSFP_TX_P       => ETH_TX_P,
-        QSFP_TX_N       => ETH_TX_N,
+        ETH_REFCLK_P    => ETH_REFCLK_P,
+        ETH_REFCLK_N    => ETH_REFCLK_N,
+        ETH_RX_P        => ETH_RX_P,
+        ETH_RX_N        => ETH_RX_N,
+        ETH_TX_P        => ETH_TX_P,
+        ETH_TX_N        => ETH_TX_N,
 
         QSFP_I2C_SCL    => QSFP_I2C_SCL,
         QSFP_I2C_SDA    => QSFP_I2C_SDA,
