@@ -73,6 +73,9 @@ set PCIE_ENDPOINT_MODE 1
 # ------------------------------------------------------------------------------
 # DMA parameters:
 # ------------------------------------------------------------------------------
+# Total number of DMA modules/streams in FW
+set DMA_MODULES           1
+# Total number of DMA channels in whole FW
 set DMA_RX_CHANNELS       16
 set DMA_TX_CHANNELS       16
 # Maximum allowed size of DMA RX frame in bytes

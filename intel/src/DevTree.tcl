@@ -62,7 +62,7 @@ proc dts_build_netcope {} {
     }
 
     # DMA module
-    global DMA_TYPE DMA_MODULES DMA_RX_CHANNELS DMA_TX_CHANNELS PCIE_ENDPOINTS DMA_RX_FRAME_SIZE_MAX DMA_TX_FRAME_SIZE_MAX DMA_RX_FRAME_SIZE_MIN DMA_TX_FRAME_SIZE_MIN
+    global DMA_TYPE DMA_RX_CHANNELS DMA_TX_CHANNELS PCIE_ENDPOINTS DMA_RX_FRAME_SIZE_MAX DMA_TX_FRAME_SIZE_MAX DMA_RX_FRAME_SIZE_MIN DMA_TX_FRAME_SIZE_MIN
     if {$DMA_TYPE != 0} {
         append ret [dts_dmamod_open $ADDR_DMA_MOD $DMA_TYPE [expr $DMA_RX_CHANNELS / $PCIE_ENDPOINTS] [expr $DMA_TX_CHANNELS / $PCIE_ENDPOINTS] "0" $DMA_RX_FRAME_SIZE_MAX $DMA_TX_FRAME_SIZE_MAX $DMA_RX_FRAME_SIZE_MIN $DMA_TX_FRAME_SIZE_MIN]
     }
@@ -103,9 +103,9 @@ proc dts_build_netcope {} {
         append ret "app:" [dts_application $ADDR_USERAPP $ETH_PORTS $MEM_PORTS]
     }
 
-    # Gen Loop Switch debug modules for each DMA stream
-    set dma_streams [expr min($ETH_PORTS,$PCIE_ENDPOINTS)]
-    for {set i 0} {$i < $dma_streams} {incr i} {
+    # Gen Loop Switch debug modules for each DMA stream/module
+    global DMA_MODULES
+    for {set i 0} {$i < $DMA_MODULES} {incr i} {
         set    gls_offset [expr $i * 0x100]
         append ret [dts_gen_loop_switch [expr $ADDR_GEN_LOOP + $gls_offset] "dbg_gls$i"]
     }

@@ -31,6 +31,17 @@ if {$DMA_TYPE == 4} {
 # ------------------------------------------------------------------------------
 # Checking of parameter compatibility
 # ------------------------------------------------------------------------------
+
+if {$ETH_PORTS <= $PCIE_ENDPOINTS} {
+    if {$DMA_MODULES != $ETH_PORTS} {
+        error "Incompatible value of DMA_MODULES: $DMA_MODULES! Must be equal to ETH_PORTS."
+    }
+} else {
+    if {($DMA_MODULES != $ETH_PORTS) && ($DMA_MODULES != 1)} {
+        error "Incompatible value of DMA_MODULES: $DMA_MODULES! Must be equal to ETH_PORTS or equal to 1."
+    }
+}
+
 if { $DMA_TYPE == 4 } {
     if { $PCIE_ENDPOINTS != 1 || $PCIE_ENDPOINT_MODE != 2} {
         error "Incompatible DMA_TYPE: $DMA_TYPE with chosen PCIE_ENDPOINTS: $PCIE_ENDPOINTS\
