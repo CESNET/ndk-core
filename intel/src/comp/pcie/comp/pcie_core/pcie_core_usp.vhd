@@ -173,6 +173,154 @@ architecture USP of PCIE_CORE is
     );
     end component;
 
+    component pcie4_uscale_plus_1
+    port (
+        user_clk                               :  out  std_logic;
+        user_reset                             :  out  std_logic;
+        user_lnk_up                            :  out  std_logic;
+
+        pci_exp_rxp                            :  in   std_logic_vector(PCIE_LANES-1 downto 0);
+        pci_exp_rxn                            :  in   std_logic_vector(PCIE_LANES-1 downto 0);
+        pci_exp_txp                            :  out  std_logic_vector(PCIE_LANES-1 downto 0);
+        pci_exp_txn                            :  out  std_logic_vector(PCIE_LANES-1 downto 0);
+
+        s_axis_rq_tdata                        :  in   std_logic_vector(AXI_DATA_WIDTH-1    downto 0);
+        s_axis_rq_tkeep                        :  in   std_logic_vector(AXI_DATA_WIDTH/32-1 downto 0);
+        s_axis_rq_tlast                        :  in   std_logic;
+        s_axis_rq_tready                       :  out  std_logic_vector(3     downto  0);
+        s_axis_rq_tuser                        :  in   std_logic_vector(AXI_RQUSER_WIDTH-1  downto 0);
+        s_axis_rq_tvalid                       :  in   std_logic;
+        m_axis_rc_tdata                        :  out  std_logic_vector(AXI_DATA_WIDTH-1    downto 0);
+        m_axis_rc_tkeep                        :  out  std_logic_vector(AXI_DATA_WIDTH/32-1 downto 0);
+        m_axis_rc_tlast                        :  out  std_logic;
+        m_axis_rc_tready                       :  in   std_logic;
+        m_axis_rc_tuser                        :  out  std_logic_vector(AXI_RCUSER_WIDTH-1  downto 0);
+        m_axis_rc_tvalid                       :  out  std_logic;
+        m_axis_cq_tdata                        :  out  std_logic_vector(AXI_DATA_WIDTH-1    downto 0);
+        m_axis_cq_tkeep                        :  out  std_logic_vector(AXI_DATA_WIDTH/32-1 downto 0);
+        m_axis_cq_tlast                        :  out  std_logic;
+        m_axis_cq_tready                       :  in   std_logic;
+        m_axis_cq_tuser                        :  out  std_logic_vector(AXI_CQUSER_WIDTH-1  downto 0);
+        m_axis_cq_tvalid                       :  out  std_logic;
+        s_axis_cc_tdata                        :  in   std_logic_vector(AXI_DATA_WIDTH-1    downto 0);
+        s_axis_cc_tkeep                        :  in   std_logic_vector(AXI_DATA_WIDTH/32-1 downto 0);
+        s_axis_cc_tlast                        :  in   std_logic;
+        s_axis_cc_tready                       :  out  std_logic_vector(3     downto  0);
+        s_axis_cc_tuser                        :  in   std_logic_vector(AXI_CCUSER_WIDTH-1  downto 0);
+        s_axis_cc_tvalid                       :  in   std_logic;
+        pcie_rq_seq_num0                       :  out  std_logic_vector(5     downto  0);
+        pcie_rq_seq_num_vld0                   :  out  std_logic;
+        pcie_rq_seq_num1                       :  out  std_logic_vector(5     downto  0);
+        pcie_rq_seq_num_vld1                   :  out  std_logic;
+        pcie_rq_tag0                           :  out  std_logic_vector(7     downto  0);
+        pcie_rq_tag1                           :  out  std_logic_vector(7     downto  0);
+        pcie_rq_tag_av                         :  out  std_logic_vector(3     downto  0);
+        pcie_rq_tag_vld0                       :  out  std_logic;
+        pcie_rq_tag_vld1                       :  out  std_logic;
+        pcie_tfc_nph_av                        :  out  std_logic_vector(3     downto  0);
+        pcie_tfc_npd_av                        :  out  std_logic_vector(3     downto  0);
+        pcie_cq_np_req                         :  in   std_logic_vector(1     downto  0);
+        pcie_cq_np_req_count                   :  out  std_logic_vector(5     downto  0);
+        cfg_phy_link_down                      :  out  std_logic;
+        cfg_phy_link_status                    :  out  std_logic_vector(1     downto  0);
+        cfg_negotiated_width                   :  out  std_logic_vector(2     downto  0);
+        cfg_current_speed                      :  out  std_logic_vector(1     downto  0);
+        cfg_max_payload                        :  out  std_logic_vector(1     downto  0);
+        cfg_max_read_req                       :  out  std_logic_vector(2     downto  0);
+        cfg_function_status                    :  out  std_logic_vector(15    downto  0);
+        cfg_function_power_state               :  out  std_logic_vector(11    downto  0);
+        cfg_vf_status                          :  out  std_logic_vector(503   downto  0);
+        cfg_vf_power_state                     :  out  std_logic_vector(755   downto  0);
+        cfg_link_power_state                   :  out  std_logic_vector(1     downto  0);
+        cfg_mgmt_addr                          :  in   std_logic_vector(9     downto  0);
+        cfg_mgmt_function_number               :  in   std_logic_vector(7     downto  0);
+        cfg_mgmt_write                         :  in   std_logic;
+        cfg_mgmt_write_data                    :  in   std_logic_vector(31    downto  0);
+        cfg_mgmt_byte_enable                   :  in   std_logic_vector(3     downto  0);
+        cfg_mgmt_read                          :  in   std_logic;
+        cfg_mgmt_read_data                     :  out  std_logic_vector(31    downto  0);
+        cfg_mgmt_read_write_done               :  out  std_logic;
+        cfg_mgmt_debug_access                  :  in   std_logic;
+        cfg_err_cor_out                        :  out  std_logic;
+        cfg_err_nonfatal_out                   :  out  std_logic;
+        cfg_err_fatal_out                      :  out  std_logic;
+        cfg_local_error_valid                  :  out  std_logic;
+        cfg_local_error_out                    :  out  std_logic_vector(4     downto  0);
+        cfg_ltssm_state                        :  out  std_logic_vector(5     downto  0);
+        cfg_rx_pm_state                        :  out  std_logic_vector(1     downto  0);
+        cfg_tx_pm_state                        :  out  std_logic_vector(1     downto  0);
+        cfg_rcb_status                         :  out  std_logic_vector(3     downto  0);
+        cfg_obff_enable                        :  out  std_logic_vector(1     downto  0);
+        cfg_pl_status_change                   :  out  std_logic;
+        cfg_tph_requester_enable               :  out  std_logic_vector(3     downto  0);
+        cfg_tph_st_mode                        :  out  std_logic_vector(11    downto  0);
+        cfg_vf_tph_requester_enable            :  out  std_logic_vector(251   downto  0);
+        cfg_vf_tph_st_mode                     :  out  std_logic_vector(755   downto  0);
+        cfg_dsn                                :  in   std_logic_vector(63    downto  0);
+        cfg_bus_number                         :  out  std_logic_vector(7     downto  0);
+        cfg_msg_received                       :  out  std_logic;
+        cfg_msg_received_data                  :  out  std_logic_vector(7    downto  0);
+        cfg_msg_received_type                  :  out  std_logic_vector(4    downto  0);
+        cfg_msg_transmit                       :  in   std_logic;
+        cfg_msg_transmit_type                  :  in   std_logic_vector(2    downto  0);
+        cfg_msg_transmit_data                  :  in   std_logic_vector(31   downto  0);
+        cfg_msg_transmit_done                  :  out  std_logic;
+        cfg_fc_ph                              :  out  std_logic_vector(7    downto  0);
+        cfg_fc_pd                              :  out  std_logic_vector(11   downto  0);
+        cfg_fc_nph                             :  out  std_logic_vector(7    downto  0);
+        cfg_fc_npd                             :  out  std_logic_vector(11   downto  0);
+        cfg_fc_cplh                            :  out  std_logic_vector(7    downto  0);
+        cfg_fc_cpld                            :  out  std_logic_vector(11   downto  0);
+        cfg_fc_sel                             :  in   std_logic_vector(2    downto  0);
+        cfg_power_state_change_ack             :  in   std_logic;
+        cfg_power_state_change_interrupt       :  out  std_logic;
+        cfg_err_cor_in                         :  in   std_logic;
+        cfg_err_uncor_in                       :  in   std_logic;
+        cfg_flr_in_process                     :  out  std_logic_vector(3     downto  0);
+        cfg_flr_done                           :  in   std_logic_vector(3     downto  0);
+        cfg_vf_flr_in_process                  :  out  std_logic_vector(251   downto  0);
+        cfg_vf_flr_func_num                    :  in   std_logic_vector(7     downto  0);
+        cfg_vf_flr_done                        :  in   std_logic_vector(0     downto  0);
+        cfg_link_training_enable               :  in   std_logic;
+        cfg_ext_read_received                  :  out  std_logic;
+        cfg_ext_write_received                 :  out  std_logic;
+        cfg_ext_register_number                :  out  std_logic_vector(9     downto  0);
+        cfg_ext_function_number                :  out  std_logic_vector(7     downto  0);
+        cfg_ext_write_data                     :  out  std_logic_vector(31    downto  0);
+        cfg_ext_write_byte_enable              :  out  std_logic_vector(3     downto  0);
+        cfg_ext_read_data                      :  in   std_logic_vector(31    downto  0);
+        cfg_ext_read_data_valid                :  in   std_logic;
+        cfg_interrupt_int                      :  in   std_logic_vector(3    downto  0);
+        cfg_interrupt_pending                  :  in   std_logic_vector(3    downto  0);
+        cfg_interrupt_sent                     :  out  std_logic;
+        cfg_interrupt_msi_sent                 :  out  std_logic;
+        cfg_interrupt_msi_fail                 :  out  std_logic;
+        cfg_interrupt_msi_function_number      :  in   std_logic_vector(7    downto  0);
+        cfg_interrupt_msix_enable              :  out  std_logic_vector(3    downto  0);
+        cfg_interrupt_msix_mask                :  out  std_logic_vector(3    downto  0);
+        cfg_interrupt_msix_vf_enable           :  out  std_logic_vector(251  downto  0);
+        cfg_interrupt_msix_vf_mask             :  out  std_logic_vector(251  downto  0);
+        cfg_interrupt_msix_data                :  in   std_logic_vector(31   downto  0);
+        cfg_interrupt_msix_address             :  in   std_logic_vector(63   downto  0);
+        cfg_interrupt_msix_int                 :  in   std_logic;
+        cfg_interrupt_msix_vec_pending         :  in   std_logic_vector(1    downto  0);
+        cfg_interrupt_msix_vec_pending_status  :  out  std_logic_vector(0    downto  0);
+        cfg_pm_aspm_l1_entry_reject            :  in   std_logic;
+        cfg_pm_aspm_tx_l0s_entry_disable       :  in   std_logic;
+        cfg_hot_reset_out                      :  out  std_logic;
+        cfg_config_space_enable                :  in   std_logic;
+        cfg_req_pm_transition_l23_ready        :  in   std_logic;
+        cfg_hot_reset_in                       :  in   std_logic;
+        cfg_ds_port_number                     :  in   std_logic_vector(7     downto  0);
+        cfg_ds_bus_number                      :  in   std_logic_vector(7     downto  0);
+        cfg_ds_device_number                   :  in   std_logic_vector(4     downto  0);
+        sys_clk                                :  in   std_logic;
+        sys_clk_gt                             :  in   std_logic;
+        sys_reset                              :  in   std_logic;
+        phy_rdy_out                            :  out  std_logic
+    );
+    end component;
+
     component xvc_vsec
     port (
             clk                                : in    std_logic;
@@ -298,40 +446,192 @@ architecture USP of PCIE_CORE is
 
 begin
 
-    assert (ENDPOINT_MODE = 0 or ENDPOINT_MODE = 2) report "Xilinx USP PCIe Wrapper: Only ENDPOINT_MODE=0 is now supported!"
+    assert (ENDPOINT_MODE = 0 or ENDPOINT_MODE = 2)
+        report "Xilinx USP PCIe Wrapper: Only values 0 and 2 are supported for parameter ENDPOINT_MODE!"
         severity failure;
 
-    assert DEVICE="ULTRASCALE" report "Xilinx USP PCIe Wrapper: Only ULTRASCALE+ device is supported!"
+    assert (PCIE_ENDPOINTS=1 or PCIE_ENDPOINTS=2)
+        report "Xilinx USP PCIe Wrapper: Only values 0 and 1 are supported for parameter PCIE_ENDPOINTS!"
+        severity failure;
+
+    assert DEVICE="ULTRASCALE"
+        report "Xilinx USP PCIe Wrapper: Only ULTRASCALE+ device is supported!"
         severity failure;
 
     -- =========================================================================
     --  PCIE IP CORE
     -- =========================================================================
 
-    pcie_mult_endp_g : for i in 0 to PCIE_HIPS-1 generate
+    pcie_hip_g : for i in 0 to PCIE_HIPS-1 generate
         pcie_ibuf_i : IBUFDS_GTE4
         generic map (
             REFCLK_HROW_CK_SEL => "00"
         )
         port map (
-            I     => PCIE_SYSCLK_P(i),
-            IB    => PCIE_SYSCLK_N(i),
+            I     => PCIE_SYSCLK_P(i*PCIE_CLKS),
+            IB    => PCIE_SYSCLK_N(i*PCIE_CLKS),
             O     => pcie_sysclk_gt_buf(i),
             ODIV2 => pcie_sysclk_buf(i),
             CEB   => '0'
         );
 
-        pcie_endp_g : if (ENDPOINT_MODE = 0 or ENDPOINT_MODE = 2) generate
+        pcie_rq_axi_ready(i) <= s_axis_rq_tready(i)(0);
+        pcie_cc_axi_ready(i) <= s_axis_cc_tready(i)(0);
 
-            pcie_rq_axi_ready(i) <= s_axis_rq_tready(i)(0);
-            pcie_cc_axi_ready(i) <= s_axis_cc_tready(i)(0);
+        pcie_clk(i) <= pcie_hip_clk(i);
 
-            pcie_clk(i) <= pcie_hip_clk(i);
+        TAG_ASSIGN(i)     <= tag_assign_int(i)(RQ_MFB_REGIONS*8 -1 downto 0);
+        TAG_ASSIGN_VLD(i) <= tag_assign_vld_int(i)(RQ_MFB_REGIONS -1 downto 0);
 
-            TAG_ASSIGN(i)     <= tag_assign_int(i)(RQ_MFB_REGIONS*8 -1 downto 0);
-            TAG_ASSIGN_VLD(i) <= tag_assign_vld_int(i)(RQ_MFB_REGIONS -1 downto 0);
-
+        pcie0_g : if (i=0) generate
             pcie_i : pcie4_uscale_plus
+            port map (
+                sys_clk                           => pcie_sysclk_buf(i),
+                sys_clk_gt                        => pcie_sysclk_gt_buf(i),
+                sys_reset                         => PCIE_SYSRST_N(i),
+        
+                pci_exp_txn                       => PCIE_TX_N((i+1)*PCIE_LANES-1 downto i*PCIE_LANES),
+                pci_exp_txp                       => PCIE_TX_P((i+1)*PCIE_LANES-1 downto i*PCIE_LANES),
+                pci_exp_rxn                       => PCIE_RX_N((i+1)*PCIE_LANES-1 downto i*PCIE_LANES),
+                pci_exp_rxp                       => PCIE_RX_P((i+1)*PCIE_LANES-1 downto i*PCIE_LANES),
+        
+                user_clk                          => pcie_hip_clk(i),
+                user_reset                        => pcie_hip_rst(i),
+                user_lnk_up                       => user_lnk_up(i),
+        
+                s_axis_rq_tlast                   => pcie_rq_axi_last(i),
+                s_axis_rq_tdata                   => pcie_rq_axi_data(i),
+                s_axis_rq_tuser                   => pcie_rq_axi_user(i),
+                s_axis_rq_tkeep                   => pcie_rq_axi_keep(i),
+                s_axis_rq_tready                  => s_axis_rq_tready(i),
+                s_axis_rq_tvalid                  => pcie_rq_axi_valid(i),
+                m_axis_rc_tdata                   => pcie_rc_axi_data(i),
+                m_axis_rc_tuser                   => pcie_rc_axi_user(i),
+                m_axis_rc_tlast                   => pcie_rc_axi_last(i),
+                m_axis_rc_tkeep                   => pcie_rc_axi_keep(i),
+                m_axis_rc_tvalid                  => pcie_rc_axi_valid(i),
+                m_axis_rc_tready                  => pcie_rc_axi_ready(i),
+                m_axis_cq_tdata                   => pcie_cq_axi_data(i),
+                m_axis_cq_tuser                   => pcie_cq_axi_user(i),
+                m_axis_cq_tlast                   => pcie_cq_axi_last(i),
+                m_axis_cq_tkeep                   => pcie_cq_axi_keep(i),
+                m_axis_cq_tvalid                  => pcie_cq_axi_valid(i),
+                m_axis_cq_tready                  => pcie_cq_axi_ready(i),
+                s_axis_cc_tdata                   => pcie_cc_axi_data(i),
+                s_axis_cc_tuser                   => pcie_cc_axi_user(i),
+                s_axis_cc_tlast                   => pcie_cc_axi_last(i),
+                s_axis_cc_tkeep                   => pcie_cc_axi_keep(i),
+                s_axis_cc_tvalid                  => pcie_cc_axi_valid(i),
+                s_axis_cc_tready                  => s_axis_cc_tready(i),
+
+                pcie_rq_seq_num0                  => open,
+                pcie_rq_seq_num_vld0              => open,
+                pcie_rq_tag0                      => tag_assign_int(i)(7 downto 0),
+                pcie_rq_tag_vld0                  => tag_assign_vld_int(i)(0),
+                pcie_rq_tag1                      => tag_assign_int(i)(15 downto 8),
+                pcie_rq_tag_vld1                  => tag_assign_vld_int(i)(1),
+
+                pcie_cq_np_req                    => (others => '1'),
+                pcie_cq_np_req_count              => open,
+
+                cfg_phy_link_down                 => cfg_phy_link_down(i),
+                cfg_phy_link_status               => cfg_phy_link_status(i),
+                cfg_negotiated_width              => cfg_negotiated_width(i),
+                cfg_current_speed                 => cfg_current_speed(i),
+                cfg_max_payload                   => cfg_max_payload(i),
+                cfg_max_read_req                  => cfg_max_read_req(i),
+                cfg_function_status               => cfg_function_status(i),
+                cfg_function_power_state          => cfg_function_power_state(i),
+                cfg_vf_status                     => open,
+                cfg_vf_power_state                => open,
+                cfg_link_power_state              => cfg_link_power_state(i),
+                cfg_mgmt_addr                     => (others => '0'),
+                cfg_mgmt_function_number          => (others => '0'),
+                cfg_mgmt_write                    => '0',
+                cfg_mgmt_write_data               => (others => '0'),
+                cfg_mgmt_byte_enable              => (others => '0'),
+                cfg_mgmt_read                     => '0',
+                cfg_mgmt_read_data                => open,
+                cfg_mgmt_read_write_done          => open,
+                cfg_mgmt_debug_access             => '0',
+                cfg_err_cor_out                   => open,
+                cfg_err_nonfatal_out              => open,
+                cfg_err_fatal_out                 => open,
+                cfg_local_error_valid             => cfg_local_error_valid(i),
+                cfg_local_error_out               => cfg_local_error_out(i),
+                cfg_ltssm_state                   => cfg_ltssm_state(i),
+                cfg_rx_pm_state                   => cfg_rx_pm_state(i),
+                cfg_tx_pm_state                   => cfg_tx_pm_state(i),
+                cfg_rcb_status                    => cfg_rcb_status(i),
+                cfg_obff_enable                   => open,
+                cfg_pl_status_change              => open,
+                cfg_tph_requester_enable          => open,
+                cfg_tph_st_mode                   => open,
+                cfg_vf_tph_requester_enable       => open,
+                cfg_vf_tph_st_mode                => open,
+                cfg_dsn                           => (others => '0'),
+                cfg_bus_number                    => open,
+                cfg_msg_received                  => open,
+                cfg_msg_received_data             => open,
+                cfg_msg_received_type             => open,
+                cfg_msg_transmit                  => '0',
+                cfg_msg_transmit_type             => (others => '0'),
+                cfg_msg_transmit_data             => (others => '0'),
+                cfg_msg_transmit_done             => open,
+                cfg_fc_ph                         => open,
+                cfg_fc_pd                         => open,
+                cfg_fc_nph                        => open,
+                cfg_fc_npd                        => open,
+                cfg_fc_cplh                       => open,
+                cfg_fc_cpld                       => open,
+                cfg_fc_sel                        => (others => '0'),
+                cfg_power_state_change_ack        => '0',
+                cfg_power_state_change_interrupt  => open,
+                cfg_err_cor_in                    => '0',
+                cfg_err_uncor_in                  => '0',
+                cfg_flr_in_process                => open,
+                cfg_flr_done                      => (others => '0'),
+                cfg_vf_flr_in_process             => open,
+                cfg_vf_flr_func_num               => (others => '0'),
+                cfg_vf_flr_done                   => (others => '0'),
+                cfg_link_training_enable          => '1',
+                cfg_ext_read_received             => cfg_ext_read(i),
+                cfg_ext_write_received            => cfg_ext_write(i),
+                cfg_ext_register_number           => cfg_ext_register(i),
+                cfg_ext_function_number           => cfg_ext_function(i),
+                cfg_ext_write_data                => cfg_ext_write_data(i),
+                cfg_ext_write_byte_enable         => cfg_ext_write_be(i),
+                cfg_ext_read_data                 => cfg_ext_read_data(i),
+                cfg_ext_read_data_valid           => cfg_ext_read_dv(i),
+                cfg_interrupt_int                 => (others => '0'),
+                cfg_interrupt_pending             => (others => '0'),
+                cfg_interrupt_sent                => open,
+                cfg_interrupt_msi_sent            => open,
+                cfg_interrupt_msi_fail            => open,
+                cfg_interrupt_msi_function_number => (others => '0'),
+                cfg_interrupt_msix_enable         => open,
+                cfg_interrupt_msix_mask           => open,
+                cfg_interrupt_msix_vf_enable      => open,
+                cfg_interrupt_msix_vf_mask        => open,
+                cfg_interrupt_msix_data           => (others => '0'),
+                cfg_interrupt_msix_address        => (others => '0'),
+                cfg_interrupt_msix_int            => '0',
+                cfg_interrupt_msix_vec_pending    => (others => '0'),
+                cfg_interrupt_msix_vec_pending_status => open,
+                cfg_pm_aspm_l1_entry_reject       => '0',
+                cfg_pm_aspm_tx_l0s_entry_disable  => '0',
+                cfg_hot_reset_out                 => open,
+                cfg_config_space_enable           => '1',
+                cfg_req_pm_transition_l23_ready   => '0',
+                cfg_hot_reset_in                  => '0',
+                cfg_ds_port_number                => (others => '0'),
+                cfg_ds_bus_number                 => (others => '0'),
+                cfg_ds_device_number              => (others => '0'),
+                phy_rdy_out                       => pcie_phy_rdy_out(i)
+            );
+        end generate;
+        pcie1_g : if (i=1) generate
+            pcie_i : pcie4_uscale_plus_1
             port map (
                 sys_clk                           => pcie_sysclk_buf(i),
                 sys_clk_gt                        => pcie_sysclk_gt_buf(i),
@@ -622,7 +922,7 @@ begin
     -- =========================================================================
 
     pcie_rst_g : for i in 0 to PCIE_ENDPOINTS-1 generate
-        pcie_rst_async(i) <= pcie_hip_rst(i) and not user_lnk_up(i);
+        pcie_rst_async(i) <= pcie_hip_rst(i) or not user_lnk_up(i);
 
         pcie_rst_sync_i : entity work.ASYNC_RESET
         generic map (
