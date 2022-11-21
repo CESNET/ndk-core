@@ -17,9 +17,6 @@ set BUILD_UID  [format "%d" [exec id -u]]
 set DMA_RX_FRAME_SIZE_MIN 60
 set DMA_TX_FRAME_SIZE_MIN 60
 
-# Disable PTC module and replace it with AXI <---> MBF converters (USP devices only)
-set PTC_DISABLE false
-
 set PCIE_LANES 16
 
 if {$DMA_TYPE == 4} {

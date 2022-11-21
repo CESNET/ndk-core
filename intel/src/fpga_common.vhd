@@ -15,6 +15,7 @@ use work.combo_user_const.all;
 use work.math_pack.all;
 use work.type_pack.all;
 use work.dma_bus_pack.all;
+use work.pcie_meta_pack.all;
 use work.eth_hdr_pack.all;
 use work.mi_addr_space_pack.all;
 
@@ -271,22 +272,35 @@ architecture FULL of FPGA_COMMON is
     constant MFB_BLOCK_SIZE   : integer := 8;  -- Number of items in block
     constant MFB_ITEM_WIDTH   : integer := 8;  -- Width of one item in bits
 
-    -- DMA MVB UP parameters
-    constant DMA_UP_MVB_ITEMS         : natural := pcie_mfb_regions_calc_f("RQ");
-    constant DMA_UP_MVB_ITEM_WIDTH    : natural := DMA_UPHDR_WIDTH;
-    -- DMA MFB UP parameters
-    constant DMA_UP_MFB_REGIONS       : natural := pcie_mfb_regions_calc_f("RQ");
-    constant DMA_UP_MFB_REGION_SIZE   : natural := 1;
-    constant DMA_UP_MFB_BLOCK_SIZE    : natural := 8;
-    constant DMA_UP_MFB_ITEM_WIDTH    : natural := 32;
-    -- DMA MVB DOWN parameters
-    constant DMA_DOWN_MVB_ITEMS       : natural := pcie_mfb_regions_calc_f("RC");
-    constant DMA_DOWN_MVB_ITEM_WIDTH  : natural := DMA_DOWNHDR_WIDTH;
-    -- DMA MFB DOWN parameters
-    constant DMA_DOWN_MFB_REGIONS     : natural := pcie_mfb_regions_calc_f("RC");
-    constant DMA_DOWN_MFB_REGION_SIZE : natural := 1;
-    constant DMA_DOWN_MFB_BLOCK_SIZE  : natural := tsel(PCIE_ENDPOINT_TYPE="USP",4,8);
-    constant DMA_DOWN_MFB_ITEM_WIDTH  : natural := 32;
+    -- DMA MVB RQ parameters
+    constant DMA_RQ_MVB_ITEMS         : natural := pcie_mfb_regions_calc_f("RQ");
+    constant DMA_RQ_MVB_ITEM_WIDTH    : natural := DMA_UPHDR_WIDTH;
+    -- DMA MFB RQ parameters
+    constant DMA_RQ_MFB_REGIONS       : natural := pcie_mfb_regions_calc_f("RQ");
+    constant DMA_RQ_MFB_REGION_SIZE   : natural := 1;
+    constant DMA_RQ_MFB_BLOCK_SIZE    : natural := 8;
+    constant DMA_RQ_MFB_ITEM_WIDTH    : natural := 32;
+
+    -- DMA MVB RC parameters
+    constant DMA_RC_MVB_ITEMS       : natural := pcie_mfb_regions_calc_f("RC");
+    constant DMA_RC_MVB_ITEM_WIDTH  : natural := DMA_DOWNHDR_WIDTH;
+    -- DMA MFB RC parameters
+    constant DMA_RC_MFB_REGIONS     : natural := pcie_mfb_regions_calc_f("RC");
+    constant DMA_RC_MFB_REGION_SIZE : natural := 1;
+    constant DMA_RC_MFB_BLOCK_SIZE  : natural := tsel(PCIE_ENDPOINT_TYPE="USP",4,8);
+    constant DMA_RC_MFB_ITEM_WIDTH  : natural := 32;
+
+    constant DMA_CQ_MFB_REGIONS     : natural := pcie_mfb_regions_calc_f("CQ");
+    constant DMA_CQ_MFB_REGION_SIZE : natural := DMA_RQ_MFB_REGION_SIZE;
+    constant DMA_CQ_MFB_BLOCK_SIZE  : natural := DMA_RQ_MFB_BLOCK_SIZE;
+    constant DMA_CQ_MFB_ITEM_WIDTH  : natural := DMA_RQ_MFB_ITEM_WIDTH;
+
+    constant DMA_CC_MFB_REGIONS     : natural := pcie_mfb_regions_calc_f("CC");
+    constant DMA_CC_MFB_REGION_SIZE : natural := DMA_RC_MFB_REGION_SIZE;
+    -- this remains the same as RQ interface beacuse on straddling option enabled, the core supports
+    -- only two TLPs on CC interface
+    constant DMA_CC_MFB_BLOCK_SIZE  : natural := DMA_RQ_MFB_BLOCK_SIZE;
+    constant DMA_CC_MFB_ITEM_WIDTH  : natural := DMA_RC_MFB_ITEM_WIDTH;
 
     -- DMA CrossbarX clock selection
     constant DMA_CROX_CLK_SEL    : integer := 0;
@@ -366,31 +380,50 @@ architecture FULL of FPGA_COMMON is
     signal dma_mi_ardy                   : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
     signal dma_mi_drdy                   : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
 
-    signal dma_up_mvb_data               : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_UP_MVB_ITEMS*DMA_UP_MVB_ITEM_WIDTH-1 downto 0);
-    signal dma_up_mvb_vld                : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_UP_MVB_ITEMS-1 downto 0);
-    signal dma_up_mvb_src_rdy            : std_logic_vector(DMA_ENDPOINTS-1 downto 0);
-    signal dma_up_mvb_dst_rdy            : std_logic_vector(DMA_ENDPOINTS-1 downto 0);
+    signal dma_rq_mvb_data               : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_RQ_MVB_ITEMS*DMA_RQ_MVB_ITEM_WIDTH-1 downto 0);
+    signal dma_rq_mvb_vld                : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_RQ_MVB_ITEMS-1 downto 0);
+    signal dma_rq_mvb_src_rdy            : std_logic_vector(DMA_ENDPOINTS-1 downto 0);
+    signal dma_rq_mvb_dst_rdy            : std_logic_vector(DMA_ENDPOINTS-1 downto 0);
 
-    signal dma_up_mfb_data               : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_UP_MFB_REGIONS*DMA_UP_MFB_REGION_SIZE*DMA_UP_MFB_BLOCK_SIZE*DMA_UP_MFB_ITEM_WIDTH-1 downto 0);
-    signal dma_up_mfb_sof                : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_UP_MFB_REGIONS-1 downto 0);
-    signal dma_up_mfb_eof                : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_UP_MFB_REGIONS-1 downto 0);
-    signal dma_up_mfb_sof_pos            : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_UP_MFB_REGIONS*max(1,log2(DMA_UP_MFB_REGION_SIZE))-1 downto 0);
-    signal dma_up_mfb_eof_pos            : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_UP_MFB_REGIONS*max(1,log2(DMA_UP_MFB_REGION_SIZE*DMA_UP_MFB_BLOCK_SIZE))-1 downto 0);
-    signal dma_up_mfb_src_rdy            : std_logic_vector(DMA_ENDPOINTS-1 downto 0);
-    signal dma_up_mfb_dst_rdy            : std_logic_vector(DMA_ENDPOINTS-1 downto 0);
+    signal dma_rq_mfb_data               : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_RQ_MFB_REGIONS*DMA_RQ_MFB_REGION_SIZE*DMA_RQ_MFB_BLOCK_SIZE*DMA_RQ_MFB_ITEM_WIDTH-1 downto 0);
+    signal dma_rq_mfb_meta               : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_RQ_MFB_REGIONS*PCIE_RQ_META_WIDTH -1 downto 0);
+    signal dma_rq_mfb_sof                : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_RQ_MFB_REGIONS-1 downto 0);
+    signal dma_rq_mfb_eof                : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_RQ_MFB_REGIONS-1 downto 0);
+    signal dma_rq_mfb_sof_pos            : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_RQ_MFB_REGIONS*max(1,log2(DMA_RQ_MFB_REGION_SIZE))-1 downto 0);
+    signal dma_rq_mfb_eof_pos            : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_RQ_MFB_REGIONS*max(1,log2(DMA_RQ_MFB_REGION_SIZE*DMA_RQ_MFB_BLOCK_SIZE))-1 downto 0);
+    signal dma_rq_mfb_src_rdy            : std_logic_vector(DMA_ENDPOINTS-1 downto 0);
+    signal dma_rq_mfb_dst_rdy            : std_logic_vector(DMA_ENDPOINTS-1 downto 0);
 
-    signal dma_down_mvb_data             : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_DOWN_MVB_ITEMS*DMA_DOWN_MVB_ITEM_WIDTH-1 downto 0);
-    signal dma_down_mvb_vld              : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_DOWN_MVB_ITEMS-1 downto 0);
-    signal dma_down_mvb_src_rdy          : std_logic_vector(DMA_ENDPOINTS-1 downto 0);
-    signal dma_down_mvb_dst_rdy          : std_logic_vector(DMA_ENDPOINTS-1 downto 0);
+    signal dma_rc_mvb_data               : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_RC_MVB_ITEMS*DMA_RC_MVB_ITEM_WIDTH-1 downto 0);
+    signal dma_rc_mvb_vld                : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_RC_MVB_ITEMS-1 downto 0);
+    signal dma_rc_mvb_src_rdy            : std_logic_vector(DMA_ENDPOINTS-1 downto 0);
+    signal dma_rc_mvb_dst_rdy            : std_logic_vector(DMA_ENDPOINTS-1 downto 0);
 
-    signal dma_down_mfb_data             : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_DOWN_MFB_REGIONS*DMA_DOWN_MFB_REGION_SIZE*DMA_DOWN_MFB_BLOCK_SIZE*DMA_DOWN_MFB_ITEM_WIDTH-1 downto 0);
-    signal dma_down_mfb_sof              : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_DOWN_MFB_REGIONS-1 downto 0);
-    signal dma_down_mfb_eof              : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_DOWN_MFB_REGIONS-1 downto 0);
-    signal dma_down_mfb_sof_pos          : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_DOWN_MFB_REGIONS*max(1,log2(DMA_DOWN_MFB_REGION_SIZE))-1 downto 0);
-    signal dma_down_mfb_eof_pos          : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_DOWN_MFB_REGIONS*max(1,log2(DMA_DOWN_MFB_REGION_SIZE*DMA_DOWN_MFB_BLOCK_SIZE))-1 downto 0);
-    signal dma_down_mfb_src_rdy          : std_logic_vector(DMA_ENDPOINTS-1 downto 0);
-    signal dma_down_mfb_dst_rdy          : std_logic_vector(DMA_ENDPOINTS-1 downto 0);
+    signal dma_rc_mfb_data               : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_RC_MFB_REGIONS*DMA_RC_MFB_REGION_SIZE*DMA_RC_MFB_BLOCK_SIZE*DMA_RC_MFB_ITEM_WIDTH-1 downto 0);
+    signal dma_rc_mfb_sof                : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_RC_MFB_REGIONS-1 downto 0);
+    signal dma_rc_mfb_eof                : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_RC_MFB_REGIONS-1 downto 0);
+    signal dma_rc_mfb_sof_pos            : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_RC_MFB_REGIONS*max(1,log2(DMA_RC_MFB_REGION_SIZE))-1 downto 0);
+    signal dma_rc_mfb_eof_pos            : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_RC_MFB_REGIONS*max(1,log2(DMA_RC_MFB_REGION_SIZE*DMA_RC_MFB_BLOCK_SIZE))-1 downto 0);
+    signal dma_rc_mfb_src_rdy            : std_logic_vector(DMA_ENDPOINTS-1 downto 0);
+    signal dma_rc_mfb_dst_rdy            : std_logic_vector(DMA_ENDPOINTS-1 downto 0);
+
+    signal dma_cq_mfb_data               : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_CQ_MFB_REGIONS*DMA_CQ_MFB_REGION_SIZE*DMA_CQ_MFB_BLOCK_SIZE*DMA_CQ_MFB_ITEM_WIDTH-1 downto 0);
+    signal dma_cq_mfb_meta               : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_CQ_MFB_REGIONS*PCIE_CQ_META_WIDTH -1 downto 0);
+    signal dma_cq_mfb_sof                : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_CQ_MFB_REGIONS-1 downto 0);
+    signal dma_cq_mfb_eof                : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_CQ_MFB_REGIONS-1 downto 0);
+    signal dma_cq_mfb_sof_pos            : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_CQ_MFB_REGIONS*max(1,log2(DMA_CQ_MFB_REGION_SIZE))-1 downto 0);
+    signal dma_cq_mfb_eof_pos            : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_CQ_MFB_REGIONS*max(1,log2(DMA_CQ_MFB_REGION_SIZE*DMA_CQ_MFB_BLOCK_SIZE))-1 downto 0);
+    signal dma_cq_mfb_src_rdy            : std_logic_vector(DMA_ENDPOINTS-1 downto 0);
+    signal dma_cq_mfb_dst_rdy            : std_logic_vector(DMA_ENDPOINTS-1 downto 0);
+
+    signal dma_cc_mfb_data               : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_CC_MFB_REGIONS*DMA_CC_MFB_REGION_SIZE*DMA_CC_MFB_BLOCK_SIZE*DMA_CC_MFB_ITEM_WIDTH-1 downto 0);
+    signal dma_cc_mfb_meta               : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_CC_MFB_REGIONS*PCIE_CC_META_WIDTH -1 downto 0);
+    signal dma_cc_mfb_sof                : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_CC_MFB_REGIONS-1 downto 0);
+    signal dma_cc_mfb_eof                : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_CC_MFB_REGIONS-1 downto 0);
+    signal dma_cc_mfb_sof_pos            : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_CC_MFB_REGIONS*max(1,log2(DMA_CC_MFB_REGION_SIZE))-1 downto 0);
+    signal dma_cc_mfb_eof_pos            : slv_array_t(DMA_ENDPOINTS-1 downto 0)(DMA_CC_MFB_REGIONS*max(1,log2(DMA_CC_MFB_REGION_SIZE*DMA_CC_MFB_BLOCK_SIZE))-1 downto 0);
+    signal dma_cc_mfb_src_rdy            : std_logic_vector(DMA_ENDPOINTS-1 downto 0);
+    signal dma_cc_mfb_dst_rdy            : std_logic_vector(DMA_ENDPOINTS-1 downto 0);
 
     signal app_dma_rx_mvb_len            : std_logic_vector(DMA_STREAMS*MVB_ITEMS*log2(DMA_RX_FRAME_SIZE_MAX+1)-1 downto 0);
     signal app_dma_rx_mvb_hdr_meta       : std_logic_vector(DMA_STREAMS*MVB_ITEMS*HDR_META_WIDTH-1 downto 0);
@@ -577,22 +610,25 @@ begin
         BAR5_BASE_ADDR      => BAR5_BASE_ADDR,
         EXP_ROM_BASE_ADDR   => EXP_ROM_BASE_ADDR,
 
-        CQ_MFB_REGIONS      => pcie_mfb_regions_calc_f("CQ"),
-        CQ_MFB_REGION_SIZE  => DMA_UP_MFB_REGION_SIZE,
-        CQ_MFB_BLOCK_SIZE   => DMA_UP_MFB_BLOCK_SIZE,
-        CQ_MFB_ITEM_WIDTH   => DMA_UP_MFB_ITEM_WIDTH,
-        RC_MFB_REGIONS      => DMA_DOWN_MFB_REGIONS,
-        RC_MFB_REGION_SIZE  => DMA_DOWN_MFB_REGION_SIZE,
-        RC_MFB_BLOCK_SIZE   => DMA_DOWN_MFB_BLOCK_SIZE,
-        RC_MFB_ITEM_WIDTH   => DMA_DOWN_MFB_ITEM_WIDTH,
-        CC_MFB_REGIONS      => pcie_mfb_regions_calc_f("CC"),
-        CC_MFB_REGION_SIZE  => DMA_UP_MFB_REGION_SIZE,
-        CC_MFB_BLOCK_SIZE   => DMA_UP_MFB_BLOCK_SIZE,
-        CC_MFB_ITEM_WIDTH   => DMA_UP_MFB_ITEM_WIDTH,
-        RQ_MFB_REGIONS      => DMA_UP_MFB_REGIONS,
-        RQ_MFB_REGION_SIZE  => DMA_UP_MFB_REGION_SIZE,
-        RQ_MFB_BLOCK_SIZE   => DMA_UP_MFB_BLOCK_SIZE,
-        RQ_MFB_ITEM_WIDTH   => DMA_UP_MFB_ITEM_WIDTH,
+        CQ_MFB_REGIONS      => DMA_CQ_MFB_REGIONS,
+        CQ_MFB_REGION_SIZE  => DMA_CQ_MFB_REGION_SIZE,
+        CQ_MFB_BLOCK_SIZE   => DMA_CQ_MFB_BLOCK_SIZE,
+        CQ_MFB_ITEM_WIDTH   => DMA_CQ_MFB_ITEM_WIDTH,
+
+        RC_MFB_REGIONS      => DMA_RC_MFB_REGIONS,
+        RC_MFB_REGION_SIZE  => DMA_RC_MFB_REGION_SIZE,
+        RC_MFB_BLOCK_SIZE   => DMA_RC_MFB_BLOCK_SIZE,
+        RC_MFB_ITEM_WIDTH   => DMA_RC_MFB_ITEM_WIDTH,
+
+        CC_MFB_REGIONS      => DMA_CC_MFB_REGIONS,
+        CC_MFB_REGION_SIZE  => DMA_CC_MFB_REGION_SIZE,
+        CC_MFB_BLOCK_SIZE   => DMA_CC_MFB_BLOCK_SIZE,
+        CC_MFB_ITEM_WIDTH   => DMA_CC_MFB_ITEM_WIDTH,
+
+        RQ_MFB_REGIONS      => DMA_RQ_MFB_REGIONS,
+        RQ_MFB_REGION_SIZE  => DMA_RQ_MFB_REGION_SIZE,
+        RQ_MFB_BLOCK_SIZE   => DMA_RQ_MFB_BLOCK_SIZE,
+        RQ_MFB_ITEM_WIDTH   => DMA_RQ_MFB_ITEM_WIDTH,
 
         DMA_PORTS           => DMA_ENDPOINTS,
         PCIE_ENDPOINT_TYPE  => PCIE_ENDPOINT_TYPE,
@@ -626,51 +662,51 @@ begin
         DMA_CLK            => clk_dma,
         DMA_RESET          => rst_dma(0),
         
-        DMA_RQ_MFB_DATA    => dma_up_mfb_data,
-        DMA_RQ_MFB_META    => (others => (others => '0')),
-        DMA_RQ_MFB_SOF     => dma_up_mfb_sof,
-        DMA_RQ_MFB_EOF     => dma_up_mfb_eof,
-        DMA_RQ_MFB_SOF_POS => dma_up_mfb_sof_pos,
-        DMA_RQ_MFB_EOF_POS => dma_up_mfb_eof_pos,
-        DMA_RQ_MFB_SRC_RDY => dma_up_mfb_src_rdy,
-        DMA_RQ_MFB_DST_RDY => dma_up_mfb_dst_rdy,
+        DMA_RQ_MFB_DATA    => dma_rq_mfb_data,
+        DMA_RQ_MFB_META    => dma_rq_mfb_meta,
+        DMA_RQ_MFB_SOF     => dma_rq_mfb_sof,
+        DMA_RQ_MFB_EOF     => dma_rq_mfb_eof,
+        DMA_RQ_MFB_SOF_POS => dma_rq_mfb_sof_pos,
+        DMA_RQ_MFB_EOF_POS => dma_rq_mfb_eof_pos,
+        DMA_RQ_MFB_SRC_RDY => dma_rq_mfb_src_rdy,
+        DMA_RQ_MFB_DST_RDY => dma_rq_mfb_dst_rdy,
 
-        DMA_RQ_MVB_DATA    => dma_up_mvb_data,
-        DMA_RQ_MVB_VLD     => dma_up_mvb_vld,
-        DMA_RQ_MVB_SRC_RDY => dma_up_mvb_src_rdy,
-        DMA_RQ_MVB_DST_RDY => dma_up_mvb_dst_rdy,
+        DMA_RQ_MVB_DATA    => dma_rq_mvb_data,
+        DMA_RQ_MVB_VLD     => dma_rq_mvb_vld,
+        DMA_RQ_MVB_SRC_RDY => dma_rq_mvb_src_rdy,
+        DMA_RQ_MVB_DST_RDY => dma_rq_mvb_dst_rdy,
 
-        DMA_RC_MFB_DATA    => dma_down_mfb_data,
+        DMA_RC_MFB_DATA    => dma_rc_mfb_data,
         DMA_RC_MFB_META    => open,
-        DMA_RC_MFB_SOF     => dma_down_mfb_sof,
-        DMA_RC_MFB_EOF     => dma_down_mfb_eof,
-        DMA_RC_MFB_SOF_POS => dma_down_mfb_sof_pos,
-        DMA_RC_MFB_EOF_POS => dma_down_mfb_eof_pos,
-        DMA_RC_MFB_SRC_RDY => dma_down_mfb_src_rdy,
-        DMA_RC_MFB_DST_RDY => dma_down_mfb_dst_rdy,
+        DMA_RC_MFB_SOF     => dma_rc_mfb_sof,
+        DMA_RC_MFB_EOF     => dma_rc_mfb_eof,
+        DMA_RC_MFB_SOF_POS => dma_rc_mfb_sof_pos,
+        DMA_RC_MFB_EOF_POS => dma_rc_mfb_eof_pos,
+        DMA_RC_MFB_SRC_RDY => dma_rc_mfb_src_rdy,
+        DMA_RC_MFB_DST_RDY => dma_rc_mfb_dst_rdy,
 
-        DMA_RC_MVB_DATA    => dma_down_mvb_data,
-        DMA_RC_MVB_VLD     => dma_down_mvb_vld,
-        DMA_RC_MVB_SRC_RDY => dma_down_mvb_src_rdy,
-        DMA_RC_MVB_DST_RDY => dma_down_mvb_dst_rdy,
+        DMA_RC_MVB_DATA    => dma_rc_mvb_data,
+        DMA_RC_MVB_VLD     => dma_rc_mvb_vld,
+        DMA_RC_MVB_SRC_RDY => dma_rc_mvb_src_rdy,
+        DMA_RC_MVB_DST_RDY => dma_rc_mvb_dst_rdy,
 
-        DMA_CQ_MFB_DATA    => open,
-        DMA_CQ_MFB_META    => open,
-        DMA_CQ_MFB_SOF     => open,
-        DMA_CQ_MFB_EOF     => open,
-        DMA_CQ_MFB_SOF_POS => open,
-        DMA_CQ_MFB_EOF_POS => open,
-        DMA_CQ_MFB_SRC_RDY => open,
-        DMA_CQ_MFB_DST_RDY => (others => '0'),
+        DMA_CQ_MFB_DATA    => dma_cq_mfb_data,
+        DMA_CQ_MFB_META    => dma_cq_mfb_meta,
+        DMA_CQ_MFB_SOF     => dma_cq_mfb_sof,
+        DMA_CQ_MFB_EOF     => dma_cq_mfb_eof,
+        DMA_CQ_MFB_SOF_POS => dma_cq_mfb_sof_pos,
+        DMA_CQ_MFB_EOF_POS => dma_cq_mfb_eof_pos,
+        DMA_CQ_MFB_SRC_RDY => dma_cq_mfb_src_rdy,
+        DMA_CQ_MFB_DST_RDY => dma_cq_mfb_dst_rdy,
 
-        DMA_CC_MFB_DATA    => (others => (others => '0')),
-        DMA_CC_MFB_META    => (others => (others => '0')),
-        DMA_CC_MFB_SOF     => (others => (others => '0')),
-        DMA_CC_MFB_EOF     => (others => (others => '0')),
-        DMA_CC_MFB_SOF_POS => (others => (others => '0')),
-        DMA_CC_MFB_EOF_POS => (others => (others => '0')),
-        DMA_CC_MFB_SRC_RDY => (others => '0'),
-        DMA_CC_MFB_DST_RDY => open,
+        DMA_CC_MFB_DATA    => dma_cc_mfb_data,
+        DMA_CC_MFB_META    => dma_cc_mfb_meta,
+        DMA_CC_MFB_SOF     => dma_cc_mfb_sof,
+        DMA_CC_MFB_EOF     => dma_cc_mfb_eof,
+        DMA_CC_MFB_SOF_POS => dma_cc_mfb_sof_pos,
+        DMA_CC_MFB_EOF_POS => dma_cc_mfb_eof_pos,
+        DMA_CC_MFB_SRC_RDY => dma_cc_mfb_src_rdy,
+        DMA_CC_MFB_DST_RDY => dma_cc_mfb_dst_rdy,
 
         MI_CLK             => clk_mi,
         MI_RESET           => rst_mi(0),
@@ -874,15 +910,25 @@ begin
         PCIE_MRRS            => PCIE_MRRS                 ,
         DMA_TAG_WIDTH        => 8                         ,
 
-        UP_MFB_REGIONS       => DMA_UP_MFB_REGIONS        ,
-        UP_MFB_REGION_SIZE   => DMA_UP_MFB_REGION_SIZE    ,
-        UP_MFB_BLOCK_SIZE    => DMA_UP_MFB_BLOCK_SIZE     ,
-        UP_MFB_ITEM_WIDTH    => DMA_UP_MFB_ITEM_WIDTH     ,
+        PCIE_RQ_MFB_REGIONS     => DMA_RQ_MFB_REGIONS     ,
+        PCIE_RQ_MFB_REGION_SIZE => DMA_RQ_MFB_REGION_SIZE ,
+        PCIE_RQ_MFB_BLOCK_SIZE  => DMA_RQ_MFB_BLOCK_SIZE  ,
+        PCIE_RQ_MFB_ITEM_WIDTH  => DMA_RQ_MFB_ITEM_WIDTH  ,
 
-        DOWN_MFB_REGIONS     => DMA_DOWN_MFB_REGIONS      ,
-        DOWN_MFB_REGION_SIZE => DMA_DOWN_MFB_REGION_SIZE  ,
-        DOWN_MFB_BLOCK_SIZE  => DMA_DOWN_MFB_BLOCK_SIZE   ,
-        DOWN_MFB_ITEM_WIDTH  => DMA_DOWN_MFB_ITEM_WIDTH   ,
+        PCIE_RC_MFB_REGIONS     => DMA_RC_MFB_REGIONS     ,
+        PCIE_RC_MFB_REGION_SIZE => DMA_RC_MFB_REGION_SIZE ,
+        PCIE_RC_MFB_BLOCK_SIZE  => DMA_RC_MFB_BLOCK_SIZE  ,
+        PCIE_RC_MFB_ITEM_WIDTH  => DMA_RC_MFB_ITEM_WIDTH  ,
+
+        PCIE_CQ_MFB_REGIONS     => DMA_CQ_MFB_REGIONS     ,
+        PCIE_CQ_MFB_REGION_SIZE => DMA_CQ_MFB_REGION_SIZE ,
+        PCIE_CQ_MFB_BLOCK_SIZE  => DMA_CQ_MFB_BLOCK_SIZE  ,
+        PCIE_CQ_MFB_ITEM_WIDTH  => DMA_CQ_MFB_ITEM_WIDTH  ,
+
+        PCIE_CC_MFB_REGIONS     => DMA_CC_MFB_REGIONS     ,
+        PCIE_CC_MFB_REGION_SIZE => DMA_CC_MFB_REGION_SIZE ,
+        PCIE_CC_MFB_BLOCK_SIZE  => DMA_CC_MFB_BLOCK_SIZE  ,
+        PCIE_CC_MFB_ITEM_WIDTH  => DMA_CC_MFB_ITEM_WIDTH  ,
 
         HDR_META_WIDTH       => HDR_META_WIDTH            ,
 
@@ -894,6 +940,7 @@ begin
         TX_CHANNELS          => DMA_TX_CHANNELS           ,
         TX_SEL_CHANNELS      => minimum(8,DMA_TX_CHANNELS),
         TX_DP_WIDTH          => 16                        ,
+        TX_FIFO_DEPTH        => 512                       ,
 
         RX_GEN_EN            => true                      ,
         TX_GEN_EN            => true                      ,
@@ -955,31 +1002,50 @@ begin
         TX_USR_MFB_SRC_RDY  => app_dma_tx_mfb_src_rdy,
         TX_USR_MFB_DST_RDY  => app_dma_tx_mfb_dst_rdy,
 
-        UP_MVB_DATA         => dma_up_mvb_data,
-        UP_MVB_VLD          => dma_up_mvb_vld,
-        UP_MVB_SRC_RDY      => dma_up_mvb_src_rdy,
-        UP_MVB_DST_RDY      => dma_up_mvb_dst_rdy,
+        PCIE_RQ_MVB_DATA    => dma_rq_mvb_data,
+        PCIE_RQ_MVB_VLD     => dma_rq_mvb_vld,
+        PCIE_RQ_MVB_SRC_RDY => dma_rq_mvb_src_rdy,
+        PCIE_RQ_MVB_DST_RDY => dma_rq_mvb_dst_rdy,
 
-        UP_MFB_DATA         => dma_up_mfb_data,
-        UP_MFB_SOF          => dma_up_mfb_sof,
-        UP_MFB_EOF          => dma_up_mfb_eof,
-        UP_MFB_SOF_POS      => dma_up_mfb_sof_pos,
-        UP_MFB_EOF_POS      => dma_up_mfb_eof_pos,
-        UP_MFB_SRC_RDY      => dma_up_mfb_src_rdy,
-        UP_MFB_DST_RDY      => dma_up_mfb_dst_rdy,
+        PCIE_RQ_MFB_DATA    => dma_rq_mfb_data,
+        PCIE_RQ_MFB_META    => dma_rq_mfb_meta,
+        PCIE_RQ_MFB_SOF     => dma_rq_mfb_sof,
+        PCIE_RQ_MFB_EOF     => dma_rq_mfb_eof,
+        PCIE_RQ_MFB_SOF_POS => dma_rq_mfb_sof_pos,
+        PCIE_RQ_MFB_EOF_POS => dma_rq_mfb_eof_pos,
+        PCIE_RQ_MFB_SRC_RDY => dma_rq_mfb_src_rdy,
+        PCIE_RQ_MFB_DST_RDY => dma_rq_mfb_dst_rdy,
 
-        DOWN_MVB_DATA       => dma_down_mvb_data,
-        DOWN_MVB_VLD        => dma_down_mvb_vld,
-        DOWN_MVB_SRC_RDY    => dma_down_mvb_src_rdy,
-        DOWN_MVB_DST_RDY    => dma_down_mvb_dst_rdy,
+        PCIE_RC_MVB_DATA    => dma_rc_mvb_data,
+        PCIE_RC_MVB_VLD     => dma_rc_mvb_vld,
+        PCIE_RC_MVB_SRC_RDY => dma_rc_mvb_src_rdy,
+        PCIE_RC_MVB_DST_RDY => dma_rc_mvb_dst_rdy,
 
-        DOWN_MFB_DATA       => dma_down_mfb_data,
-        DOWN_MFB_SOF        => dma_down_mfb_sof,
-        DOWN_MFB_EOF        => dma_down_mfb_eof,
-        DOWN_MFB_SOF_POS    => dma_down_mfb_sof_pos,
-        DOWN_MFB_EOF_POS    => dma_down_mfb_eof_pos,
-        DOWN_MFB_SRC_RDY    => dma_down_mfb_src_rdy,
-        DOWN_MFB_DST_RDY    => dma_down_mfb_dst_rdy,
+        PCIE_RC_MFB_DATA    => dma_rc_mfb_data,
+        PCIE_RC_MFB_SOF     => dma_rc_mfb_sof,
+        PCIE_RC_MFB_EOF     => dma_rc_mfb_eof,
+        PCIE_RC_MFB_SOF_POS => dma_rc_mfb_sof_pos,
+        PCIE_RC_MFB_EOF_POS => dma_rc_mfb_eof_pos,
+        PCIE_RC_MFB_SRC_RDY => dma_rc_mfb_src_rdy,
+        PCIE_RC_MFB_DST_RDY => dma_rc_mfb_dst_rdy,
+
+        PCIE_CQ_MFB_DATA    => dma_cq_mfb_data,
+        PCIE_CQ_MFB_META    => dma_cq_mfb_meta,
+        PCIE_CQ_MFB_SOF     => dma_cq_mfb_sof,
+        PCIE_CQ_MFB_EOF     => dma_cq_mfb_eof,
+        PCIE_CQ_MFB_SOF_POS => dma_cq_mfb_sof_pos,
+        PCIE_CQ_MFB_EOF_POS => dma_cq_mfb_eof_pos,
+        PCIE_CQ_MFB_SRC_RDY => dma_cq_mfb_src_rdy,
+        PCIE_CQ_MFB_DST_RDY => dma_cq_mfb_dst_rdy,
+
+        PCIE_CC_MFB_DATA    => dma_cc_mfb_data,
+        PCIE_CC_MFB_META    => dma_cc_mfb_meta,
+        PCIE_CC_MFB_SOF     => dma_cc_mfb_sof,
+        PCIE_CC_MFB_EOF     => dma_cc_mfb_eof,
+        PCIE_CC_MFB_SOF_POS => dma_cc_mfb_sof_pos,
+        PCIE_CC_MFB_EOF_POS => dma_cc_mfb_eof_pos,
+        PCIE_CC_MFB_SRC_RDY => dma_cc_mfb_src_rdy,
+        PCIE_CC_MFB_DST_RDY => dma_cc_mfb_dst_rdy,
 
         MI_ADDR             => dma_mi_addr,
         MI_DWR              => dma_mi_dwr,

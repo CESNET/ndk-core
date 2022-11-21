@@ -125,10 +125,10 @@ begin
     MI_DRD  <= (others => (others => '0'));
     MI_DRDY <= (others => '0');
 
-    UP_MVB_SRC_RDY   <= (others => '0');
-    UP_MFB_SRC_RDY   <= (others => '0');
-    DOWN_MVB_DST_RDY <= (others => '1');
-    DOWN_MFB_DST_RDY <= (others => '1');
+    PCIE_RQ_MVB_SRC_RDY <= (others => '0');
+    PCIE_RQ_MFB_SRC_RDY <= (others => '0');
+    PCIE_RC_MVB_DST_RDY <= (others => '1');
+    PCIE_RC_MFB_DST_RDY <= (others => '1');
 
     -- =====================================================================
     --  DMA USER INPUT PACK/UNPACK

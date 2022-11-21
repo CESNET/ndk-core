@@ -12,7 +12,7 @@ use work.math_pack.all;
 use work.type_pack.all;
 
 use work.dma_bus_pack.all;
-
+use work.pcie_meta_pack.all;
 
 entity DMA_WRAPPER is
 generic(
@@ -37,15 +37,25 @@ generic(
     PCIE_MRRS            : natural := 512;
     DMA_TAG_WIDTH        : natural := DMA_REQUEST_TAG'high-DMA_REQUEST_TAG'low+1;
 
-    UP_MFB_REGIONS       : natural := 2;
-    UP_MFB_REGION_SIZE   : natural := 1;
-    UP_MFB_BLOCK_SIZE    : natural := 8;
-    UP_MFB_ITEM_WIDTH    : natural := 32;
+    PCIE_RQ_MFB_REGIONS     : natural := 2;
+    PCIE_RQ_MFB_REGION_SIZE : natural := 1;
+    PCIE_RQ_MFB_BLOCK_SIZE  : natural := 8;
+    PCIE_RQ_MFB_ITEM_WIDTH  : natural := 32;
 
-    DOWN_MFB_REGIONS     : natural := 2;
-    DOWN_MFB_REGION_SIZE : natural := 1;
-    DOWN_MFB_BLOCK_SIZE  : natural := 8;
-    DOWN_MFB_ITEM_WIDTH  : natural := 32;
+    PCIE_RC_MFB_REGIONS     : natural := 2;
+    PCIE_RC_MFB_REGION_SIZE : natural := 1;
+    PCIE_RC_MFB_BLOCK_SIZE  : natural := 8;
+    PCIE_RC_MFB_ITEM_WIDTH  : natural := 32;
+
+    PCIE_CQ_MFB_REGIONS     : natural := 2;
+    PCIE_CQ_MFB_REGION_SIZE : natural := 1;
+    PCIE_CQ_MFB_BLOCK_SIZE  : natural := 8;
+    PCIE_CQ_MFB_ITEM_WIDTH  : natural := 32;
+
+    PCIE_CC_MFB_REGIONS     : natural := 2;
+    PCIE_CC_MFB_REGION_SIZE : natural := 1;
+    PCIE_CC_MFB_BLOCK_SIZE  : natural := 8;
+    PCIE_CC_MFB_ITEM_WIDTH  : natural := 32;
 
     HDR_META_WIDTH       : natural := 12;
 
@@ -57,6 +67,7 @@ generic(
     TX_CHANNELS          : natural := 8;
     TX_SEL_CHANNELS      : natural := 8;
     TX_DP_WIDTH          : natural := 16;
+    TX_FIFO_DEPTH        : natural := 512;
 
     DSP_CNT_WIDTH        : natural := 64;
 
@@ -151,34 +162,55 @@ port(
     -- =====================================================================
 
     -- Upstream MVB interface (for sending request headers to PCIe Endpoints)
-    UP_MVB_DATA          : out slv_array_t     (DMA_ENDPOINTS -1 downto 0)(UP_MFB_REGIONS*DMA_UPHDR_WIDTH -1 downto 0) := (others => (others => '0'));
-    UP_MVB_VLD           : out slv_array_t     (DMA_ENDPOINTS -1 downto 0)(UP_MFB_REGIONS                 -1 downto 0) := (others => (others => '0'));
-    UP_MVB_SRC_RDY       : out std_logic_vector(DMA_ENDPOINTS -1 downto 0)                                             := (others => '0');
-    UP_MVB_DST_RDY       : in  std_logic_vector(DMA_ENDPOINTS -1 downto 0);
+    PCIE_RQ_MVB_DATA          : out slv_array_t     (DMA_ENDPOINTS -1 downto 0)(PCIE_RQ_MFB_REGIONS*DMA_UPHDR_WIDTH -1 downto 0) := (others => (others => '0'));
+    PCIE_RQ_MVB_VLD           : out slv_array_t     (DMA_ENDPOINTS -1 downto 0)(PCIE_RQ_MFB_REGIONS                 -1 downto 0) := (others => (others => '0'));
+    PCIE_RQ_MVB_SRC_RDY       : out std_logic_vector(DMA_ENDPOINTS -1 downto 0)                                                  := (others => '0');
+    PCIE_RQ_MVB_DST_RDY       : in  std_logic_vector(DMA_ENDPOINTS -1 downto 0);
 
     -- Upstream MFB interface (for sending data to PCIe Endpoints)
-    UP_MFB_DATA          : out slv_array_t     (DMA_ENDPOINTS -1 downto 0)(UP_MFB_REGIONS*UP_MFB_REGION_SIZE*UP_MFB_BLOCK_SIZE*UP_MFB_ITEM_WIDTH -1 downto 0) := (others => (others => '0'));
-    UP_MFB_SOF           : out slv_array_t     (DMA_ENDPOINTS -1 downto 0)(UP_MFB_REGIONS                                                        -1 downto 0) := (others => (others => '0'));
-    UP_MFB_EOF           : out slv_array_t     (DMA_ENDPOINTS -1 downto 0)(UP_MFB_REGIONS                                                        -1 downto 0) := (others => (others => '0'));
-    UP_MFB_SOF_POS       : out slv_array_t     (DMA_ENDPOINTS -1 downto 0)(UP_MFB_REGIONS*max(1,log2(UP_MFB_REGION_SIZE))                        -1 downto 0) := (others => (others => '0'));
-    UP_MFB_EOF_POS       : out slv_array_t     (DMA_ENDPOINTS -1 downto 0)(UP_MFB_REGIONS*max(1,log2(UP_MFB_REGION_SIZE*UP_MFB_BLOCK_SIZE))      -1 downto 0) := (others => (others => '0'));
-    UP_MFB_SRC_RDY       : out std_logic_vector(DMA_ENDPOINTS -1 downto 0)                                                                                    := (others => '0');
-    UP_MFB_DST_RDY       : in  std_logic_vector(DMA_ENDPOINTS -1 downto 0);
+    PCIE_RQ_MFB_DATA          : out slv_array_t     (DMA_ENDPOINTS -1 downto 0)(PCIE_RQ_MFB_REGIONS*PCIE_RQ_MFB_REGION_SIZE*PCIE_RQ_MFB_BLOCK_SIZE*PCIE_RQ_MFB_ITEM_WIDTH -1 downto 0) := (others => (others => '0'));
+    PCIE_RQ_MFB_META          : out slv_array_t     (DMA_ENDPOINTS -1 downto 0)(PCIE_RQ_MFB_REGIONS*PCIE_RQ_META_WIDTH -1 downto 0);
+    PCIE_RQ_MFB_SOF           : out slv_array_t     (DMA_ENDPOINTS -1 downto 0)(PCIE_RQ_MFB_REGIONS                                                        -1 downto 0) := (others => (others => '0'));
+    PCIE_RQ_MFB_EOF           : out slv_array_t     (DMA_ENDPOINTS -1 downto 0)(PCIE_RQ_MFB_REGIONS                                                        -1 downto 0) := (others => (others => '0'));
+    PCIE_RQ_MFB_SOF_POS       : out slv_array_t     (DMA_ENDPOINTS -1 downto 0)(PCIE_RQ_MFB_REGIONS*max(1,log2(PCIE_RQ_MFB_REGION_SIZE))                        -1 downto 0) := (others => (others => '0'));
+    PCIE_RQ_MFB_EOF_POS       : out slv_array_t     (DMA_ENDPOINTS -1 downto 0)(PCIE_RQ_MFB_REGIONS*max(1,log2(PCIE_RQ_MFB_REGION_SIZE*PCIE_RQ_MFB_BLOCK_SIZE))      -1 downto 0) := (others => (others => '0'));
+    PCIE_RQ_MFB_SRC_RDY       : out std_logic_vector(DMA_ENDPOINTS -1 downto 0) := (others => '0');
+    PCIE_RQ_MFB_DST_RDY       : in  std_logic_vector(DMA_ENDPOINTS -1 downto 0);
 
     -- Downstream MVB interface (for receiving completion headers from PCIe Endpoints)
-    DOWN_MVB_DATA        : in  slv_array_t     (DMA_ENDPOINTS -1 downto 0)(DOWN_MFB_REGIONS*DMA_DOWNHDR_WIDTH -1 downto 0);
-    DOWN_MVB_VLD         : in  slv_array_t     (DMA_ENDPOINTS -1 downto 0)(DOWN_MFB_REGIONS                   -1 downto 0);
-    DOWN_MVB_SRC_RDY     : in  std_logic_vector(DMA_ENDPOINTS -1 downto 0);
-    DOWN_MVB_DST_RDY     : out std_logic_vector(DMA_ENDPOINTS -1 downto 0) := (others => '1');
+    PCIE_RC_MVB_DATA        : in  slv_array_t     (DMA_ENDPOINTS -1 downto 0)(PCIE_RC_MFB_REGIONS*DMA_DOWNHDR_WIDTH -1 downto 0);
+    PCIE_RC_MVB_VLD         : in  slv_array_t     (DMA_ENDPOINTS -1 downto 0)(PCIE_RC_MFB_REGIONS                   -1 downto 0);
+    PCIE_RC_MVB_SRC_RDY     : in  std_logic_vector(DMA_ENDPOINTS -1 downto 0);
+    PCIE_RC_MVB_DST_RDY     : out std_logic_vector(DMA_ENDPOINTS -1 downto 0) := (others => '0');
 
     -- Downstream MFB interface (for sending data from PCIe Endpoints)
-    DOWN_MFB_DATA        : in  slv_array_t     (DMA_ENDPOINTS -1 downto 0)(DOWN_MFB_REGIONS*DOWN_MFB_REGION_SIZE*DOWN_MFB_BLOCK_SIZE*DOWN_MFB_ITEM_WIDTH -1 downto 0);
-    DOWN_MFB_SOF         : in  slv_array_t     (DMA_ENDPOINTS -1 downto 0)(DOWN_MFB_REGIONS                                                              -1 downto 0);
-    DOWN_MFB_EOF         : in  slv_array_t     (DMA_ENDPOINTS -1 downto 0)(DOWN_MFB_REGIONS                                                              -1 downto 0);
-    DOWN_MFB_SOF_POS     : in  slv_array_t     (DMA_ENDPOINTS -1 downto 0)(DOWN_MFB_REGIONS*max(1,log2(DOWN_MFB_REGION_SIZE))                            -1 downto 0);
-    DOWN_MFB_EOF_POS     : in  slv_array_t     (DMA_ENDPOINTS -1 downto 0)(DOWN_MFB_REGIONS*max(1,log2(DOWN_MFB_REGION_SIZE*DOWN_MFB_BLOCK_SIZE))        -1 downto 0);
-    DOWN_MFB_SRC_RDY     : in  std_logic_vector(DMA_ENDPOINTS -1 downto 0);
-    DOWN_MFB_DST_RDY     : out std_logic_vector(DMA_ENDPOINTS -1 downto 0) := (others => '1');
+    PCIE_RC_MFB_DATA        : in  slv_array_t     (DMA_ENDPOINTS -1 downto 0)(PCIE_RC_MFB_REGIONS*PCIE_RC_MFB_REGION_SIZE*PCIE_RC_MFB_BLOCK_SIZE*PCIE_RC_MFB_ITEM_WIDTH -1 downto 0);
+    PCIE_RC_MFB_SOF         : in  slv_array_t     (DMA_ENDPOINTS -1 downto 0)(PCIE_RC_MFB_REGIONS                                                              -1 downto 0);
+    PCIE_RC_MFB_EOF         : in  slv_array_t     (DMA_ENDPOINTS -1 downto 0)(PCIE_RC_MFB_REGIONS                                                              -1 downto 0);
+    PCIE_RC_MFB_SOF_POS     : in  slv_array_t     (DMA_ENDPOINTS -1 downto 0)(PCIE_RC_MFB_REGIONS*max(1,log2(PCIE_RC_MFB_REGION_SIZE))                            -1 downto 0);
+    PCIE_RC_MFB_EOF_POS     : in  slv_array_t     (DMA_ENDPOINTS -1 downto 0)(PCIE_RC_MFB_REGIONS*max(1,log2(PCIE_RC_MFB_REGION_SIZE*PCIE_RC_MFB_BLOCK_SIZE))        -1 downto 0);
+    PCIE_RC_MFB_SRC_RDY     : in  std_logic_vector(DMA_ENDPOINTS -1 downto 0);
+    PCIE_RC_MFB_DST_RDY     : out std_logic_vector(DMA_ENDPOINTS -1 downto 0) := (others => '0');
+
+    -- CQ MFB interface (receiving data from PCIe endpoint, DMA Calypte only)
+    PCIE_CQ_MFB_DATA          : in  slv_array_t     (DMA_ENDPOINTS -1 downto 0)(PCIE_CQ_MFB_REGIONS*PCIE_CQ_MFB_REGION_SIZE*PCIE_CQ_MFB_BLOCK_SIZE*PCIE_CQ_MFB_ITEM_WIDTH -1 downto 0);
+    PCIE_CQ_MFB_META          : in  slv_array_t     (DMA_ENDPOINTS -1 downto 0)(PCIE_CQ_MFB_REGIONS*PCIE_CQ_META_WIDTH -1 downto 0);
+    PCIE_CQ_MFB_SOF           : in  slv_array_t     (DMA_ENDPOINTS -1 downto 0)(PCIE_CQ_MFB_REGIONS                                                        -1 downto 0);
+    PCIE_CQ_MFB_EOF           : in  slv_array_t     (DMA_ENDPOINTS -1 downto 0)(PCIE_CQ_MFB_REGIONS                                                        -1 downto 0);
+    PCIE_CQ_MFB_SOF_POS       : in  slv_array_t     (DMA_ENDPOINTS -1 downto 0)(PCIE_CQ_MFB_REGIONS*max(1,log2(PCIE_CQ_MFB_REGION_SIZE))                        -1 downto 0);
+    PCIE_CQ_MFB_EOF_POS       : in  slv_array_t     (DMA_ENDPOINTS -1 downto 0)(PCIE_CQ_MFB_REGIONS*max(1,log2(PCIE_CQ_MFB_REGION_SIZE*PCIE_CQ_MFB_BLOCK_SIZE))      -1 downto 0);
+    PCIE_CQ_MFB_SRC_RDY       : in  std_logic_vector(DMA_ENDPOINTS -1 downto 0);
+    PCIE_CQ_MFB_DST_RDY       : out std_logic_vector(DMA_ENDPOINTS -1 downto 0) := (others => '0');
+
+    -- CC MFB interface (seinding data to PCIe endpoint, DMA Calypte only)
+    PCIE_CC_MFB_DATA          : out slv_array_t     (DMA_ENDPOINTS -1 downto 0)(PCIE_CC_MFB_REGIONS*PCIE_CC_MFB_REGION_SIZE*PCIE_CC_MFB_BLOCK_SIZE*PCIE_CC_MFB_ITEM_WIDTH -1 downto 0) := (others => (others => '0'));
+    PCIE_CC_MFB_META          : out slv_array_t     (DMA_ENDPOINTS -1 downto 0)(PCIE_CC_MFB_REGIONS*PCIE_CC_META_WIDTH -1 downto 0) := (others => (others => '0'));
+    PCIE_CC_MFB_SOF           : out slv_array_t     (DMA_ENDPOINTS -1 downto 0)(PCIE_CC_MFB_REGIONS                                                        -1 downto 0) := (others => (others => '0'));
+    PCIE_CC_MFB_EOF           : out slv_array_t     (DMA_ENDPOINTS -1 downto 0)(PCIE_CC_MFB_REGIONS                                                        -1 downto 0) := (others => (others => '0'));
+    PCIE_CC_MFB_SOF_POS       : out slv_array_t     (DMA_ENDPOINTS -1 downto 0)(PCIE_CC_MFB_REGIONS*max(1,log2(PCIE_CC_MFB_REGION_SIZE))                        -1 downto 0) := (others => (others => '0'));
+    PCIE_CC_MFB_EOF_POS       : out slv_array_t     (DMA_ENDPOINTS -1 downto 0)(PCIE_CC_MFB_REGIONS*max(1,log2(PCIE_CC_MFB_REGION_SIZE*PCIE_CC_MFB_BLOCK_SIZE))      -1 downto 0) := (others => (others => '0'));
+    PCIE_CC_MFB_SRC_RDY       : out std_logic_vector(DMA_ENDPOINTS -1 downto 0) := (others => '0');
+    PCIE_CC_MFB_DST_RDY       : in  std_logic_vector(DMA_ENDPOINTS -1 downto 0);
 
     MI_ADDR              : in  slv_array_t(PCIE_ENDPOINTS -1 downto 0)(32   -1 downto 0);
     MI_DWR               : in  slv_array_t(PCIE_ENDPOINTS -1 downto 0)(32   -1 downto 0);
