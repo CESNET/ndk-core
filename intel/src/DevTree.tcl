@@ -127,5 +127,41 @@ proc dts_build_netcope {} {
         }
         append ret "};"
     }
+
+    # Creating separate space for MI bus when DMA Calypte are used, the core uses additional BAR for its function
+    if {$DMA_TYPE == 4} {
+        append ret "mi1: mi_bus1 {"
+        append ret "#address-cells = <1>;"
+        append ret "#size-cells = <1>;"
+
+        append ret "compatible = \"netcope,bus,mi\";"
+        append ret "resource = \"PCI0,BAR2\";"
+        append ret "width = <0x20>;"
+
+        set FIFO_DEPTH          512
+        set MFB_BYTE_WIDTH      32
+        set DMA_HDR_BYTE_WIDTH  8
+        set CHAN_PER_EP         [expr $DMA_TX_CHANNELS / $PCIE_ENDPOINTS]
+
+        # Calculation of the addres range reserved for single channel
+        set TX_DATA_BUFF_BASE       "0x00000000"
+        set TX_DATA_BUFF_SIZE       [expr $FIFO_DEPTH*$MFB_BYTE_WIDTH]
+        set TX_DATA_BUFF_SIZE_HEX   [format "0x%x" $TX_DATA_BUFF_SIZE]
+
+        for {set i 0} {$i < $CHAN_PER_EP} {incr i} {
+            set    var_buff_base [expr $TX_DATA_BUFF_BASE + $i * $TX_DATA_BUFF_SIZE_HEX]
+            append ret [dts_dma_calypte_tx_buffer "data" $i $var_buff_base $TX_DATA_BUFF_SIZE_HEX "0"]
+        }
+
+        set TX_HDR_BUFF_BASE        [expr $TX_DATA_BUFF_BASE + $CHAN_PER_EP*$TX_DATA_BUFF_SIZE]
+        set TX_HDR_BUFF_SIZE        [expr $FIFO_DEPTH*$DMA_HDR_BYTE_WIDTH]
+        set TX_HDR_BUFF_SIZE_HEX    [format "0x%x" $TX_HDR_BUFF_SIZE]
+
+        for {set i 0} {$i < $CHAN_PER_EP} {incr i} {
+            set    var_buff_base [expr $TX_HDR_BUFF_BASE + $i * $TX_HDR_BUFF_SIZE_HEX]
+            append ret [dts_dma_calypte_tx_buffer "hdr" $i $var_buff_base $TX_HDR_BUFF_SIZE_HEX "0"]
+        }
+        append ret "};"
+    }
     return $ret
 }
