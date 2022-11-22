@@ -15,6 +15,7 @@ import scapy.utils
 import scapy.contrib.mpls
 import random
 import string
+import ipaddress
 
 class base_node:
     def __init__(self, name):
@@ -83,8 +84,27 @@ class IPv4(base_node):
     def __init__(self):
         super().__init__("IPv4");
 
+
+
     def packet_gen(self, packet, config):
-        packet.append(scapy.all.IP(version=4))
+        src = None;
+        dst = None;
+
+        src_rand = config.object_get([self.name, "values", "src"]);
+        if (src_rand != None):
+            val_range = random.choice(src_rand)
+            src_min = int(val_range.get("min"), 0)
+            src_max = int(val_range.get("max"), 0)
+            src = str(ipaddress.IPv4Address(random.randint(src_min, src_max)))
+
+        dst_rand = config.object_get([self.name, "values", "dst"]);
+        if (dst_rand != None):
+            val_range = random.choice(dst_rand)
+            dst_min = int(val_range.get("min"), 0)
+            dst_max = int(val_range.get("max"), 0)
+            dst = str(ipaddress.IPv4Address(random.randint(dst_min, dst_max)))
+
+        packet.append(scapy.all.IP(version=4, src = src, dst = dst))
         #randomize from list
         protocol_next = [Payload(), Empty(), ICMPv4(), UDP(), TCP()];
         protocol = random.choices(protocol_next, config.l3_weight)[0]
@@ -95,8 +115,25 @@ class IPv6(base_node):
         super().__init__("IPv6");
 
     def packet_gen(self, packet, config):
+        src = None;
+        dst = None;
+
+        src_rand = config.object_get([self.name, "values", "src"]);
+        if (src_rand != None):
+            val_range = random.choice(src_rand)
+            src_min = int(val_range.get("min"), 0)
+            src_max = int(val_range.get("max"), 0)
+            src = str(ipaddress.IPv6Address(random.randint(src_min, src_max)))
+
+        dst_rand = config.object_get([self.name, "values", "dst"]);
+        if (dst_rand != None):
+            val_range = random.choice(dst_rand)
+            dst_min = int(val_range.get("min"), 0)
+            dst_max = int(val_range.get("max"), 0)
+            dst = str(ipaddress.IPv6Address(random.randint(dst_min, dst_max)))
+
         protocol_next = [Payload(), Empty(), ICMPv6(), UDP(), TCP()];
-        packet.append(scapy.all.IPv6(version=6))
+        packet.append(scapy.all.IPv6(version=6, src = src, dst = dst))
         #randomize from list
         protocol = random.choices(protocol_next, config.l3_weight)[0]
         protocol.packet_gen(packet, config);
