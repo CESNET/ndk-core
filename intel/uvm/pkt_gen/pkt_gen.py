@@ -23,23 +23,42 @@ def main():
     parser.add_argument("-p", "--packets", type=int,
                         help="number of generated packets", default=20)
     parser.add_argument("-s", "--seed", type=int,
-                        help="set seed to random generator", default=time.time())
+                        help="set seed to random generator", default=int(time.time()*1000))
+    parser.add_argument("-c", "--conf", type=str,
+                        help="Configrutation of random genertor for protocols in JSON", default=None)
+
     args = parser.parse_args()
+    print("SEED : " + f'{args.seed}')
+
+    #args.seed = 1667909888.37288 ./pkt_gen.py -f test.pcap -p 189 result in error
 
     gen = ethernet()
     packets = []
+    conf_json = None
     random.seed(args.seed)
+  
+    if (args.conf != None):
+        conf_file = open(args.conf)
+        conf_json   = conf_file.read()
+        conf_file.close();
+
+    pcap_file = scapy.utils.PcapWriter(args.file_output, append=False, sync=True) 
+
     for x in range(args.packets):
-        cfg = packet_config()
+        cfg = packet_config(conf_json)
         protocols = []
         gen.packet_gen(protocols, cfg)
         packet = scapy.packet.Packet()
         for pr in protocols:
             packet = packet/pr
-
-        packets.append(scapy.packet.fuzz(packet))
-
-    scapy.utils.wrpcap(args.file_output, packets)
+      
+        packet_fuzz = scapy.packet.fuzz(packet)
+        try:
+            pcap_file.write(packet_fuzz)
+        except:
+            pcap_file.write(packet)
+        
+    pcap_file.close()
 
 
 if __name__ == "__main__":

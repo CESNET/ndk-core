@@ -8,11 +8,13 @@
 #  Author(s):
 #    Radek Iša <isa@cesnet.cz>
 
+import json
 
 class packet_config:
-    def __init__(self):
+    def __init__(self, constraints = None):
         self.vlan = 4
         self.mpls = 4
+
         #                      [IPv4(), IPv6(), MPLS(), Empty()]
         self.mpls_weight     = [     1,      1,      1,      1]
         #                      [IPv4(), IPv6(), MPLS(), Empty()]
@@ -26,3 +28,24 @@ class packet_config:
         #                      [IPv4(), IPv6(), VLAN(), MPLS(), Empty(), PPP()]
         self.ethernet_weight = [     1,      1,      1,      1,       1,     1]
 
+        self.constraints = None
+        if (constraints != None):
+            self.constraints = json.loads(constraints);
+
+        mpls_stack = self.object_get(["mpls", "stack"]);
+        if (mpls_stack != None):
+            self.mpls = int(mpls_stack.get("max"));
+
+        vlan_stack = self.object_get(["vlan", "stack"]);
+        if (vlan_stack != None):
+            self.vlan = int(vlan_stack.get("max"));
+
+
+    def object_get(self, path):
+        index = 0
+        obj   = self.constraints
+        while (index < len(path) and obj != None):
+            obj = obj.get(path[index])
+            index += 1
+
+        return obj;

@@ -14,7 +14,9 @@ class sequence_pcap#(ITEM_WIDTH) extends uvm_common::sequence_base#(uvm_logic_ve
     `uvm_object_param_utils(uvm_app_core_packet::sequence_pcap#(ITEM_WIDTH))
     `uvm_declare_p_sequencer(uvm_logic_vector_array::sequencer#(ITEM_WIDTH));
 
+    string config_json = "./filter.json";
     rand int unsigned transaction_count;
+    rand int unsigned pkt_gen_seed;
     constraint c1 {transaction_count inside {[cfg.transaction_count_min : cfg.transaction_count_max]};}
 
     // Constructor - creates new instance of this class
@@ -44,8 +46,8 @@ class sequence_pcap#(ITEM_WIDTH) extends uvm_common::sequence_base#(uvm_logic_ve
         `uvm_info(get_full_name(), $sformatf("\n\tsequence_pcap is running\n\t\tpcap_name%s", pcap_file), UVM_DEBUG);
 
         reader = new();
-        $swrite(pkt_gen_params, "-f \"%s\" -p %0d", pcap_file, transaction_count);
-        if($system({PKT_GEN_PATH, " ", pkt_gen_params}) != 0) begin
+        $swrite(pkt_gen_params, "-f \"%s\" -p %0d -c %s -s %0d", pcap_file, transaction_count, config_json, pkt_gen_seed);
+        if($system({PKT_GEN_PATH, " ", pkt_gen_params, " >> stdout"}) != 0) begin
             `uvm_fatal(p_sequencer.get_full_name(), $sformatf("\n\t Cannot run command %s", {PKT_GEN_PATH, " ", pkt_gen_params}))
         end
 
