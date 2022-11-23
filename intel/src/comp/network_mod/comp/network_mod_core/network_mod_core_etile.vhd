@@ -439,6 +439,7 @@ architecture ETILE of NETWORK_MOD_CORE is
     end function;
 
     constant SPEED_CAP : std_logic_vector(16-1 downto 0) := speed_cap_f;
+    constant PCS_LANES : natural := tsel(ETH_PORT_SPEED = 100, 20 , 1 ); -- 20 lanes for "100g1" mode, 1 lane for "25g4" and "10g4"
 
     -- =========================================================================
     --                                SIGNALS
@@ -573,13 +574,29 @@ begin
     );
 
     mgmt_g : for i in ETH_PORT_CHAN-1 downto 0 generate
+
+    signal mi_ia_drd    : std_logic_vector(MI_DATA_WIDTH_PHY-1 downto 0);
+    signal mi_ia_drdy   : std_logic;
+    signal mi_ia_en     : std_logic;
+    signal mi_ia_we_phy : std_logic;
+    signal mi_ia_sel    : std_logic_vector(4-1 downto 0);
+    signal mi_ia_addr   : std_logic_vector(32-1 downto 0);
+    signal mi_ia_dwr    : std_logic_vector(MI_DATA_WIDTH_PHY-1 downto 0);
+    signal mi_ia_ardy   : std_logic;
+    signal ia_rd_sel    : std_logic_vector(mi_ia_sel'range);
+    signal ia_rd_sel_r  : std_logic_vector(mi_ia_sel'range);
+
+	 begin
+
         mgmt_i : entity work.mgmt
         generic map (
-            NUM_LANES => LANES_PER_CHANNEL,
+            NUM_LANES => PCS_LANES,
             PMA_LANES => LANES_PER_CHANNEL,
             SPEED     => ETH_PORT_SPEED,
             SPEED_CAP => SPEED_CAP,
-            DEVICE    => DEVICE
+            DEVICE    => DEVICE,
+            DRP_DWIDTH => MI_DATA_WIDTH_PHY,
+            DRP_AWIDTH => 32
         )
         port map (
             RESET         => MI_RESET_PHY,
@@ -623,46 +640,101 @@ begin
             PMD_SIG_DET   => (others => rx_pcs_ready(i)), --TODO
             PMA_PRECURSOR => open,
             PMA_POSTCURSOR=> open,
-            PMA_DRIVE     => open              
+            PMA_DRIVE     => open,
+            -- Dynamic reconfiguration interface
+            DRPCLK        => MI_CLK_PHY,
+            DRPDO         => mi_ia_drd,
+            DRPRDY        => mi_ia_drdy,
+            DRPEN         => mi_ia_en,
+            DRPWE         => mi_ia_we_phy,
+            DRPADDR       => mi_ia_addr,
+            DRPARDY       => mi_ia_ardy,
+            DRPDI         => mi_ia_dwr,
+            DRPSEL        => mi_ia_sel
         );
+
+
+        -- Store mi_ia_sel for read operations
+        sel_reg_p: process(MI_CLK_PHY)
+        begin
+            if rising_edge(MI_CLK_PHY) then
+                if mi_ia_en = '1' then
+                    ia_rd_sel_r <= mi_ia_sel;
+                end if;
+           end if;
+        end process;
+        ia_rd_sel <= mi_ia_sel when mi_ia_en = '1' else ia_rd_sel_r;
+
+        -- Assign WR/RD signals for Eth blocks
+        mi_ia_addr_phy(i)   <= mi_ia_addr(mi_ia_addr_phy(i)'range);
+        mi_ia_dwr_phy(i)    <= mi_ia_dwr;
+        mi_ia_wr_phy(i)     <= mi_ia_en and     mi_ia_we_phy when mi_ia_sel = "0000" else '0';
+        mi_ia_rd_phy(i)     <= mi_ia_en and not mi_ia_we_phy when mi_ia_sel = "0000" else '0';
+        -- Generate WR/RD signals for XCVR blocks
+        xcvr_wr_rd_g: for xcvr in 0 to LANES_PER_CHANNEL-1 generate
+            mi_ia_wr_phy  (xcvr + i*LANES_PER_CHANNEL + ETH_PORT_CHAN) <= mi_ia_en and     mi_ia_we_phy when mi_ia_sel = std_logic_vector(to_unsigned(xcvr+1,4)) else '0';
+            mi_ia_rd_phy  (xcvr + i*LANES_PER_CHANNEL + ETH_PORT_CHAN) <= mi_ia_en and not mi_ia_we_phy when mi_ia_sel = std_logic_vector(to_unsigned(xcvr+1,4)) else '0';
+            mi_ia_addr_phy(xcvr + i*LANES_PER_CHANNEL + ETH_PORT_CHAN) <= mi_ia_addr(mi_ia_addr_phy(i)'range);
+            mi_ia_dwr_phy (xcvr + i*LANES_PER_CHANNEL + ETH_PORT_CHAN) <= mi_ia_dwr;
+        end generate;
+        rsfec_wr_rd_g: if (ETH_PORT_SPEED /= 10) generate
+            -- rsfec inf is on the last Output port of MI IA
+            mi_ia_rd_phy  (IA_OUTPUT_INFS-1) <= mi_ia_en and     mi_ia_we_phy when mi_ia_sel = "1001" else '0'; -- RS-FEC mapped to page 9
+            mi_ia_wr_phy  (IA_OUTPUT_INFS-1) <= mi_ia_en and not mi_ia_we_phy when mi_ia_sel = "1001" else '0'; -- RS-FEC mapped to page 9
+            mi_ia_addr_phy(IA_OUTPUT_INFS-1) <= mi_ia_addr(mi_ia_addr_phy(i)'range);
+            mi_ia_dwr_phy (IA_OUTPUT_INFS-1) <= mi_ia_dwr;
+        end generate;
+
+        -- Mux read data from Eth/xvcr to mgmt
+        drd_mux_p: process(all)
+        begin
+            case ia_rd_sel is
+                when "0001" => -- XCVR0
+                    mi_ia_drd  <= mi_ia_drd_phy (0 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                    mi_ia_drdy <= mi_ia_drdy_phy(0 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                    mi_ia_ardy <= mi_ia_ardy_phy(0 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                when "0010" => -- XCVR1
+                    if (LANES_PER_CHANNEL > 1) then
+                        mi_ia_drd  <= mi_ia_drd_phy (1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                        mi_ia_drdy <= mi_ia_drdy_phy(1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                        mi_ia_ardy <= mi_ia_ardy_phy(1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                    else -- RS-FEC
+                        mi_ia_drd  <= (others => '0');
+                        mi_ia_drdy <= '0';
+                        mi_ia_ardy <= '0';
+                    end if;
+                when "0011" => -- XCVR2
+                    if (LANES_PER_CHANNEL > 2) then
+                        mi_ia_drd  <= mi_ia_drd_phy (2 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                        mi_ia_drdy <= mi_ia_drdy_phy(2 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                        mi_ia_ardy <= mi_ia_ardy_phy(2 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                    else
+                        mi_ia_drd  <= (others => '0');
+                        mi_ia_drdy <= '0';
+                        mi_ia_ardy <= '0';
+                    end if;
+                when "0100" => -- XCVR3
+                    if (LANES_PER_CHANNEL > 3) then
+                        mi_ia_drd  <= mi_ia_drd_phy (3 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                        mi_ia_drdy <= mi_ia_drdy_phy(3 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                        mi_ia_ardy <= mi_ia_ardy_phy(3 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                    else
+                        mi_ia_drd  <= (others => '0');
+                        mi_ia_drdy <= '0';
+                        mi_ia_ardy <= '0';
+                    end if;
+                when "1001" => -- RS-FEC
+                    mi_ia_drd  <= mi_ia_drd_phy (IA_OUTPUT_INFS-1);
+                    mi_ia_drdy <= mi_ia_drdy_phy(IA_OUTPUT_INFS-1);
+                    mi_ia_ardy <= mi_ia_ardy_phy(IA_OUTPUT_INFS-1);
+                when others => -- "0000": Ethernet core
+                    mi_ia_drd  <= mi_ia_drd_phy(i);
+                    mi_ia_drdy <= mi_ia_drdy_phy(i);
+                    mi_ia_ardy <= mi_ia_ardy_phy(i);
+            end case;
+        end process;
+
     end generate;
-
-    -- =========================================================================
-    -- MI_PHY Indirect Access
-    -- =========================================================================
-    -- How to set the Output interface in MI Indirect Access: 
-    -- ETH_PORT_CHAN=1: "0x0"         for Ethernet inf, "0x4" - "0x1" for Transceiver (XCVR) inf, "0x5" for RS-FEC inf
-    -- ETH_PORT_CHAN=4: "0x3" - "0x0" for Ethernet inf, "0x7" - "0x4" for Transceiver (XCVR) inf, "0x8" for RS-FEC inf (RS-FEC does not exist in 10GE IP core!)
-    --mi_indirect_access_i : entity work.MI_INDIRECT_ACCESS
-    --generic map(
-    --    ADDR_WIDTH        => MI_ADDR_WIDTH_PHY,
-    --    DATA_WIDTH        => MI_DATA_WIDTH_PHY,
-    --    OUTPUT_INTERFACES => IA_OUTPUT_INFS
-    --)
-    --port map(
-    --    -- Common interface ----------------------------------------------------
-    --    CLK         => MI_CLK_PHY  ,
-    --    RESET       => MI_RESET_PHY,
-    --    -- Input MI interface --------------------------------------------------
-    --    RX_DWR      => MI_DWR_PHY     ,
-    --    RX_ADDR     => MI_ADDR_PHY    ,
-    --    RX_RD       => MI_RD_PHY      ,
-    --    RX_WR       => MI_WR_PHY      ,
-    --    RX_ARDY     => MI_ARDY_PHY    ,
-    --    RX_DRD      => MI_DRD_PHY     ,
-    --    RX_DRDY     => MI_DRDY_PHY    ,
-    --    -- Output MI interfaces ------------------------------------------------
-    --    TX_DWR     => mi_ia_dwr_phy ,
-    --    TX_ADDR    => mi_ia_addr_phy,
-    --    TX_RD      => mi_ia_rd_phy  ,
-    --    TX_WR      => mi_ia_wr_phy  ,
-    --    TX_ARDY    => mi_ia_ardy_phy,
-    --    TX_DRD     => mi_ia_drd_phy ,
-    --    TX_DRDY    => mi_ia_drdy_phy
-    --);
-
-    mi_ia_rd_phy <= (others => '0');
-    mi_ia_wr_phy <= (others => '0');
 
     -- eth ---------------------------------------------------------------------
     eth_inf_dwr_phy  <= mi_ia_dwr_phy (ETH_PORT_CHAN-1 downto 0);
