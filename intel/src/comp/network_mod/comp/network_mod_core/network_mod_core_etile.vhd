@@ -679,8 +679,8 @@ begin
         end generate;
         rsfec_wr_rd_g: if (ETH_PORT_SPEED /= 10) generate
             -- rsfec inf is on the last Output port of MI IA
-            mi_ia_rd_phy  (IA_OUTPUT_INFS-1) <= mi_ia_en and     mi_ia_we_phy when mi_ia_sel = "1001" else '0'; -- RS-FEC mapped to page 9
-            mi_ia_wr_phy  (IA_OUTPUT_INFS-1) <= mi_ia_en and not mi_ia_we_phy when mi_ia_sel = "1001" else '0'; -- RS-FEC mapped to page 9
+            mi_ia_wr_phy  (IA_OUTPUT_INFS-1) <= mi_ia_en and     mi_ia_we_phy when mi_ia_sel = "1001" else '0'; -- RS-FEC mapped to page 9
+            mi_ia_rd_phy  (IA_OUTPUT_INFS-1) <= mi_ia_en and not mi_ia_we_phy when mi_ia_sel = "1001" else '0'; -- RS-FEC mapped to page 9
             mi_ia_addr_phy(IA_OUTPUT_INFS-1) <= mi_ia_addr(mi_ia_addr_phy(i)'range);
             mi_ia_dwr_phy (IA_OUTPUT_INFS-1) <= mi_ia_dwr;
         end generate;
