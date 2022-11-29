@@ -14,8 +14,8 @@ begin
 
     CLK_ETH <= (others => '0');
 
-    QSFP_TX_P <= (others => '0');
-    QSFP_TX_N <= (others => '0');
+    ETH_TX_P <= (others => '0');
+    ETH_TX_N <= (others => '0');
 
     QSFP_MODSEL_N <= (others => '0');
     QSFP_LPMODE   <= (others => '0');
