@@ -28,10 +28,13 @@ class NFBDevice(cocotbext.nfb.NFBDevice):
         if hasattr(self._dut, 'REFCLK'):
             # Tivoli card
             cocotb.start_soon(Clock(self._dut.REFCLK, 20, 'ns').start())
-        if hasattr(self._dut, 'SYSCLK_P'):
+        elif hasattr(self._dut, 'SYSCLK_P'):
             # NFB-200G2QL
             cocotb.start_soon(Clock(self._dut.SYSCLK_P, 8, 'ns').start())
             cocotb.start_soon(Clock(self._dut.SYSCLK_N, 8, 'ns').start(start_high=False))
+        else:
+            # No card: fpga_common
+            cocotb.start_soon(Clock(self._dut.SYSCLK, 10, 'ns').start())
 
         for pcie_clk in self._core.pcie_i.pcie_core_i.pcie_hip_clk:
             cocotb.start_soon(Clock(pcie_clk, 4, 'ns').start())
@@ -39,7 +42,11 @@ class NFBDevice(cocotbext.nfb.NFBDevice):
             cocotb.start_soon(Clock(eth_core.network_mod_core_i.cmac_clk_322m, 3106, 'ps').start())
 
     def _init_pcie(self):
-        self._core = [getattr(self._dut, core) for core in ["usp_i", "fpga_i"] if hasattr(self._dut, core)][0]
+        try:
+            self._core = [getattr(self._dut, core) for core in ["usp_i", "fpga_i"] if hasattr(self._dut, core)][0]
+        except:
+            # No fpga_common instance in card, try fpga_common directly
+            self._core = self._dut
 
         pcie_i = self._core.pcie_i.pcie_core_i
         self.mi = []
@@ -48,13 +55,13 @@ class NFBDevice(cocotbext.nfb.NFBDevice):
             clk = pcie_i.pcie_hip_clk[i]
             rst = pcie_i.pcie_hip_rst[i]
 
-            cq  = Axi4StreamMasterV(pcie_i, "CQ_AXI", clk, array_idx=i)
-            cc  = Axi4StreamSlaveV(pcie_i, "CC_AXI", clk, array_idx=i)
-            ccm = Axi4StreamV(pcie_i, "CC_AXI", clk, 0, aux_signals=True, array_idx=i)
+            cq  = Axi4StreamMasterV(pcie_i, "pcie_cq_axi", clk, array_idx=i)
+            cc  = Axi4StreamSlaveV(pcie_i, "pcie_cc_axi", clk, array_idx=i)
+            ccm = Axi4StreamV(pcie_i, "pcie_cc_axi", clk, 0, aux_signals=True, array_idx=i)
 
-            rq  = Axi4StreamSlaveV(pcie_i, "RQ_AXI", clk, array_idx=i)
-            rc  = Axi4StreamMasterV(pcie_i, "RC_AXI", clk, array_idx=i)
-            rqm = Axi4StreamV(pcie_i, "RQ_AXI", clk, aux_signals=True, array_idx=i)
+            rq  = Axi4StreamSlaveV(pcie_i, "pcie_rq_axi", clk, array_idx=i)
+            rc  = Axi4StreamMasterV(pcie_i, "pcie_rc_axi", clk, array_idx=i)
+            rqm = Axi4StreamV(pcie_i, "pcie_rq_axi", clk, aux_signals=True, array_idx=i)
 
             req = Axi4SRequester(self.ram, rq, rc, rqm)
             mi  = Axi4SCMiRoot(cq, cc, ccm)
@@ -81,7 +88,7 @@ class NFBDevice(cocotbext.nfb.NFBDevice):
         await Timer(40, units="ns")
         for rst in pcie_i.pcie_hip_rst:
             rst.value = 0
-        await cocotb.triggers.FallingEdge(self._dut.fpga_i.global_reset)
+        await cocotb.triggers.FallingEdge(self._core.global_reset)
 
     async def _pcie_cfg_ext_reg_access(self, addr, index = 0, fn = 0, sync=True, data=None):
         pcie_i = self._core.pcie_i.pcie_core_i
