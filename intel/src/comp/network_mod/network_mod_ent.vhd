@@ -41,6 +41,7 @@ generic(
     LANES             : natural := 4;
     QSFP_PORTS        : natural := 2;
     QSFP_I2C_PORTS    : natural := 1; -- max 2
+    QSFP_I2C_TRISTATE : boolean := true;
 
     -- =====================================================================
     -- MFB configuration:
@@ -96,14 +97,21 @@ port(
     -- =====================================================================
     -- QSFP Control
     -- =====================================================================        
-    QSFP_I2C_SCL    : inout std_logic_vector(QSFP_I2C_PORTS-1 downto 0);
-    QSFP_I2C_SDA    : inout std_logic_vector(QSFP_I2C_PORTS-1 downto 0);
+    QSFP_I2C_SCL    : inout std_logic_vector(QSFP_I2C_PORTS-1 downto 0) := (others => 'Z');
+    QSFP_I2C_SDA    : inout std_logic_vector(QSFP_I2C_PORTS-1 downto 0) := (others => 'Z');
+    QSFP_I2C_SDA_I  : in    std_logic_vector(QSFP_I2C_PORTS-1 downto 0) := (others => '1');
+    QSFP_I2C_SCL_I  : in    std_logic_vector(QSFP_I2C_PORTS-1 downto 0) := (others => '1');
+    QSFP_I2C_SCL_O  : out   std_logic_vector(QSFP_I2C_PORTS-1 downto 0);
+    QSFP_I2C_SCL_OE : out   std_logic_vector(QSFP_I2C_PORTS-1 downto 0);
+    QSFP_I2C_SDA_O  : out   std_logic_vector(QSFP_I2C_PORTS-1 downto 0);
+    QSFP_I2C_SDA_OE : out   std_logic_vector(QSFP_I2C_PORTS-1 downto 0);
     QSFP_I2C_DIR    : out   std_logic_vector(QSFP_I2C_PORTS-1 downto 0);
     QSFP_MODSEL_N   : out   std_logic_vector(QSFP_PORTS-1 downto 0);
     QSFP_LPMODE     : out   std_logic_vector(QSFP_PORTS-1 downto 0);
     QSFP_RESET_N    : out   std_logic_vector(QSFP_PORTS-1 downto 0);
     QSFP_MODPRS_N   : in    std_logic_vector(QSFP_PORTS-1 downto 0) := (others => '0');
     QSFP_INT_N      : in    std_logic_vector(QSFP_PORTS-1 downto 0) := (others => '1');
+
 
     -- =====================================================================
     -- Link control/status - runs on CLK_ETH
