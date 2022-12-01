@@ -496,7 +496,7 @@ begin
         asfifox_rd_data_reg_p: process(CLK_ETH)
         begin
             if (rising_edge(CLK_ETH(p))) then
-                asfifox_ts_dv(p) <= asfifox_empty(p);
+                asfifox_ts_dv(p) <= not asfifox_empty(p);
                 asfifox_ts_ns(p) <= asfifox_rd_data(p);
             end if;
         end process;
