@@ -185,7 +185,8 @@ architecture FULL of FPGA_COMMON is
     constant PCIE_MPS     : natural := 256;
     constant PCIE_MRRS    : natural := 512;
     constant RESET_WIDTH  : natural := 10;
-    constant TSU_USE_DSP  : boolean := (DEVICE="ULTRASCALE");
+    constant TS_MULT_SMART_DSP : boolean := (DEVICE="ULTRASCALE");
+    constant TS_MULT_USE_DSP   : boolean := (DEVICE="AGILEX" or DEVICE="STRATIX10");
 
     constant CARD_ID_WIDTH	: natural := tsel(DEVICE="ULTRASCALE", 96, 64);
 
@@ -1293,8 +1294,8 @@ begin
 
     tsu_gen_i: entity work.tsu_gen
     generic map (
-        TS_MULT_SMART_DSP => TSU_USE_DSP,
-        TS_MULT_USE_DSP   => TSU_USE_DSP,
+        TS_MULT_SMART_DSP => TS_MULT_SMART_DSP,
+        TS_MULT_USE_DSP   => TS_MULT_USE_DSP,
         PPS_SEL_WIDTH     => 0,
         CLK_SEL_WIDTH     => 0
     )
