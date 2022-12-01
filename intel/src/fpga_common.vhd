@@ -79,7 +79,7 @@ generic (
     MEM_DATA_WIDTH          : natural := 512;
     MEM_BURST_WIDTH         : natural := 7;
     MEM_REFR_PERIOD_WIDTH   : natural := 32;
-    MEM_DEF_REFR_PERIOD     : slv_array_t(MEM_PORTS-1 downto 0)(MEM_REFR_PERIOD_WIDTH-1 downto 0) := (others => (others => '0'));
+    MEM_DEF_REFR_PERIOD     : integer := 0;
     AMM_FREQ_KHZ            : natural := 0;
     
     STATUS_LEDS             : natural := 2;
@@ -142,7 +142,7 @@ port (
     MEM_AVMM_READDATA       : in  slv_array_t(MEM_PORTS-1 downto 0)(MEM_DATA_WIDTH-1 downto 0) := (others => (others => '0'));
     MEM_AVMM_READDATAVALID  : in  std_logic_vector(MEM_PORTS-1 downto 0) := (others => '0');
 
-    MEM_REFR_PERIOD         : out slv_array_t(MEM_PORTS - 1 downto 0)(MEM_REFR_PERIOD_WIDTH - 1 downto 0) := MEM_DEF_REFR_PERIOD;
+    MEM_REFR_PERIOD         : out slv_array_t(MEM_PORTS-1 downto 0)(MEM_REFR_PERIOD_WIDTH - 1 downto 0) := (others => std_logic_vector(to_unsigned(MEM_DEF_REFR_PERIOD, MEM_REFR_PERIOD_WIDTH)));
     MEM_REFR_REQ            : out std_logic_vector(MEM_PORTS - 1 downto 0);
     MEM_REFR_ACK            : in std_logic_vector(MEM_PORTS - 1 downto 0) := (others => '0');
 

@@ -7,6 +7,8 @@
 
 library IEEE;
 use IEEE.std_logic_1164.all;
+use ieee.numeric_std.all;
+use work.type_pack.all;
 
 use work.math_pack.all;
 use work.type_pack.all;
@@ -52,7 +54,7 @@ generic (
     -- MEM parameters: width of user refresh period
     MEM_REFR_PERIOD_WIDTH: natural := 32;
     -- MEM parameters: default refresh periods for each interface
-    MEM_DEF_REFR_PERIOD: slv_array_t(MEM_PORTS - 1 downto 0)(MEM_REFR_PERIOD_WIDTH - 1 downto 0);
+    MEM_DEF_REFR_PERIOD: integer := 0;
     -- Freq of the AMM bus with EMIF
     AMM_FREQ_KHZ       : integer := 266660;
     -- MI parameters: width of data signals
@@ -277,7 +279,7 @@ port (
     MEM_AVMM_READDATAVALID : in  std_logic_vector(MEM_PORTS-1 downto 0);
 
     -- MEM parameter: user refresh period
-    MEM_REFR_PERIOD         : out slv_array_t(MEM_PORTS - 1 downto 0)(MEM_REFR_PERIOD_WIDTH - 1 downto 0) := MEM_DEF_REFR_PERIOD;
+    MEM_REFR_PERIOD         : out slv_array_t(MEM_PORTS-1 downto 0)(MEM_REFR_PERIOD_WIDTH - 1 downto 0) := (others => std_logic_vector(to_unsigned(MEM_DEF_REFR_PERIOD, MEM_REFR_PERIOD_WIDTH)));
     -- MEM parameter: user refresh request
     MEM_REFR_REQ            : out std_logic_vector(MEM_PORTS - 1 downto 0);
     -- MEM parameter: user refresh ack

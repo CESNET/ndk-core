@@ -1,7 +1,7 @@
 import cocotb
 from cocotb.triggers import Timer, RisingEdge, Combine
 
-from ndk_core.intel import NFBDevice
+from ndk_core import NFBDevice
 
 import sys
 sys.stderr = None # disable warnings from Scapy

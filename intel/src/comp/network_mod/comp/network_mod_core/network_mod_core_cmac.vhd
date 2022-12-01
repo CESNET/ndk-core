@@ -776,7 +776,7 @@ begin
             end if;
         end process;
 
-        bip_err_cntr_max(i) <= and bip_err_cntr(i);
+        bip_err_cntr_max(i) <= and std_logic_vector(bip_err_cntr(i));
         mgmt_bip_err_cntrs((i+1)*16-1 downto i*16) <= std_logic_vector(bip_err_cntr(i));
     end generate;
 
