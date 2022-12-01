@@ -19,6 +19,7 @@ entity qsfp_ctrl is
 generic (
     QSFP_PORTS          : integer := 1;
     QSFP_I2C_PORTS      : integer := 1;
+    I2C_TRISTATE        : boolean := true;
     FPC202_INIT_EN      : boolean := false
 );
 port (
@@ -31,9 +32,17 @@ port (
     QSFP_RESET_N        : out   std_logic_vector(QSFP_PORTS-1 downto 0);
     QSFP_MODPRS_N       : in    std_logic_vector(QSFP_PORTS-1 downto 0);
     QSFP_INT_N          : in    std_logic_vector(QSFP_PORTS-1 downto 0);
-    QSFP_I2C_SCL        : inout std_logic_vector(QSFP_I2C_PORTS-1 downto 0);
-    QSFP_I2C_SDA        : inout std_logic_vector(QSFP_I2C_PORTS-1 downto 0);
-    QSFP_I2C_DIR        : out   std_logic_vector(QSFP_I2C_PORTS-1 downto 0); -- I2C bus direction, 0 = QSFP -> FPGA, 1 = FPGA -> QSFP     
+    -- I2C - bidirectional, tristate buffers
+    QSFP_I2C_SCL        : inout std_logic_vector(QSFP_I2C_PORTS-1 downto 0) := (others => 'Z');
+    QSFP_I2C_SDA        : inout std_logic_vector(QSFP_I2C_PORTS-1 downto 0) := (others => 'Z');
+    QSFP_I2C_DIR        : out   std_logic_vector(QSFP_I2C_PORTS-1 downto 0);
+    -- Optional non-bidirectional I2C interface (tristate buffers in the top-level)
+    QSFP_I2C_SDA_I      : in    std_logic_vector(QSFP_I2C_PORTS-1 downto 0) := (others => '1');
+    QSFP_I2C_SCL_I      : in    std_logic_vector(QSFP_I2C_PORTS-1 downto 0) := (others => '1');
+    QSFP_I2C_SCL_O      : out   std_logic_vector(QSFP_I2C_PORTS-1 downto 0);
+    QSFP_I2C_SCL_OE     : out   std_logic_vector(QSFP_I2C_PORTS-1 downto 0);
+    QSFP_I2C_SDA_O      : out   std_logic_vector(QSFP_I2C_PORTS-1 downto 0);
+    QSFP_I2C_SDA_OE     : out   std_logic_vector(QSFP_I2C_PORTS-1 downto 0);
     -- Select which QSFP port is targetting during MI read/writes
     MI_QSFP_SEL           : in  std_logic_vector(max(log2(QSFP_PORTS)-1, 0) downto 0);
     -- MI32 interface - 
@@ -81,9 +90,11 @@ architecture full of qsfp_ctrl is
       
     signal trans_ctrl            : std_logic_vector(3*QSFP_PORTS-1 downto 0);
     signal qsfp_modsel_r         : std_logic_vector(QSFP_PORTS-1 downto 0) := (0 => '1', others => '0');
-    signal qsfp_i2c_scl_i        : std_logic;
-    signal qsfp_i2c_sda_i        : std_logic;
-    signal qsfp_status           : std_logic_vector(6*QSFP_PORTS-1 downto 0); 
+    signal qsfp_i2c_scl_in       : std_logic_vector(QSFP_I2C_PORTS-1 downto 0);
+    signal qsfp_i2c_scl_int      : std_logic;
+    signal qsfp_i2c_sda_in       : std_logic_vector(QSFP_I2C_PORTS-1 downto 0);
+    signal qsfp_i2c_sda_int      : std_logic;
+    signal qsfp_status           : std_logic_vector(6*QSFP_PORTS-1 downto 0);
     
     signal qsfp_mi_sel_i         : natural;   
     
@@ -348,10 +359,10 @@ begin
       RST_SYNC     => '0',
       RST_ASYNC    => MI_RESET_PHY,
       -- I2C interfaces
-      SCL_PAD_I    => qsfp_i2c_scl_i,
+      SCL_PAD_I    => qsfp_i2c_scl_int,
       SCL_PAD_O    => i2c_qsfp_scl_o,
       SCL_PADOEN_O => i2c_qsfp_scl_oen,
-      SDA_PAD_I    => qsfp_i2c_sda_i,
+      SDA_PAD_I    => qsfp_i2c_sda_int,
       SDA_PAD_O    => i2c_qsfp_sda_o,
       SDA_PADOEN_O => i2c_qsfp_sda_oen,
       -- control interface
@@ -362,15 +373,33 @@ begin
       INT          => open
    );
 
+    i2c_tri_g: if I2C_TRISTATE generate
+        qsfp_i2c_sda_in <= QSFP_I2C_SDA;
+        qsfp_i2c_scl_in <= QSFP_I2C_SCL;
+    else generate
+        qsfp_i2c_sda_in <= QSFP_I2C_SDA_I;
+        qsfp_i2c_scl_in <= QSFP_I2C_SCL_I;
+    end generate;
+
     i2c_mux_g : if QSFP_I2C_PORTS = 1 generate
-        qsfp_i2c_sda_i  <= QSFP_I2C_SDA(0);
-        qsfp_i2c_scl_i  <= QSFP_I2C_SCL(0);
-        QSFP_I2C_SCL(0) <= i2c_qsfp_scl_o when (i2c_qsfp_scl_oen = '0') else 'Z';
-        QSFP_I2C_SDA(0) <= i2c_qsfp_sda_o when (i2c_qsfp_sda_oen = '0') else 'Z';
+        qsfp_i2c_sda_int <= qsfp_i2c_sda_in(0);
+        qsfp_i2c_scl_int <= qsfp_i2c_scl_in(0);
+        QSFP_I2C_SCL(0)  <= i2c_qsfp_scl_o when (i2c_qsfp_scl_oen = '0') else 'Z';
+        QSFP_I2C_SDA(0)  <= i2c_qsfp_sda_o when (i2c_qsfp_sda_oen = '0') else 'Z';
+        -- Non-bidirectional i2c outputs
+        QSFP_I2C_SCL_O(0)  <= i2c_qsfp_scl_o;
+        QSFP_I2C_SCL_OE(0) <= not i2c_qsfp_scl_oen;
+        QSFP_I2C_SDA_O(0)  <= i2c_qsfp_sda_o;
+        QSFP_I2C_SDA_OE(0) <= not i2c_qsfp_sda_oen;
     else generate
         qsfp_i2c_omux_g : for i in 0 to QSFP_I2C_PORTS-1 generate
             QSFP_I2C_SCL(i) <= i2c_qsfp_scl_o when (i2c_qsfp_scl_oen = '0') and (qsfp_modsel_r(i) = '1') else 'Z';
             QSFP_I2C_SDA(i) <= i2c_qsfp_sda_o when (i2c_qsfp_sda_oen = '0') and (qsfp_modsel_r(i) = '1') else 'Z';
+				-- Non-bidirectional i2c outputs
+            QSFP_I2C_SCL_O(i)  <= i2c_qsfp_scl_o        when (qsfp_modsel_r(i) = '1') else '1';
+            QSFP_I2C_SCL_OE(i) <= not i2c_qsfp_scl_oen  when (qsfp_modsel_r(i) = '1') else '0';
+            QSFP_I2C_SDA_O(i)  <= i2c_qsfp_sda_o        when (qsfp_modsel_r(i) = '1') else '1';
+            QSFP_I2C_SDA_OE(i) <= not i2c_qsfp_sda_oen  when (qsfp_modsel_r(i) = '1') else '0';
         end generate;
         qsfp_i2c_scl_mux_i: entity work.GEN_MUX_ONEHOT
         generic map (
@@ -378,9 +407,9 @@ begin
             MUX_WIDTH   => QSFP_I2C_PORTS
         )
         port map (
-            DATA_IN     => QSFP_I2C_SCL,
+            DATA_IN     => qsfp_i2c_scl_in,
             SEL         => qsfp_modsel_r,
-            DATA_OUT(0) => qsfp_i2c_scl_i
+            DATA_OUT(0) => qsfp_i2c_scl_int
         );
 
         qsfp_i2c_sda_mux_i: entity work.GEN_MUX_ONEHOT
@@ -389,9 +418,9 @@ begin
             MUX_WIDTH   => QSFP_I2C_PORTS
         )
         port map (
-            DATA_IN     => QSFP_I2C_SDA,
+            DATA_IN     => qsfp_i2c_sda_in,
             SEL         => qsfp_modsel_r,
-            DATA_OUT(0) => qsfp_i2c_sda_i
+            DATA_OUT(0) => qsfp_i2c_sda_int
         );
     end generate;
     

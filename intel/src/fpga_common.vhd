@@ -72,6 +72,7 @@ generic (
     ETH_PORT_LEDS           : natural := 2;
     QSFP_PORTS              : natural := 2;
     QSFP_I2C_PORTS          : natural := 1;
+    QSFP_I2C_TRISTATE       : boolean := true;
 
     MEM_PORTS               : natural := 2;
     MEM_ADDR_WIDTH          : natural := 27;
@@ -113,8 +114,14 @@ port (
     ETH_LED_R               : out   std_logic_vector(ETH_PORTS*ETH_PORT_LEDS-1 downto 0);
 
     -- QSFP management interface
-    QSFP_I2C_SCL            : inout std_logic_vector(QSFP_I2C_PORTS-1 downto 0);
-    QSFP_I2C_SDA            : inout std_logic_vector(QSFP_I2C_PORTS-1 downto 0);
+    QSFP_I2C_SCL            : inout std_logic_vector(QSFP_I2C_PORTS-1 downto 0) := (others => 'Z');
+    QSFP_I2C_SDA            : inout std_logic_vector(QSFP_I2C_PORTS-1 downto 0) := (others => 'Z');
+    QSFP_I2C_SDA_I          : in    std_logic_vector(QSFP_I2C_PORTS-1 downto 0) := (others => '1');
+    QSFP_I2C_SCL_I          : in    std_logic_vector(QSFP_I2C_PORTS-1 downto 0) := (others => '1');
+    QSFP_I2C_SCL_O          : out   std_logic_vector(QSFP_I2C_PORTS-1 downto 0);
+    QSFP_I2C_SCL_OE         : out   std_logic_vector(QSFP_I2C_PORTS-1 downto 0);
+    QSFP_I2C_SDA_O          : out   std_logic_vector(QSFP_I2C_PORTS-1 downto 0);
+    QSFP_I2C_SDA_OE         : out   std_logic_vector(QSFP_I2C_PORTS-1 downto 0);
     QSFP_I2C_DIR            : out   std_logic_vector(QSFP_I2C_PORTS-1 downto 0);
     QSFP_MODSEL_N           : out   std_logic_vector(QSFP_PORTS-1 downto 0);
     QSFP_LPMODE             : out   std_logic_vector(QSFP_PORTS-1 downto 0);
@@ -187,7 +194,7 @@ architecture FULL of FPGA_COMMON is
     constant RESET_WIDTH  : natural := 10;
     constant TSU_USE_DSP  : boolean := (DEVICE="ULTRASCALE");
 
-    constant CARD_ID_WIDTH	: natural := tsel(DEVICE="ULTRASCALE", 96, 64);
+    constant CARD_ID_WIDTH : natural := tsel(DEVICE="ULTRASCALE", 96, 64);
 
     constant MI_DATA_WIDTH      : integer := 32;
     constant MI_ADDR_WIDTH      : integer := 32;
@@ -1163,6 +1170,7 @@ begin
         LANES             => ETH_LANES      ,
         QSFP_PORTS        => QSFP_PORTS     ,
         QSFP_I2C_PORTS    => QSFP_I2C_PORTS ,
+        QSFP_I2C_TRISTATE => QSFP_I2C_TRISTATE,
 
         REGIONS           => MFB_REGIONS    ,
         REGION_SIZE       => MFB_REGION_SIZE,
@@ -1196,6 +1204,12 @@ begin
 
         QSFP_I2C_SCL    => QSFP_I2C_SCL,
         QSFP_I2C_SDA    => QSFP_I2C_SDA,
+        QSFP_I2C_SCL_I  => QSFP_I2C_SCL_I,
+        QSFP_I2C_SDA_I  => QSFP_I2C_SDA_I,
+        QSFP_I2C_SCL_O  => QSFP_I2C_SCL_O,
+        QSFP_I2C_SCL_OE => QSFP_I2C_SCL_OE,
+        QSFP_I2C_SDA_O  => QSFP_I2C_SDA_O,
+        QSFP_I2C_SDA_OE => QSFP_I2C_SDA_OE,
         QSFP_I2C_DIR    => QSFP_I2C_DIR,
         QSFP_MODSEL_N   => QSFP_MODSEL_N,
         QSFP_LPMODE     => QSFP_LPMODE,

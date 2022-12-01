@@ -519,7 +519,8 @@ begin
     generic map (
        QSFP_PORTS     => QSFP_PORTS,
        QSFP_I2C_PORTS => QSFP_I2C_PORTS,
-       FPC202_INIT_EN => FPC202_INIT_EN
+       FPC202_INIT_EN => FPC202_INIT_EN,
+       I2C_TRISTATE   => QSFP_I2C_TRISTATE
     )
     port map (
        RST            => MI_RESET_PMD,
@@ -534,6 +535,12 @@ begin
        QSFP_I2C_SCL   => QSFP_I2C_SCL,
        QSFP_I2C_SDA   => QSFP_I2C_SDA,
        QSFP_I2C_DIR   => QSFP_I2C_DIR,
+       QSFP_I2C_SDA_I => QSFP_I2C_SDA_I,
+       QSFP_I2C_SCL_I => QSFP_I2C_SCL_I,
+       QSFP_I2C_SCL_O  => QSFP_I2C_SCL_O,
+       QSFP_I2C_SCL_OE => QSFP_I2C_SCL_OE,
+       QSFP_I2C_SDA_O  => QSFP_I2C_SDA_O,
+       QSFP_I2C_SDA_OE => QSFP_I2C_SDA_OE,
        -- Select which QSFP port is targetting during MI read/writes
        MI_QSFP_SEL    => MI_ADDR_PMD(8+max(log2(QSFP_PORTS),1)-1 downto 8),
        -- MI interface
