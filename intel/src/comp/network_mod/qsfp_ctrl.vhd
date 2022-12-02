@@ -64,7 +64,8 @@ end entity;
 
 architecture full of qsfp_ctrl is
 
-    constant QSFP_RST_W : natural := 20;
+    constant QSFP_RST_W    : natural := 20;
+    constant QSFP_STATUS_W : natural := 8;
 
     signal i2c_mi_wr             : std_logic;   
     signal i2c_qsfp_scl_o        : std_logic;
@@ -99,7 +100,7 @@ architecture full of qsfp_ctrl is
     signal qsfp_i2c_scl_int      : std_logic;
     signal qsfp_i2c_sda_in       : std_logic_vector(QSFP_I2C_PORTS-1 downto 0);
     signal qsfp_i2c_sda_int      : std_logic;
-    signal qsfp_status           : std_logic_vector(6*QSFP_PORTS-1 downto 0);
+    signal qsfp_status           : std_logic_vector(QSFP_PORTS*QSFP_STATUS_W-1 downto 0);
     
     signal qsfp_mi_sel_i         : natural;   
     
@@ -114,7 +115,7 @@ begin
     qsfp_mi_sel_i <= to_integer(unsigned(MI_QSFP_SEL));
   
     gen_qsfp_status: for i in 0 to QSFP_PORTS-1 generate
-        qsfp_status((i+1)*6-1 downto i*6) <= QSFP_INT_N(i) & QSFP_MODPRS_N(i) & trans_ctrl((i+1)*3-1 downto i*3) & '1';
+        qsfp_status((i+1)*QSFP_STATUS_W-1 downto i*QSFP_STATUS_W) <= TX_READY(i) & QSFP_RESET_N(i) & QSFP_INT_N(i) & QSFP_MODPRS_N(i) & trans_ctrl((i+1)*3-1 downto i*3) & '1';
     end generate;
 
     -- Read I2C controller registers + QSFP status registers
@@ -122,6 +123,7 @@ begin
     begin
         if (rising_edge(MI_CLK_PHY)) then
             MI_DRDY_PHY <= '0';
+            MI_DRD_PHY  <= (others => '0');
             -- Read from I2C controller or from QSFP status reg
             if (MI_RD_PHY = '1') then 
                 MI_DRDY_PHY <= '1';
@@ -130,7 +132,7 @@ begin
                 elsif (MI_ADDR_PHY(3 downto 2) = "01") then -- I2C reg 0x04
                     MI_DRD_PHY <= i2c_qsfp_drd(63 downto 32);
                 else
-                    MI_DRD_PHY(5 downto 0) <= qsfp_status((qsfp_mi_sel_i+1)*6-1 downto qsfp_mi_sel_i*6);
+                    MI_DRD_PHY(QSFP_STATUS_W-1 downto 0) <= qsfp_status((qsfp_mi_sel_i+1)*QSFP_STATUS_W-1 downto qsfp_mi_sel_i*QSFP_STATUS_W);
                 end if;
             end if;
         end if;
