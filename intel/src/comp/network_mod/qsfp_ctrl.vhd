@@ -10,10 +10,13 @@
 
 library ieee;
 use ieee.std_logic_1164.all;
-use ieee.std_logic_arith.all;
-use ieee.std_logic_unsigned.all;
-use ieee.std_logic_misc.all;
+--use ieee.std_logic_arith.all;
+--use ieee.std_logic_unsigned.all;
+--use ieee.std_logic_misc.all;
+use ieee.numeric_std.all;
+
 use work.math_pack.all;
+use work.type_pack.all;
 
 entity qsfp_ctrl is
 generic (
@@ -61,6 +64,9 @@ end entity;
 
 architecture full of qsfp_ctrl is
 
+    constant QSFP_RST_W    : natural := 20;
+    constant QSFP_STATUS_W : natural := 8;
+
     signal i2c_mi_wr             : std_logic;   
     signal i2c_qsfp_scl_o        : std_logic;
     signal i2c_qsfp_scl_oen      : std_logic;
@@ -84,9 +90,9 @@ architecture full of qsfp_ctrl is
     signal fpc_fsm_nst           : fpc_fsm_st_t;
     signal fpc_fsm_done          : std_logic;
     signal fpc_fsm_timer_en      : std_logic;
-    signal fpc_conf_st           : std_logic_vector(2-1 downto 0);
-    signal fpc_conf_st_reg       : std_logic_vector(2-1 downto 0);
-    signal sleep_timer           : std_logic_vector(25-1 downto 0);
+    signal fpc_conf_st           : unsigned(2-1 downto 0);
+    signal fpc_conf_st_reg       : unsigned(2-1 downto 0);
+    signal sleep_timer           : unsigned(25-1 downto 0);
       
     signal trans_ctrl            : std_logic_vector(3*QSFP_PORTS-1 downto 0);
     signal qsfp_modsel_r         : std_logic_vector(QSFP_PORTS-1 downto 0) := (0 => '1', others => '0');
@@ -94,20 +100,22 @@ architecture full of qsfp_ctrl is
     signal qsfp_i2c_scl_int      : std_logic;
     signal qsfp_i2c_sda_in       : std_logic_vector(QSFP_I2C_PORTS-1 downto 0);
     signal qsfp_i2c_sda_int      : std_logic;
-    signal qsfp_status           : std_logic_vector(6*QSFP_PORTS-1 downto 0);
+    signal qsfp_status           : std_logic_vector(QSFP_PORTS*QSFP_STATUS_W-1 downto 0);
     
     signal qsfp_mi_sel_i         : natural;   
     
-    signal qsfp_rdy              : std_logic_vector(1 downto 0);
-    signal QSFP_RESET_N_sync     : std_logic_vector(1 downto 0);
-    signal qsfp_cntr             : std_logic_vector(2*20-1 downto 0); -- QSFP powerup counters
+    signal qsfp_modprs_n_sync    : std_logic_vector(QSFP_PORTS-1 downto 0);
+    signal qsfp_modprs_n_sync2   : std_logic_vector(QSFP_PORTS-1 downto 0);
+    signal qsfp_insert_detect    : std_logic_vector(QSFP_PORTS-1 downto 0);
+    signal qsfp_rst_start        : std_logic_vector(QSFP_PORTS-1 downto 0);
+    signal qsfp_rst_timer        : u_array_t (QSFP_PORTS-1 downto 0)(QSFP_RST_W-1 downto 0);
   
 begin
     
-    qsfp_mi_sel_i <= conv_integer(MI_QSFP_SEL);
+    qsfp_mi_sel_i <= to_integer(unsigned(MI_QSFP_SEL));
   
     gen_qsfp_status: for i in 0 to QSFP_PORTS-1 generate
-        qsfp_status((i+1)*6-1 downto i*6) <= QSFP_INT_N(i) & QSFP_MODPRS_N(i) & trans_ctrl((i+1)*3-1 downto i*3) & '1';
+        qsfp_status((i+1)*QSFP_STATUS_W-1 downto i*QSFP_STATUS_W) <= TX_READY(i) & QSFP_RESET_N(i) & QSFP_INT_N(i) & QSFP_MODPRS_N(i) & trans_ctrl((i+1)*3-1 downto i*3) & '1';
     end generate;
 
     -- Read I2C controller registers + QSFP status registers
@@ -115,6 +123,7 @@ begin
     begin
         if (rising_edge(MI_CLK_PHY)) then
             MI_DRDY_PHY <= '0';
+            MI_DRD_PHY  <= (others => '0');
             -- Read from I2C controller or from QSFP status reg
             if (MI_RD_PHY = '1') then 
                 MI_DRDY_PHY <= '1';
@@ -123,7 +132,7 @@ begin
                 elsif (MI_ADDR_PHY(3 downto 2) = "01") then -- I2C reg 0x04
                     MI_DRD_PHY <= i2c_qsfp_drd(63 downto 32);
                 else
-                    MI_DRD_PHY(5 downto 0) <= qsfp_status((qsfp_mi_sel_i+1)*6-1 downto qsfp_mi_sel_i*6);
+                    MI_DRD_PHY(QSFP_STATUS_W-1 downto 0) <= qsfp_status((qsfp_mi_sel_i+1)*QSFP_STATUS_W-1 downto qsfp_mi_sel_i*QSFP_STATUS_W);
                 end if;
             end if;
         end if;
@@ -172,36 +181,6 @@ begin
          
       end if;
    end process i2c_regs_wr_p;
-   
-         --
---   cdc_qsfprst: xpm_cdc_single
---   generic map (
---      DEST_SYNC_FF   => 2, -- integer; range: 2-10
---      SIM_ASSERT_CHK => 0, -- integer; 0=disable simulation messages, 1=enable simulation messages
---      SRC_INPUT_REG  => 0 -- integer; 0=do not register input, 1=register input
---      )
---      port map (
---         src_clk  => '0', -- optional; required when SRC_INPUT_REG = 1
---         src_in   => qsfp_reset_n(i),
---         dest_clk => SYSCLK,
---         dest_out => qsfp_reset_n_sync(i)
---      );
---      
---      -- Delay the startup of RX path of Eth PHY after the QSFP is reset
---      QSFP_POWERUP_TIMERS: process(SYSCLK)
---      begin
---         if SYSCLK'event and SYSCLK = '1' then
---            -- Wait 10 ms for the QSFP RX data   
---            if (qsfp_reset_n_sync(i) = '0') then
---               qsfp_cntr((i+1)*20-1 downto i*20) <= (others => '0');
---            elsif (qsfp_rdy(i) = '0') then
---               qsfp_cntr((i+1)*20-1 downto i*20) <= qsfp_cntr((i+1)*20-1 downto i*20) + 1; 
---             end if;
---             qsfp_rdy(i) <= qsfp_cntr((i+1)*20-1);
---         end if;
---      end process; 
---      
---   end generate; -- ports_gen
 
     -- On Intel Stratix 10 DX Dev Kit is FPC202 controller which by default
     -- keeps the QSFP cages turned off and must be configured first.
@@ -423,16 +402,63 @@ begin
             DATA_OUT(0) => qsfp_i2c_sda_int
         );
     end generate;
+
+    ----------------------------------------------------------------------------
+    -- QSFP reset logic
+    ----------------------------------------------------------------------------
     
-   ----------------------------------------------------------------------------
-   -- Assign outputs 
-   ----------------------------------------------------------------------------
-   qsfp_outs_g: for i in 0 to QSFP_PORTS-1 generate
-      -- Startup reset for QSFP cages (TX of ETH phy should be started before releasing QSFP reset) 
-      QSFP_RESET_N(i) <= trans_ctrl(i*3+0) and TX_READY(i);
-      QSFP_LPMODE(i)  <= trans_ctrl(i*3+1);
-      QSFP_MODSEL_N(i) <= not qsfp_modsel_r(i);
-   end generate;
-   QSFP_I2C_DIR   <= (others => not i2c_qsfp_sda_oen); -- I2C bus direction: 0 = QSFP -> FPGA, 1 = FPGA -> QSFP
+    qsfp_rst_g: for i in 0 to QSFP_PORTS-1 generate
+        -- TODO glitch filtering on the QSFP_MODPRS_N signal
+        sync_qsfp_modprs_n_i: entity work.ASYNC_OPEN_LOOP
+        generic map (
+            IN_REG   => false,
+            TWO_REG  => true
+        )
+        port map (
+            ADATAIN  => QSFP_MODPRS_N(i),
+            BCLK     => MI_CLK_PHY,
+            BDATAOUT => qsfp_modprs_n_sync(i)
+        );
+
+        process (MI_CLK_PHY)
+        begin
+            if (rising_edge(MI_CLK_PHY)) then
+                qsfp_modprs_n_sync2(i) <= qsfp_modprs_n_sync(i);
+                -- QSFP module insertion detection
+                qsfp_insert_detect(i)  <= qsfp_modprs_n_sync2(i) and not qsfp_modprs_n_sync(i);
+            end if;
+        end process;
+
+        -- Automatic startup reset for QSFP cages:
+        -- 1) TX of ETH phy should be started before releasing QSFP reset
+        -- 2) QSFP reset after inserting the QSFP module
+        -- 3) QSFP reset after system reset (MI)
+        qsfp_rst_start(i) <= (not TX_READY(i)) or qsfp_insert_detect(i) or
+                             MI_RESET_PHY;
+
+        -- A timer that generates a reset for ~10 ms
+        process (MI_CLK_PHY)
+        begin
+            if (rising_edge(MI_CLK_PHY)) then
+                if (qsfp_rst_start(i) = '1') then
+                    qsfp_rst_timer(i) <= (others => '0');
+                elsif (qsfp_rst_timer(i)(QSFP_RST_W-1) = '0') then
+                    qsfp_rst_timer(i) <= qsfp_rst_timer(i) + 1;
+                end if;
+            end if;
+        end process;
+    end generate;
+    
+    ----------------------------------------------------------------------------
+    -- Assign outputs 
+    ----------------------------------------------------------------------------
+
+    qsfp_outs_g: for i in 0 to QSFP_PORTS-1 generate
+        -- SW reset via MI or automatic reset (see above)
+        QSFP_RESET_N(i) <= trans_ctrl(i*3+0) and qsfp_rst_timer(i)(QSFP_RST_W-1);
+        QSFP_LPMODE(i)  <= trans_ctrl(i*3+1);
+        QSFP_MODSEL_N(i) <= not qsfp_modsel_r(i);
+    end generate;
+    QSFP_I2C_DIR   <= (others => not i2c_qsfp_sda_oen); -- I2C bus direction: 0 = QSFP -> FPGA, 1 = FPGA -> QSFP
      
 end architecture;

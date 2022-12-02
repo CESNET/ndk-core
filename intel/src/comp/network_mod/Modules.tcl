@@ -6,6 +6,7 @@
 
 # Paths to components
 set ASYNC_RESET_BASE          "$OFM_PATH/comp/base/async/reset"
+set ASYNC_OPENLOOP_BASE       "$OFM_PATH/comp/base/async/open_loop"
 set MI_SPLITTER_BASE          "$OFM_PATH/comp/mi_tools/splitter_plus_gen"
 set NETWORK_MOD_COMP_BASE     "$ENTITY_BASE/comp"
 set NETWORK_MOD_CORE_BASE     "$NETWORK_MOD_COMP_BASE/network_mod_core"
@@ -18,15 +19,16 @@ set ASFIFOX_BASE              "$OFM_PATH/comp/base/fifo/asfifox"
 # set ARCHGRP  "F_TILE"
 
 # Packages
-set PACKAGES "$PACKAGES $OFM_PATH/comp/base/pkg/math_pack.vhd"
-set PACKAGES "$PACKAGES $OFM_PATH/comp/base/pkg/type_pack.vhd"
-set PACKAGES "$PACKAGES $OFM_PATH/comp/base/pkg/eth_hdr_pack.vhd"
+lappend PACKAGES "$OFM_PATH/comp/base/pkg/math_pack.vhd"
+lappend PACKAGES "$OFM_PATH/comp/base/pkg/type_pack.vhd"
+lappend PACKAGES "$OFM_PATH/comp/base/pkg/eth_hdr_pack.vhd"
 
-set MOD "$MOD $ENTITY_BASE/network_mod_ent.vhd"
+lappend MOD "$ENTITY_BASE/network_mod_ent.vhd"
 
 if {$ARCHGRP == "EMPTY"} {
-    set MOD "$MOD $ENTITY_BASE/network_mod_empty.vhd"
+    lappend MOD "$ENTITY_BASE/network_mod_empty.vhd"
 } else {
+    lappend COMPONENTS [list "ASYNC_OPENLOOP"       $ASYNC_OPENLOOP_BASE   "FULL"  ]
     lappend COMPONENTS [list "ASYNC_RESET"          $ASYNC_RESET_BASE      "FULL"  ]
     lappend COMPONENTS [list "MI_SPLITTER_PLUS_GEN" $MI_SPLITTER_BASE      "FULL"  ]
     lappend COMPONENTS [list "NETWORK_MOD_CORE"     $NETWORK_MOD_CORE_BASE $ARCHGRP]
@@ -35,7 +37,7 @@ if {$ARCHGRP == "EMPTY"} {
     lappend COMPONENTS [list "ASFIFOX"              $ASFIFOX_BASE          "FULL"  ]
 
     # Source files for implemented component
-    set MOD "$MOD $ENTITY_BASE/qsfp_ctrl.vhd"
-    set MOD "$MOD $ENTITY_BASE/network_mod.vhd"
-    set MOD "$MOD $ENTITY_BASE/DevTree.tcl"
+    lappend MOD "$ENTITY_BASE/qsfp_ctrl.vhd"
+    lappend MOD "$ENTITY_BASE/network_mod.vhd"
+    lappend MOD "$ENTITY_BASE/DevTree.tcl"
 }
