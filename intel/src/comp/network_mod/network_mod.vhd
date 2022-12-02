@@ -82,6 +82,8 @@ architecture FULL of NETWORK_MOD is
     constant FPC202_INIT_EN : boolean := (BOARD = "DK-DEV-1SDX-P" or BOARD = "DK-DEV-AGI027RES");
     constant RESIZE_BUFFER  : boolean := (ETH_CORE_ARCH = "F_TILE" or (ETH_CORE_ARCH = "E_TILE" and ETH_CHANNELS = 4));
 
+    constant TS_TIMEOUT_W : natural := 3; -- last TS is unvalided after 4 cycles
+
     -- =========================================================================
     --                                FUNCTIONS
     -- =========================================================================
@@ -172,15 +174,13 @@ architecture FULL of NETWORK_MOD is
     signal mi_split_drd_phy  : slv_array_t     (MI_ADDR_BASES_PHY-1 downto 0)(MI_DATA_WIDTH_PHY-1 downto 0);
     signal mi_split_drdy_phy : std_logic_vector(MI_ADDR_BASES_PHY-1 downto 0);
 
-    -- TSU
-    signal tsu_clk_vec     : std_logic_vector(ETH_PORTS-1 downto 0);
-    signal tsu_rst_vec     : std_logic_vector(ETH_PORTS-1 downto 0);
-    signal asfifox_wr_en   : std_logic_vector(ETH_PORTS-1 downto 0);
-    signal asfifox_full    : std_logic_vector(ETH_PORTS-1 downto 0);
-    signal asfifox_rd_data : slv_array_t     (ETH_PORTS-1 downto 0)(64-1 downto 0);
-    signal asfifox_empty   : std_logic_vector(ETH_PORTS-1 downto 0);
-    signal asfifox_ts_ns   : slv_array_t     (ETH_PORTS-1 downto 0)(64-1 downto 0);
-    signal asfifox_ts_dv   : std_logic_vector(ETH_PORTS-1 downto 0);
+    -- TS signals
+    signal asfifox_ts_dv_n     : std_logic_vector(ETH_PORTS-1 downto 0);
+    signal asfifox_ts_ns       : slv_array_t     (ETH_PORTS-1 downto 0)(64-1 downto 0);
+    signal asfifox_ts_timeout  : u_array_t(ETH_PORTS-1 downto 0)(TS_TIMEOUT_W-1 downto 0);
+    signal asfifox_ts_last_vld : std_logic_vector(ETH_PORTS-1 downto 0);
+    signal synced_ts_dv        : std_logic_vector(ETH_PORTS-1 downto 0);
+    signal synced_ts_ns        : slv_array_t     (ETH_PORTS-1 downto 0)(64-1 downto 0);
 
 begin
 
@@ -384,8 +384,8 @@ begin
             MI_ARDY         => mi_split_ardy(p),
             MI_DRDY         => mi_split_drdy(p),
 
-            TSU_TS_NS       => asfifox_ts_ns(p),
-            TSU_TS_DV       => asfifox_ts_dv(p)
+            TSU_TS_NS       => synced_ts_ns(p),
+            TSU_TS_DV       => synced_ts_dv(p)
         );
 
         -- =====================================================================
@@ -464,9 +464,9 @@ begin
         TX_MVB_VLD  <= slv_array_ser(TX_MVB_VLD_arr);
 
         -- =====================================================================
-        -- ASFIFOX
+        -- TIMESTAMP ASFIFOX
         -- =====================================================================
-        asfifox_i : entity work.ASFIFOX
+        ts_asfifox_i : entity work.ASFIFOX
         generic map(
             DATA_WIDTH => 64    ,
             ITEMS      => 32    ,
@@ -486,24 +486,59 @@ begin
 
             RD_CLK    => CLK_ETH        (p)   ,
             RD_RST    => repl_rst_arr   (p)(1),
-            RD_DATA   => asfifox_rd_data(p)   ,
+            RD_DATA   => asfifox_ts_ns  (p)   ,
             RD_EN     => '1'                  ,
-            RD_EMPTY  => asfifox_empty  (p)   ,
+            RD_EMPTY  => asfifox_ts_dv_n(p)   ,
             RD_AEMPTY => open                 ,
             RD_STATUS => open
         );
 
-        asfifox_rd_data_reg_p: process(CLK_ETH)
+        process(CLK_ETH)
         begin
             if (rising_edge(CLK_ETH(p))) then
-                asfifox_ts_dv(p) <= asfifox_empty(p);
-                asfifox_ts_ns(p) <= asfifox_rd_data(p);
+                if (asfifox_ts_dv_n(p) = '1' and asfifox_ts_timeout(p)(TS_TIMEOUT_W-1) = '0') then
+                    asfifox_ts_timeout(p) <= asfifox_ts_timeout(p) + 1;
+                end if;
+                if (repl_rst_arr(p)(1) = '1' or asfifox_ts_dv_n(p) = '0') then
+                    asfifox_ts_timeout(p) <= (others => '0');
+                end if;
             end if;
         end process;
 
+        process(CLK_ETH)
+        begin
+            if (rising_edge(CLK_ETH(p))) then
+                if (asfifox_ts_dv_n(p) = '0') then
+                    asfifox_ts_last_vld(p) <= '1';
+                end if;
+                if (repl_rst_arr(p)(1) = '1') then
+                    asfifox_ts_last_vld(p) <= '0';
+                end if;
+            end if;
+        end process;
+
+        -- Synced TS is valid if the value is current or if the value is a few
+        -- clock cycles old. This provides filtering for occasional flushing of
+        -- the asynchronous FIFO.
+        process(CLK_ETH)
+        begin
+            if (rising_edge(CLK_ETH(p))) then
+                if (asfifox_ts_dv_n(p) = '0') then
+                    synced_ts_ns(p) <= asfifox_ts_ns(p);
+                end if;
+                
+                synced_ts_dv(p) <= (not asfifox_ts_dv_n(p)) or
+                                   (asfifox_ts_last_vld(p) and not asfifox_ts_timeout(p)(TS_TIMEOUT_W-1));
+
+                if (repl_rst_arr(p)(1) = '1') then
+                    synced_ts_dv(p) <= '0';
+                end if;
+            end if;
+        end process;
+
+        -- ETH clock is used as TSU main clock
         TSU_CLK <= CLK_ETH     (0)   ;
         TSU_RST <= repl_rst_arr(0)(1);
-
     end generate;
 
     ACTIVITY_RX <= slv_array_ser(sig_activity_rx);
