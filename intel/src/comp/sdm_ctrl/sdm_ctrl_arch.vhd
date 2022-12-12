@@ -95,6 +95,8 @@ architecture FULL of SDM_CTRL is
     signal retry_cnt          : std_logic_vector(2-1 downto 0);
     signal retry_stop         : std_logic;
 
+    signal chip_id_done       : std_logic;
+
 begin
 
     read_chip_id_g: if READ_CHIP_ID = true generate
@@ -242,6 +244,7 @@ begin
             avmm_drd      <= (others => '0');
             avmm_drd_vld  <= '0';
             avmm_wait     <= '1';
+            chip_id_done  <= '0';
 
             p_state_save  <= '0';
             res_fill_dec  <= '0';
@@ -289,6 +292,7 @@ begin
                     avmm_drd     <= mc_drd;
                     avmm_drd_vld <= mc_drd_vld;
                     avmm_wait    <= '0';
+                    chip_id_done <= '1';
                 when others =>
                     null;
             end case;
@@ -325,6 +329,7 @@ begin
         chip_id_reg_p: process (CLK)
         begin
             if (rising_edge(CLK)) then
+                CHIP_ID_VLD <= chip_id_done;
                 if (p_state = READ_LSW) then
                     if (mc_drd_vld = '1') then
                         chip_id_reg(32-1 downto 0) <= mc_drd;
