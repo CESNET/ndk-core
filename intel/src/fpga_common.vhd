@@ -195,7 +195,7 @@ architecture FULL of FPGA_COMMON is
     constant TS_MULT_SMART_DSP : boolean := (DEVICE="ULTRASCALE");
     constant TS_MULT_USE_DSP   : boolean := (DEVICE="AGILEX" or DEVICE="STRATIX10");
 
-    constant CARD_ID_WIDTH : natural := tsel(DEVICE="ULTRASCALE", 96, 64);
+    constant FPGA_ID_WIDTH : natural := tsel(DEVICE="ULTRASCALE", 96, 64);
 
     constant MI_DATA_WIDTH      : integer := 32;
     constant MI_ADDR_WIDTH      : integer := 32;
@@ -330,9 +330,12 @@ architecture FULL of FPGA_COMMON is
     signal app_pcie_link_up              : std_logic_vector(PCIE_ENDPOINTS-1 downto 0) := (others => '0');
 
     signal xilinx_dna                    : std_logic_vector(95 downto 0);
+    signal xilinx_dna_vld                : std_logic;
     signal intel_chip_id                 : std_logic_vector(63 downto 0);
-    signal card_id                       : std_logic_vector(CARD_ID_WIDTH-1 downto 0);
-    signal pcie_card_id                  : slv_array_t     (PCIE_ENDPOINTS-1 downto 0)(CARD_ID_WIDTH-1 downto 0);
+    signal intel_chip_id_vld             : std_logic;
+    signal fpga_id                       : std_logic_vector(FPGA_ID_WIDTH-1 downto 0);
+    signal fpga_id_vld                   : std_logic := '0';
+    signal pcie_fpga_id                  : slv_array_t     (PCIE_ENDPOINTS-1 downto 0)(FPGA_ID_WIDTH-1 downto 0);
 
     -- MI32 interface signals
     signal mi_dwr                        : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(31 downto 0);
@@ -567,15 +570,17 @@ begin
     port map (
         CLK             => clk_usr_x1,
         XILINX_DNA      => xilinx_dna,
-        XILINX_DNA_VLD  => open
+        XILINX_DNA_VLD  => xilinx_dna_vld
     );
 
-    card_id_usp_g: if (DEVICE = "ULTRASCALE") generate
-        card_id <= xilinx_dna;
+    fpga_id_usp_g: if (DEVICE = "ULTRASCALE") generate
+        fpga_id     <= xilinx_dna;
+        fpga_id_vld <= xilinx_dna_vld;
     end generate;
 
-    card_id_intel_g: if (DEVICE = "STRATIX10" or DEVICE = "AGILEX") generate
-        card_id <= intel_chip_id;
+    fpga_id_intel_g: if (DEVICE = "STRATIX10" or DEVICE = "AGILEX") generate
+        fpga_id     <= intel_chip_id;
+        fpga_id_vld <= intel_chip_id_vld;
     end generate;
 
     -- =========================================================================
@@ -620,7 +625,7 @@ begin
         PTC_DISABLE         => PTC_DISABLE,
         DMA_BAR_ENABLE      => false,
         XVC_ENABLE          => false,
-        CARD_ID_WIDTH       => CARD_ID_WIDTH,
+        CARD_ID_WIDTH       => FPGA_ID_WIDTH,
         DEVICE              => DEVICE
     )
     port map (
@@ -636,7 +641,7 @@ begin
         PCIE_USER_RESET    => rst_pci,
         PCIE_LINK_UP       => pcie_link_up,
 
-        CARD_ID            => pcie_card_id,
+        CARD_ID            => pcie_fpga_id,
 
         DMA_CLK            => clk_dma,
         DMA_RESET          => rst_dma(0),
@@ -728,17 +733,17 @@ begin
             BDATAOUT => app_pcie_link_up(i) 
         );
 
-        cdc_pcie_cardid_i: entity work.ASYNC_OPEN_LOOP_SMD
+        cdc_pcie_fpga_id_i: entity work.ASYNC_OPEN_LOOP_SMD
         generic map(
-            DATA_WIDTH => CARD_ID_WIDTH
+            DATA_WIDTH => FPGA_ID_WIDTH
         )
         port map(
             ACLK     => clk_usr_x1,
             BCLK     => clk_pci(i),
             ARST     => '0',
             BRST     => '0',
-            ADATAIN  => card_id,
-            BDATAOUT => pcie_card_id(i)
+            ADATAIN  => fpga_id,
+            BDATAOUT => pcie_fpga_id(i)
         );
     end generate;
 
@@ -838,7 +843,8 @@ begin
         MI_ARDY => mi_adc_ardy(MI_ADC_PORT_SENSOR),
         MI_DRDY => mi_adc_drdy(MI_ADC_PORT_SENSOR),
 
-        CHIP_ID => intel_chip_id
+        CHIP_ID     => intel_chip_id,
+        CHIP_ID_VLD => intel_chip_id_vld
     );
 
     -- =========================================================================
