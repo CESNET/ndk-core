@@ -456,6 +456,7 @@ architecture FULL of FPGA_COMMON is
     signal eth_tx_activity_ser           : std_logic_vector(ETH_PORTS*ETH_CHANNELS-1 downto 0);
     signal eth_rx_activity               : slv_array_t(ETH_PORTS-1 downto 0)(ETH_CHANNELS-1 downto 0);
     signal eth_tx_activity               : slv_array_t(ETH_PORTS-1 downto 0)(ETH_CHANNELS-1 downto 0);
+    signal eth_modprs_n                  : std_logic_vector(ETH_PORTS-1 downto 0);
 
     signal flash_wr_data                 : std_logic_vector(64-1 downto 0);
     signal flash_wr_en                   : std_logic;
@@ -1285,19 +1286,33 @@ begin
         TSU_TS_DV       => tsu_dv
     );
 
-    eth_rx_link_up  <= slv_array_deser(eth_rx_link_up_ser,ETH_PORTS,ETH_CHANNELS);
-    eth_tx_phy_rdy  <= slv_array_deser(eth_tx_phy_rdy_ser,ETH_PORTS,ETH_CHANNELS);
-    eth_rx_activity <= slv_array_deser(eth_rx_activity_ser,ETH_PORTS,ETH_CHANNELS);
-    eth_tx_activity <= slv_array_deser(eth_tx_activity_ser,ETH_PORTS,ETH_CHANNELS);
+    eth_led_ctrl_i: entity work.ETH_LED_CTRL_TOP
+    generic map (
+        ETH_PORTS      => ETH_PORTS,
+        ETH_CHANNELS   => ETH_CHANNELS,
+        LEDS_PER_PORT  => ETH_PORT_LEDS,
+        SYS_CLK_PERIOD => 5, -- 200 MHz
+        LED_ON_VAL     => '1'
+    )
+    port map(
+        ETH_CLK          => clk_eth_phy,
+        SYS_CLK          => clk_usr_x2,
+        SYS_RESET        => rst_usr_x2(0),
+    
+        ETH_RX_LINK_UP   => eth_rx_link_up_ser,
+        ETH_RX_ACTIVITY  => eth_rx_activity_ser,
+        ETH_TX_ACTIVITY  => eth_tx_activity_ser,
+        ETH_PORT_ENABLED => (others => '1'),
+        ETH_MODPRS_N     => eth_modprs_n,
+    
+        ETH_LED_G        => ETH_LED_G,
+        ETH_LED_R        => ETH_LED_R
+    );
 
-    led_eth_g: for i in 0 to ETH_PORTS-1 generate
-        process (clk_eth_phy)
-        begin
-            if rising_edge(clk_eth_phy(i)) then
-                ETH_LED_G(i) <= (and eth_rx_link_up(i)) and (and eth_tx_phy_rdy(i));
-                ETH_LED_R(i) <= (or eth_rx_activity(i)) or (or eth_tx_activity(i));
-            end if;
-        end process;
+    eth_modprs_n_g: if QSFP_PORTS = ETH_PORTS generate
+        eth_modprs_n <= QSFP_MODPRS_N;
+    else generate -- fix for 2x100GE in QSFP-DD
+        eth_modprs_n <= (others => QSFP_MODPRS_N(0));
     end generate;
 
     -- =========================================================================
