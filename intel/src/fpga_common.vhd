@@ -563,26 +563,6 @@ begin
     MISC_OUT(2) <= clk_usr_x2;  -- 200 MHz
     MISC_OUT(3) <= rst_usr_x2(0);
 
-    hwid_i : entity work.hwid
-    generic map (
-        DEVICE          => DEVICE
-    )
-    port map (
-        CLK             => clk_usr_x1,
-        XILINX_DNA      => xilinx_dna,
-        XILINX_DNA_VLD  => xilinx_dna_vld
-    );
-
-    fpga_id_usp_g: if (DEVICE = "ULTRASCALE") generate
-        fpga_id     <= xilinx_dna;
-        fpga_id_vld <= xilinx_dna_vld;
-    end generate;
-
-    fpga_id_intel_g: if (DEVICE = "STRATIX10" or DEVICE = "AGILEX") generate
-        fpga_id     <= intel_chip_id;
-        fpga_id_vld <= intel_chip_id_vld;
-    end generate;
-
     -- =========================================================================
     --                      PCIe module instance and connections
     -- =========================================================================
@@ -738,7 +718,7 @@ begin
             DATA_WIDTH => FPGA_ID_WIDTH
         )
         port map(
-            ACLK     => clk_usr_x1,
+            ACLK     => clk_mi,
             BCLK     => clk_pci(i),
             ARST     => '0',
             BRST     => '0',
@@ -846,6 +826,30 @@ begin
         CHIP_ID     => intel_chip_id,
         CHIP_ID_VLD => intel_chip_id_vld
     );
+
+    -- =========================================================================
+    -- FPGA ID LOGIC
+    -- =========================================================================
+
+    hwid_i : entity work.hwid
+    generic map (
+        DEVICE          => DEVICE
+    )
+    port map (
+        CLK             => clk_mi,
+        XILINX_DNA      => xilinx_dna,
+        XILINX_DNA_VLD  => xilinx_dna_vld
+    );
+
+    fpga_id_usp_g: if (DEVICE = "ULTRASCALE") generate
+        fpga_id     <= xilinx_dna;
+        fpga_id_vld <= xilinx_dna_vld;
+    end generate;
+
+    fpga_id_intel_g: if (DEVICE = "STRATIX10" or DEVICE = "AGILEX") generate
+        fpga_id     <= intel_chip_id;
+        fpga_id_vld <= intel_chip_id_vld;
+    end generate;
 
     -- =========================================================================
     --  DMA MODULE
@@ -1048,6 +1052,7 @@ begin
         AMM_FREQ_KHZ          => AMM_FREQ_KHZ,
         MI_DATA_WIDTH         => MI_DATA_WIDTH,
         MI_ADDR_WIDTH         => MI_ADDR_WIDTH,
+        FPGA_ID_WIDTH         => FPGA_ID_WIDTH,
         RESET_WIDTH           => RESET_WIDTH,
         BOARD                 => BOARD,
         DEVICE                => DEVICE
@@ -1076,6 +1081,8 @@ begin
         PCIE_LINK_UP       => app_pcie_link_up,
         ETH_RX_LINK_UP     => eth_rx_link_up_ser,
         ETH_TX_PHY_RDY     => eth_tx_phy_rdy_ser,
+        FPGA_ID            => fpga_id,
+        FPGA_ID_VLD        => fpga_id_vld,
 
         ETH_RX_MVB_DATA    => eth_rx_mvb_data,
         ETH_RX_MVB_VLD     => eth_rx_mvb_vld,
