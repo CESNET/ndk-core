@@ -35,7 +35,8 @@ entity SDM_CTRL is
         MI_DRDY  : out std_logic;
 
         -- CHIP ID
-        CHIP_ID  : out std_logic_vector(64-1 downto 0)
+        CHIP_ID     : out std_logic_vector(64-1 downto 0);
+        CHIP_ID_VLD : out std_logic := '0'
     );
 end entity;
 

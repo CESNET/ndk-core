@@ -61,6 +61,8 @@ generic (
     MI_DATA_WIDTH      : integer := 32;
     -- MI parameters: width of address signal
     MI_ADDR_WIDTH      : integer := 32;
+    -- Width of FPGA ID
+    FPGA_ID_WIDTH      : natural := 64;
     -- Width of reset signals
     RESET_WIDTH        : integer := 2;
     -- Name of FPGA board
@@ -114,16 +116,19 @@ port (
     APP_RESET     : out std_logic_vector(RESET_WIDTH-1 downto 0);
 
     -- =========================================================================
-    -- STATUS INPUTS (clocked at APP_CLK)
+    -- STATUS INPUTS
     -- =========================================================================
 
     -- Link Up flags of each PCIe endpoints, active when PCIe EP is ready for data transfers.
-    -- DMA channels are statically and evenly mapped to all PCIe EPs
+    -- DMA channels are statically and evenly mapped to all PCIe EPs (clocked at APP_CLK)
     PCIE_LINK_UP            : in  std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
     -- RX Link Up flags of each Ethernet channel
     ETH_RX_LINK_UP          : in  std_logic_vector(ETH_STREAMS*ETH_CHANNELS-1 downto 0);
     -- TX PHY Ready flags of each Ethernet channel
     ETH_TX_PHY_RDY          : in  std_logic_vector(ETH_STREAMS*ETH_CHANNELS-1 downto 0);
+    -- Unique identification number of the FPGA chip (clocked at MI_CLK)
+    FPGA_ID                 : in  std_logic_vector(FPGA_ID_WIDTH-1 downto 0);
+    FPGA_ID_VLD             : in  std_logic;
  
     -- =========================================================================
     -- RX ETHERNET STREAMS (clocked at APP_CLK)
