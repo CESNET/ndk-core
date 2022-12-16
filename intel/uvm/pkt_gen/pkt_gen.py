@@ -36,7 +36,7 @@ def main():
     packets = []
     conf_json = None
     random.seed(args.seed)
-  
+
     if (args.conf != None):
         conf_file = open(args.conf)
         conf_json   = conf_file.read()
@@ -51,13 +51,13 @@ def main():
         packet = scapy.packet.Packet()
         for pr in protocols:
             packet = packet/pr
-      
+
         packet_fuzz = scapy.packet.fuzz(packet)
         try:
             pcap_file.write(packet_fuzz)
         except:
             pcap_file.write(packet)
-        
+
     pcap_file.close()
 
 
