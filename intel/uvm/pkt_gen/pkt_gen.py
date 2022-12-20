@@ -9,7 +9,7 @@
 #    Radek Iša <isa@cesnet.cz>
 
 
-from parser import *
+from parser_rand import *
 import scapy.utils
 import string
 import argparse
@@ -31,34 +31,8 @@ def main():
     print("SEED : " + f'{args.seed}')
 
     #args.seed = 1667909888.37288 ./pkt_gen.py -f test.pcap -p 189 result in error
-
-    gen = ethernet()
-    packets = []
-    conf_json = None
-    random.seed(args.seed)
-
-    if (args.conf != None):
-        conf_file = open(args.conf)
-        conf_json   = conf_file.read()
-        conf_file.close();
-
-    pcap_file = scapy.utils.PcapWriter(args.file_output, append=False, sync=True) 
-
-    for x in range(args.packets):
-        cfg = packet_config(conf_json)
-        protocols = []
-        gen.packet_gen(protocols, cfg)
-        packet = scapy.packet.Packet()
-        for pr in protocols:
-            packet = packet/pr
-
-        packet_fuzz = scapy.packet.fuzz(packet)
-        try:
-            pcap_file.write(packet_fuzz)
-        except:
-            pcap_file.write(packet)
-
-    pcap_file.close()
+    gen = parser_rand(args.file_output, args.conf, args.seed, args.packets)
+    gen.gen();
 
 
 if __name__ == "__main__":

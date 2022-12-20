@@ -87,16 +87,19 @@ class sequence_pcap#(ITEM_WIDTH) extends uvm_common::sequence_base#(uvm_logic_ve
         //pkt_gen_file =  $system({"`dirname ", FILE_PATH, "../pkt_gen/pkt_gen.py"});
     endfunction
 
-    function string proto_dist_gen(int unsigned weight[]);
+    function string proto_dist_gen(int unsigned weight[], string proto[]);
         string ret = "";
+        if (weight.size() != proto.size()) begin
+            `uvm_fatal(p_sequencer.get_full_name(), $sformatf(" \n\tuvm_app_core_packet::sequence_pcap#(%0d) weight(%0d) and proto(%0d) size is not same", ITEM_WIDTH, weight.size(), proto.size()));
+        end
         for(int unsigned it = 0; it < weight.size(); it++) begin
             if (it != 0) begin
-                $swrite(ret, "%s, %0d", ret, weight[it]);
+                $swrite(ret, "%s, \"%s\" : %0d", ret, proto[it], weight[it]);
             end else begin
-                $swrite(ret, "%0d", weight[it]);
+                $swrite(ret, "\"%s\" : %0d", proto[it], weight[it]);
             end
         end
-        return {"[", ret ,"]"};
+        return {"{", ret ,"}"};
     endfunction
 
     function void configure(string file_json, string ipv4, string ipv6);
@@ -111,20 +114,20 @@ class sequence_pcap#(ITEM_WIDTH) extends uvm_common::sequence_base#(uvm_logic_ve
         $fwrite(file, "{\n");
         //ETH
 
-        $fwrite(file, "\"ETH\"  : { \"weight\" : %s},\n", proto_dist_gen(eth_next_prot));
-        $fwrite(file, "\"VLAN\" : { \"weight\" : %s},\n", proto_dist_gen(vlan_next_prot));
-        $fwrite(file, "\"PPP\" : { \"weight\" : %s},\n", proto_dist_gen(ppp_next_prot));
-        $fwrite(file, "\"MPLS\" : { \"weight\" : %s},\n", proto_dist_gen(mpls_next_prot));
-        $fwrite(file, "\"TCP\" : { \"weight\" : %s},\n", proto_dist_gen(proto_next_prot));
-        $fwrite(file, "\"UDP\" : { \"weight\" : %s},\n", proto_dist_gen(proto_next_prot));
+        $fwrite(file, "\"ETH\"  : { \"weight\" : %s},\n", proto_dist_gen(eth_next_prot, {"IPv4", "IPv6", "VLAN", "MPLS", "Empty", "PPP"}));
+        $fwrite(file, "\"VLAN\" : { \"weight\" : %s},\n", proto_dist_gen(vlan_next_prot, {"IPv4", "IPv6", "VLAN", "MPLS", "Empty", "PPP"}));
+        $fwrite(file, "\"PPP\" : { \"weight\" : %s},\n",  proto_dist_gen(ppp_next_prot, {"IPv4", "IPv6", "MPLS", "Empty"}));
+        $fwrite(file, "\"MPLS\" : { \"weight\" : %s},\n", proto_dist_gen(mpls_next_prot, {"IPv4", "IPv6", "MPLS", "Empty"}));
+        $fwrite(file, "\"TCP\" : { \"weight\" : %s},\n",  proto_dist_gen(proto_next_prot, {"Empty", "Payload"}));
+        $fwrite(file, "\"UDP\" : { \"weight\" : %s},\n",  proto_dist_gen(proto_next_prot, {"Empty", "Payload"}));
 
         $fwrite(file, "\"IPv4\" : { \"values\" : {");
         $fwrite(file, {"\n\t\"src\" : ", "[\n", rule_ipv4, "],", "\n\t\"dst\" : ", "[\n", rule_ipv4, "]"});
-        $fwrite(file, "\n\t},\n\t\"weight\" : %s},\n", proto_dist_gen(ip_next_prot));
+        $fwrite(file, "\n\t},\n\t\"weight\" : %s},\n", proto_dist_gen(ip_next_prot, {"Payload", "Empty", "ICMPv4", "UDP", "TCP"}));
 
         $fwrite(file, "\"IPv6\" : { \"values\" : {");
         $fwrite(file, {"\n\t\"src\" : ", "[\n", rule_ipv6, "],", "\n\t\"dst\" : ", "[\n", rule_ipv6, "]"});
-        $fwrite(file, "\n\t},\n\t\"weight\" : %s}\n", proto_dist_gen(ip_next_prot));
+        $fwrite(file, "\n\t},\n\t\"weight\" : %s}\n", proto_dist_gen(ip_next_prot, {"Payload", "Empty", "ICMPv4", "UDP", "TCP"}));
 
         $fwrite(file, "\n\t}\n");
         $fclose(file);
