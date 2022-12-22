@@ -391,6 +391,9 @@ architecture USP of PCIE_CORE is
     signal s_axis_rq_tready         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(3 downto 0);
     signal s_axis_cc_tready         : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(3 downto 0);
 
+    signal tag_assign_int       : slv_array_t(PCIE_ENDPOINTS -1 downto 0)(16 -1 downto 0);
+    signal tag_assign_vld_int   : slv_array_t(PCIE_ENDPOINTS -1 downto 0)(2 -1 downto 0);
+
     --==============================================================================================
     -- Inserting Debug nets:
     --==============================================================================================
@@ -406,9 +409,6 @@ architecture USP of PCIE_CORE is
     signal cfg_rx_pm_state          : slv_array_t(PCIE_ENDPOINTS -1 downto 0)(1 downto 0);
     signal cfg_tx_pm_state          : slv_array_t(PCIE_ENDPOINTS -1 downto 0)(1 downto 0);
     signal cfg_ltssm_state          : slv_array_t(PCIE_ENDPOINTS -1 downto 0)(5 downto 0);
-
-    signal tag_assign_int       : slv_array_t(PCIE_ENDPOINTS -1 downto 0)(16 -1 downto 0);
-    signal tag_assign_vld_int   : slv_array_t(PCIE_ENDPOINTS -1 downto 0)(2 -1 downto 0);
 
     -- attribute mark_debug                 : string;
     -- -- special signals for debugging

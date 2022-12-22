@@ -1,5 +1,5 @@
 # 1.  base - base module address
-# 2.  type - controller type: 3 for DMA Medusa only
+# 2.  type - controller type: 3 for DMA Medusa, 4 for DMA Calypte
 # 3.  rxn  - number of RX channels
 # 4.  txn  - number of TX channels
 # 5.  pcie - index(es) of PCIe endpoint(s) which DMA module uses.
@@ -15,12 +15,8 @@ proc dts_dmamod_open {base type rxn txn pcie rx_frame_size_max tx_frame_size_max
     append ret "#address-cells = <1>;"
     append ret "#size-cells = <1>;"
 
-    if {$type == 3} {
-        set strtype "ndp"
-    } elseif {$type == 4} {
-        set strtype "calypte"
-    } else {
-        error "ERROR: Unsupported DMA Type $type for DMA Module!"
+    if {$type != 3 && $type != 4} {
+        error "ERROR: Unsupported DMA Type: $type for DMA Module!"
     }
 
     append ret "dma_params_rx$pcie:" [dts_dma_params "dma_params_rx$pcie" $rx_frame_size_max $rx_frame_size_min]
@@ -30,10 +26,10 @@ proc dts_dmamod_open {base type rxn txn pcie rx_frame_size_max tx_frame_size_max
     for {set i 0} {$i < $rxn} {incr i} {
         if {$type == 3} {
             set    var_base [expr $base + $i * 0x80]
-            append ret [dts_dma_medusa_ctrl $strtype $type "rx" $i $var_base $pcie "dma_params_rx$pcie"]
+            append ret [dts_dma_medusa_ctrl "ndp" $type "rx" $i $var_base $pcie "dma_params_rx$pcie"]
         } elseif {$type == 4} {
             set    var_base [expr $base + $i * 0x80]
-            append ret [dts_dma_calypte_ctrl $strtype "rx" $i $var_base $pcie]
+            append ret [dts_dma_calypte_ctrl "rx" $i $var_base $pcie]
         }
     }
 
@@ -41,7 +37,10 @@ proc dts_dmamod_open {base type rxn txn pcie rx_frame_size_max tx_frame_size_max
     for {set i 0} {$i < $txn} {incr i} {
         if {$type == 3} {
             set    var_base [expr $base + $i * 0x80 + $offset]
-            append ret [dts_dma_medusa_ctrl $strtype $type "tx" $i $var_base $pcie "dma_params_tx$pcie"]
+            append ret [dts_dma_medusa_ctrl "ndp" $type "tx" $i $var_base $pcie "dma_params_tx$pcie"]
+        } elseif {$type == 4} {
+            set    var_base [expr $base + $i * 0x80 + $offset]
+            append ret [dts_dma_calypte_ctrl "tx" $i $var_base $pcie]
         }
     }
 

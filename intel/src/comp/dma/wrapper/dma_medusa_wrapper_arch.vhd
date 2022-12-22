@@ -59,9 +59,9 @@ architecture MEDUSA of DMA_WRAPPER is
     --  UP MVB Endpoint tagging
     -- =====================================================================
 
-    signal dma_up_mvb_data : slv_array_t(DMA_ENDPOINTS-1 downto 0)(UP_MFB_REGIONS*DMA_UPHDR_WIDTH-1 downto 0);
-    signal UP_MVB_DATA_arr : slv_array_2d_t(DMA_ENDPOINTS-1 downto 0)(UP_MFB_REGIONS-1 downto 0)(DMA_UPHDR_WIDTH-1 downto 0);
-    signal UP_MVB_DATA_vec : std_logic_vector(DMA_ENDPOINTS*UP_MFB_REGIONS*DMA_UPHDR_WIDTH-1 downto 0);
+    signal dma_rq_mvb_data : slv_array_t(DMA_ENDPOINTS-1 downto 0)(PCIE_RQ_MFB_REGIONS*DMA_UPHDR_WIDTH-1 downto 0);
+    signal PCIE_RQ_MVB_DATA_arr : slv_array_2d_t(DMA_ENDPOINTS-1 downto 0)(PCIE_RQ_MFB_REGIONS-1 downto 0)(DMA_UPHDR_WIDTH-1 downto 0);
+    signal PCIE_RQ_MVB_DATA_vec : std_logic_vector(DMA_ENDPOINTS*PCIE_RQ_MFB_REGIONS*DMA_UPHDR_WIDTH-1 downto 0);
 
     -- =====================================================================
 begin
@@ -218,19 +218,19 @@ begin
 
     up_mvb_data_pr : process (all)
     begin
-        UP_MVB_DATA <= dma_up_mvb_data;
+        PCIE_RQ_MVB_DATA <= dma_rq_mvb_data;
 
         if (DMA_PER_PCIE=2) then
             for i in 0 to PCIE_ENDPOINTS-1 loop
                 for e in 0 to DMA_PER_PCIE-1 loop
-                    UP_MVB_DATA_arr(i*DMA_PER_PCIE+e) <= slv_array_deser(dma_up_mvb_data(i*DMA_PER_PCIE+e),UP_MFB_REGIONS);
-                    for g in 0 to UP_MFB_REGIONS-1 loop
-                        UP_MVB_DATA_arr(i*DMA_PER_PCIE+e)(g)(DMA_REQUEST_TAG'high downto DMA_REQUEST_TAG'high-log2(DMA_PER_PCIE)+1) <= std_logic_vector(to_unsigned(e,log2(DMA_PER_PCIE)));
+                    PCIE_RQ_MVB_DATA_arr(i*DMA_PER_PCIE+e) <= slv_array_deser(dma_rq_mvb_data(i*DMA_PER_PCIE+e),PCIE_RQ_MFB_REGIONS);
+                    for g in 0 to PCIE_RQ_MFB_REGIONS-1 loop
+                        PCIE_RQ_MVB_DATA_arr(i*DMA_PER_PCIE+e)(g)(DMA_REQUEST_TAG'high downto DMA_REQUEST_TAG'high-log2(DMA_PER_PCIE)+1) <= std_logic_vector(to_unsigned(e,log2(DMA_PER_PCIE)));
                     end loop;
                 end loop;
             end loop;
-            UP_MVB_DATA_vec <= slv_array_2d_ser(UP_MVB_DATA_arr);
-            UP_MVB_DATA     <= slv_array_deser(UP_MVB_DATA_vec,DMA_ENDPOINTS);
+            PCIE_RQ_MVB_DATA_vec <= slv_array_2d_ser(PCIE_RQ_MVB_DATA_arr);
+            PCIE_RQ_MVB_DATA     <= slv_array_deser(PCIE_RQ_MVB_DATA_vec,DMA_ENDPOINTS);
         end if;
     end process;
 
@@ -261,15 +261,15 @@ begin
             PCIE_MRRS            => PCIE_MRRS                       ,
             DMA_TAG_WIDTH        => DMA_TAG_WIDTH-log2(DMA_PER_PCIE),
 
-            UP_MFB_REGIONS       => UP_MFB_REGIONS                  ,
-            UP_MFB_REGION_SIZE   => UP_MFB_REGION_SIZE              ,
-            UP_MFB_BLOCK_SIZE    => UP_MFB_BLOCK_SIZE               ,
-            UP_MFB_ITEM_WIDTH    => UP_MFB_ITEM_WIDTH               ,
+            UP_MFB_REGIONS       => PCIE_RQ_MFB_REGIONS                  ,
+            UP_MFB_REGION_SIZE   => PCIE_RQ_MFB_REGION_SIZE              ,
+            UP_MFB_BLOCK_SIZE    => PCIE_RQ_MFB_BLOCK_SIZE               ,
+            UP_MFB_ITEM_WIDTH    => PCIE_RQ_MFB_ITEM_WIDTH               ,
 
-            DOWN_MFB_REGIONS     => DOWN_MFB_REGIONS                ,
-            DOWN_MFB_REGION_SIZE => DOWN_MFB_REGION_SIZE            ,
-            DOWN_MFB_BLOCK_SIZE  => DOWN_MFB_BLOCK_SIZE             ,
-            DOWN_MFB_ITEM_WIDTH  => DOWN_MFB_ITEM_WIDTH             ,
+            DOWN_MFB_REGIONS     => PCIE_RC_MFB_REGIONS                ,
+            DOWN_MFB_REGION_SIZE => PCIE_RC_MFB_REGION_SIZE            ,
+            DOWN_MFB_BLOCK_SIZE  => PCIE_RC_MFB_BLOCK_SIZE             ,
+            DOWN_MFB_ITEM_WIDTH  => PCIE_RC_MFB_ITEM_WIDTH             ,
 
             HDR_META_WIDTH       => HDR_META_WIDTH                  ,
 
@@ -336,31 +336,31 @@ begin
             TX_USR_MFB_SRC_RDY   => TX_USR_MFB_SRC_RDY(i) ,
             TX_USR_MFB_DST_RDY   => TX_USR_MFB_DST_RDY(i) ,
 
-            UP_MVB_DATA          => dma_up_mvb_data(DPE),
-            UP_MVB_VLD           => UP_MVB_VLD(DPE),
-            UP_MVB_SRC_RDY       => UP_MVB_SRC_RDY(DPE),
-            UP_MVB_DST_RDY       => UP_MVB_DST_RDY(DPE),
+            UP_MVB_DATA          => dma_rq_mvb_data(DPE),
+            UP_MVB_VLD           => PCIE_RQ_MVB_VLD(DPE),
+            UP_MVB_SRC_RDY       => PCIE_RQ_MVB_SRC_RDY(DPE),
+            UP_MVB_DST_RDY       => PCIE_RQ_MVB_DST_RDY(DPE),
                                                         
-            UP_MFB_DATA          => UP_MFB_DATA(DPE),
-            UP_MFB_SOF           => UP_MFB_SOF(DPE),
-            UP_MFB_EOF           => UP_MFB_EOF(DPE),
-            UP_MFB_SOF_POS       => UP_MFB_SOF_POS(DPE),
-            UP_MFB_EOF_POS       => UP_MFB_EOF_POS(DPE),
-            UP_MFB_SRC_RDY       => UP_MFB_SRC_RDY(DPE),
-            UP_MFB_DST_RDY       => UP_MFB_DST_RDY(DPE),
+            UP_MFB_DATA          => PCIE_RQ_MFB_DATA(DPE),
+            UP_MFB_SOF           => PCIE_RQ_MFB_SOF(DPE),
+            UP_MFB_EOF           => PCIE_RQ_MFB_EOF(DPE),
+            UP_MFB_SOF_POS       => PCIE_RQ_MFB_SOF_POS(DPE),
+            UP_MFB_EOF_POS       => PCIE_RQ_MFB_EOF_POS(DPE),
+            UP_MFB_SRC_RDY       => PCIE_RQ_MFB_SRC_RDY(DPE),
+            UP_MFB_DST_RDY       => PCIE_RQ_MFB_DST_RDY(DPE),
                                                         
-            DOWN_MVB_DATA        => DOWN_MVB_DATA(DPE),
-            DOWN_MVB_VLD         => DOWN_MVB_VLD(DPE),
-            DOWN_MVB_SRC_RDY     => DOWN_MVB_SRC_RDY(DPE),
-            DOWN_MVB_DST_RDY     => DOWN_MVB_DST_RDY(DPE),
+            DOWN_MVB_DATA        => PCIE_RC_MVB_DATA(DPE),
+            DOWN_MVB_VLD         => PCIE_RC_MVB_VLD(DPE),
+            DOWN_MVB_SRC_RDY     => PCIE_RC_MVB_SRC_RDY(DPE),
+            DOWN_MVB_DST_RDY     => PCIE_RC_MVB_DST_RDY(DPE),
                                                         
-            DOWN_MFB_DATA        => DOWN_MFB_DATA(DPE),
-            DOWN_MFB_SOF         => DOWN_MFB_SOF(DPE),
-            DOWN_MFB_EOF         => DOWN_MFB_EOF(DPE),
-            DOWN_MFB_SOF_POS     => DOWN_MFB_SOF_POS(DPE),
-            DOWN_MFB_EOF_POS     => DOWN_MFB_EOF_POS(DPE),
-            DOWN_MFB_SRC_RDY     => DOWN_MFB_SRC_RDY(DPE),
-            DOWN_MFB_DST_RDY     => DOWN_MFB_DST_RDY(DPE),
+            DOWN_MFB_DATA        => PCIE_RC_MFB_DATA(DPE),
+            DOWN_MFB_SOF         => PCIE_RC_MFB_SOF(DPE),
+            DOWN_MFB_EOF         => PCIE_RC_MFB_EOF(DPE),
+            DOWN_MFB_SOF_POS     => PCIE_RC_MFB_SOF_POS(DPE),
+            DOWN_MFB_EOF_POS     => PCIE_RC_MFB_EOF_POS(DPE),
+            DOWN_MFB_SRC_RDY     => PCIE_RC_MFB_SRC_RDY(DPE),
+            DOWN_MFB_DST_RDY     => PCIE_RC_MFB_DST_RDY(DPE),
 
             MI_ADDR              => dma_end_mi_addr(DPE),
             MI_DWR               => dma_end_mi_dwr(DPE),
