@@ -5,6 +5,14 @@ How to start
 
 This chapter describes steps for building the FPGA firmware, loading it into the FPGA card, and using it.
 
+What dependencies are needed to build an FPGA firmware
+======================================================
+
+- The NDK build system is for Linux operating systems only. We recommend using any RHEL-compatible OS, for example, Rocky Linux 8+.
+- The dtc/libfdt package is required. On RHEL-compatible OS, you can use the following command: ``sudo dnf install dtc``.
+- To build the FPGA firmware, you must have Intel Quartus Prime Pro or Xilinx Vivado (depending on the target card) installed, including a valid license.
+- You can always find information about the required version of the synthesis tools (Quartus/Vivado) in the ``<NDK-APP-XXX_root_directory>/README.md`` file.
+
 How to build an FPGA firmware with an NDK-based application
 ===========================================================
 
@@ -14,9 +22,6 @@ How to build an FPGA firmware with an NDK-based application
 - If you do not have a DMA IP (it is not part of the open-source NDK), you must use the ``make DMA_TYPE=0`` command to disable the DMA and create a loopback instead.
 - Wait until the FPGA firmware build successfully finishes.
 - The FPGA firmware file (bitstream) is in the same directory in the NDK format (.nfw) or the Quartus/Vivado format (.sof/.bit).
-
-.. NOTE::
-    To build the FPGA firmware, you must have Intel Quartus Prime Pro or Xilinx Vivado (depending on the target card) installed, including a valid license.
 
 How to prepare the FPGA card and the host PC
 ============================================
@@ -80,6 +85,6 @@ After you have completed the first steps with the NDK firmware, you may want to 
 The following references provide the information to do just that.
 
 - :ref:`Here, you can read about frequently used terms in NDK firmware <ndk_terminology>`.
-- :ref:`Here, you can find detailed information about the NDK firmware architecture <ndk_intel>`.
+- :ref:`Here, you can find detailed information about the NDK firmware architecture <ndk_arch>`.
 - :ref:`Here, you can find detailed information about the NDK configuration files and parameters <ndk_configuration>`.
 - :ref:`Here, you can learn how to test R/W requests to the registers in the NDK firmware or what other tests are available and how to utilize them <ndk_testing>`.

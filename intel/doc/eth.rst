@@ -1,7 +1,8 @@
+.. _ndk_net_mod:
 .. _ndk_intel_net_mod:
 
-Network Module
-==============
+The Network Module
+==================
 
 Network Module enables connection of the NDK platform to an Ethernet interface(s).
 The basic architecture is displayed below.
@@ -260,7 +261,7 @@ The MAC Lites split the whole Network Module into two clock domains (not conside
 In the current setting, the clock signal in the left clock domain has twice the frequency of the clock signal in the right clock domain.
 That is because we want to avoid timing problems further in our designs.
 To achieve the same throughput in both clock domains, the width of the MFB bus is doubled in the slower clock domain (the one on the right).
-The Network Module Logic is connected to the TimeStamp Unit (:ref:`TSU <ndk_intel_tsu>`), which generates timestamps.
+The Network Module Logic is connected to the TimeStamp Unit (:ref:`TSU <ndk_tsu>`), which generates timestamps.
 The timestamps are inserted per frame into their header (the ``TIMESTAMP`` and ``TIMESTAMPVLD`` items of the header).
 
 .. _sw_access_mac_lites:

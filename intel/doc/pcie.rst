@@ -1,3 +1,4 @@
+.. _ndk_pcie_mod:
 .. _ndk_intel_pcie_mod:
 
 The PCIe module
@@ -19,6 +20,7 @@ The PCIe Core varies according to the PCIe Hard IP or FPGA used. The PCIe Core c
 
 Supported PCIe Hard IP
 ----------------------
+
 A list of the supported PCIe Hard IPs is below. You can select the target architecture by setting the NDK parameter ``PCIE_MOD_ARCH``. According to this parameter, the correct PCIE_CORE module variant is used and the VHDL generic ``PCIE_ENDPOINT_TYPE`` is set appropriately.
 
 - ``R_TILE`` - `R-Tile Avalon Streaming Intel FPGA IP for PCI Express <https://www.intel.com/content/www/us/en/docs/programmable/683501/>`_
