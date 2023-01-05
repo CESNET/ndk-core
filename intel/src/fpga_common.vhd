@@ -1144,6 +1144,11 @@ begin
         DMA_RESET_X2       => rst_dma_x2,
         APP_RESET          => rst_app,
 
+        TSU_CLK            => tsu_clk,
+        TSU_RESET          => tsu_rst,
+        TSU_TS_NS          => tsu_ns,
+        TSU_TS_VLD         => tsu_dv,
+
         PCIE_LINK_UP       => app_pcie_link_up,
         ETH_RX_LINK_UP     => eth_rx_link_up_ser,
         ETH_TX_PHY_RDY     => eth_tx_phy_rdy_ser,

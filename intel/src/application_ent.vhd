@@ -72,7 +72,7 @@ generic (
 );
 port (
     -- =========================================================================
-    -- CLOCK AND RESET INPUTS
+    -- USER CLOCK AND RESET INPUTS
     -- =========================================================================
 
     -- user clock input
@@ -114,6 +114,19 @@ port (
     DMA_RESET_X2  : out std_logic_vector(RESET_WIDTH-1 downto 0);
     -- reset output synchronized with APP_CLK
     APP_RESET     : out std_logic_vector(RESET_WIDTH-1 downto 0);
+
+    -- =========================================================================
+    -- TIMESTAPS
+    -- =========================================================================
+
+    -- TSU clock input
+    TSU_CLK    : in std_logic;
+    -- reset input synchronized with TSU_CLK
+    TSU_RESET  : in std_logic;
+    -- Timestamp from TSU in nanoseconds format
+    TSU_TS_NS  : in std_logic_vector(64-1 downto 0);
+    -- Timestamp valid flag
+    TSU_TS_VLD : in std_logic;
 
     -- =========================================================================
     -- STATUS INPUTS
