@@ -12,33 +12,69 @@
 from config import *
 from parser import *
 
-class parser_rand(parser):
-    def __init__(self, pcap_file, cfg, seed, packets):
+class dfs_item:
+    def __init__(self, protocol, cfg):
+        self.protocol     = protocol
+        self.index        = 0
+        self.cfg          = cfg.copy()
+        proto_next = protocol.protocol_next(self.cfg)
+        self.protocols_next = []
+        for it in proto_next:
+            if (proto_next[it] != 0):
+                self.protocols_next.append(it)
+
+    def last(self):
+        return len(self.protocols_next) == 0;
+
+    def next(self):
+        if (self.protocols_next == None or self.index >= len(self.protocols_next)):
+            return None
+
+        ret = self.protocols_next[self.index]
+        self.index += 1
+        return ret
+
+
+class parser_dfs(parser):
+    def __init__(self, pcap_file, cfg, seed):
         super().__init__(pcap_file, cfg, seed);
-        self.packets = packets
 
     def gen(self):
-        for x in range(self.packets):
-            cfg = packet_config(self.cfg)
-            protocols = []
-            proto_act = self.protocols["ETH"]
-            packet = scapy.packet.Packet()
+        next_items = []
 
-            while (proto_act != None):
-                pkt_proto = proto_act.protocol_add(cfg)
-                if (pkt_proto != None):
-                    packet     = packet/pkt_proto
-                proto_next = proto_act.protocol_next(cfg)
+        cfg_act  = packet_config(self.cfg);
+        item = dfs_item(self.protocols["ETH"], cfg_act);
+        next_items.append(item)
+
+        packets = 0
+        while (len(next_items) > 0):
+            # get last item
+            item = next_items[-1];
+            # get next generated protocol
+            proto_next = item.next()
+
+            if (not item.last()):
                 if (proto_next != None):
-                    proto_next_indexs  = [];
-                    proto_next_weights = [];
-                    self.proto_weight_get(proto_next_indexs, proto_next_weights, proto_next)
-                    protocol_next_name = random.choices(proto_next_indexs, proto_next_weights)[0]
-                    proto_act = self.protocols.get(protocol_next_name);
+                    item_next = dfs_item(self.protocols[proto_next], item.cfg);
+                    next_items.append(item_next)
                 else:
-                    proto_act = None
+                    #remove last index there is no next protocol
+                    del next_items[-1]
+            else:
+                #generate packet
+                packets += 1
+                packet = scapy.packet.Packet()
 
-            # End While
-            packet.show()
-            self.write(packet)
+                for it in next_items:
+                    pkt_proto = it.protocol.protocol_add(it.cfg)
+                    if (pkt_proto != None):
+                        packet     = packet/pkt_proto
+
+                #write packet
+                self.write(packet)
+                #remove last index
+                del next_items[-1]
+
+        print ("PACKETS %d" % (packets))
+        pass
 

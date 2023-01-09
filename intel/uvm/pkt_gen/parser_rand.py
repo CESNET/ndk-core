@@ -20,7 +20,6 @@ class parser_rand(parser):
     def gen(self):
         for x in range(self.packets):
             cfg = packet_config(self.cfg)
-            protocols = []
             proto_act = self.protocols["ETH"]
             packet = scapy.packet.Packet()
 
@@ -29,16 +28,13 @@ class parser_rand(parser):
                 if (pkt_proto != None):
                     packet     = packet/pkt_proto
                 proto_next = proto_act.protocol_next(cfg)
-                if (proto_next != None):
-                    proto_next_indexs  = [];
-                    proto_next_weights = [];
-                    self.proto_weight_get(proto_next_indexs, proto_next_weights, proto_next)
+                if (len(proto_next) > 0):
+                    (proto_next_indexs, proto_next_weights) = self.proto_weight_get(proto_next)
                     protocol_next_name = random.choices(proto_next_indexs, proto_next_weights)[0]
                     proto_act = self.protocols.get(protocol_next_name);
                 else:
                     proto_act = None
 
             # End While
-            packet.show()
             self.write(packet)
 

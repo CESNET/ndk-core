@@ -28,6 +28,11 @@ class sequence_pcap#(ITEM_WIDTH) extends uvm_common::sequence_base#(uvm_logic_ve
     rand int unsigned mpls_next_prot[4];
     rand int unsigned ip_next_prot[5];
     rand int unsigned proto_next_prot[2]; //empty/payload
+    rand int unsigned algorithm; // 0 -> rand; 1 -> dfs
+
+    constraint c_alg{
+        algorithm dist {0 :/ 10, 1 :/ 1};
+    }
 
     constraint c_eth{
         foreach(eth_next_prot[it]) { 
@@ -153,7 +158,7 @@ class sequence_pcap#(ITEM_WIDTH) extends uvm_common::sequence_base#(uvm_logic_ve
         `uvm_info(get_full_name(), $sformatf("\n\tsequence_pcap is running\n\t\tpcap_name%s", pcap_file), UVM_DEBUG);
 
         this.configure(config_json, rule_ipv4, rule_ipv6);
-        $swrite(pkt_gen_params, "-f \"%s\" -p %0d -c %s -s %0d", pcap_file, transaction_count, config_json, pkt_gen_seed);
+        $swrite(pkt_gen_params, "-a %s -f \"%s\" -p %0d -c %s -s %0d", algorithm == 0 ? "rand" : "dfs",  pcap_file, transaction_count, config_json, pkt_gen_seed);
         if($system({PKT_GEN_PATH, " ", pkt_gen_params, " >> pkt_gen_out"}) != 0) begin
             `uvm_fatal(p_sequencer.get_full_name(), $sformatf("\n\t Cannot run command %s", {PKT_GEN_PATH, " ", pkt_gen_params}))
         end

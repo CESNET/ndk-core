@@ -21,11 +21,14 @@ class base_node:
     def __init__(self, name):
         self.name = name
 
+    def name_get(self):
+        return self.name
+
     def protocol_add(self, config):
-        pass
+        return None 
 
     def protocol_next(self, config):
-        return None
+        return {}
 
 
 
@@ -54,9 +57,6 @@ class ICMPv4(base_node):
     def protocol_add(self, config):
         return scapy.all.ICMP()
 
-    def protocol_next(self, config):
-        return None
-
 
 class ICMPv6(base_node):
     def __init__(self):
@@ -64,9 +64,6 @@ class ICMPv6(base_node):
 
     def protocol_add(self, config):
         return scapy.all.ICMPv6Unknown()
-
-    def protocol_next(self, config):
-        return None
 
 class UDP(base_node):
     def __init__(self):
@@ -220,8 +217,9 @@ class VLAN(base_node):
         # check if it is last generated VLAN
         if (config.vlan != 0):
             config.vlan -= 1
+        print("TEST VLAN %d" % (config.vlan))
         if (config.vlan == 0):
-            proto_weight["VLAN"] = 0;
+            proto["VLAN"] = 0;
 
         return proto
 
@@ -260,12 +258,17 @@ class parser:
         self.pcap_file.close()
 
     def gen(self):
+        print("This is Null packet generator and shouldn't be used", file=sys.stderr)
         pass
 
-    def proto_weight_get(self, proto, weight, dict_items):
+    def proto_weight_get(self, dict_items):
+        proto  = []
+        weight = []
         for key in dict_items:
             proto.append(key);
             weight.append(dict_items[key]);
+
+        return (proto, weight)
 
 
     def write(self, packet):
