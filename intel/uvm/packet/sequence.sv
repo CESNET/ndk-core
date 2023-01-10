@@ -112,7 +112,7 @@ class sequence_pcap#(ITEM_WIDTH) extends uvm_common::sequence_base#(uvm_logic_ve
         string rule_ipv6 = {"\t{ \"min\" : \"0x00000000000000000000000000000000\", \"max\" : \"0xffffffffffffffffffffffffffffffff\" }", ipv6};
         string rule_ipv4 = {"\t{ \"min\" : \"0x00000000\", \"max\" : \"0xffffffff\" }", ipv4};
 
-        // create json configuratio for pkt_gen
+        // create json configuration for pkt_gen
         if((file = $fopen(file_json, "w")) == 0) begin
             `uvm_fatal(this.get_full_name(), $sformatf("\n\t Cannot open file %s for writing", file_json));
         end
