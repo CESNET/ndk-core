@@ -9,56 +9,58 @@
 #    Radek Iša <isa@cesnet.cz>
 
 
-from parser import *
+from parser_rand import *
+from parser_dfs  import *
 import scapy.utils
 import string
 import argparse
 import time
+import enum
+
+class parse_alg(enum.Enum):
+    noe  = 'none'
+    dfs  = 'dfs'
+    rand = 'rand'
+
+    def __str__(self):
+        return self.value
+
+    @staticmethod
+    def values():
+       ret = []
+       arg_list = list(parse_alg)
+       for it in arg_list:
+           ret.append(it.value);
+       return ret;
 
 def main():
     #parse options
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-f", "--file_output", type=str,
+    arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument("-f", "--file_output", type=str,
                         help="Set output file", required=True)
-    parser.add_argument("-p", "--packets", type=int,
+    arg_parser.add_argument("-p", "--packets", type=int,
                         help="number of generated packets", default=20)
-    parser.add_argument("-s", "--seed", type=int,
+    arg_parser.add_argument("-a", "--algorithm", type=parse_alg,
+                        help=("parse algorithms possible values [" + ' '.join(parse_alg.values()) + "]"), default="rand")
+    arg_parser.add_argument("-s", "--seed", type=int,
                         help="set seed to random generator", default=int(time.time()*1000))
-    parser.add_argument("-c", "--conf", type=str,
+    arg_parser.add_argument("-c", "--conf", type=str,
                         help="Configrutation of random genertor for protocols in JSON", default=None)
 
-    args = parser.parse_args()
-    print("SEED : " + f'{args.seed}')
+    args = arg_parser.parse_args()
+    print("SEED      : " + f'{args.seed}')
+    print("ALGORITHM : " + f'{args.algorithm}')
 
     #args.seed = 1667909888.37288 ./pkt_gen.py -f test.pcap -p 189 result in error
+    gen = parser(args.file_output, args.conf, args.seed)
 
-    gen = ethernet()
-    packets = []
-    conf_json = None
-    random.seed(args.seed)
-  
-    if (args.conf != None):
-        conf_file = open(args.conf)
-        conf_json   = conf_file.read()
-        conf_file.close();
+    if (args.algorithm == parse_alg.rand):
+        gen = parser_rand(args.file_output, args.conf, args.seed, args.packets)
+    if (args.algorithm == parse_alg.dfs):
+        gen = parser_dfs(args.file_output, args.conf, args.seed)
 
-    pcap_file = scapy.utils.PcapWriter(args.file_output, append=False, sync=True) 
-
-    for x in range(args.packets):
-        cfg = packet_config(conf_json)
-        protocols = []
-        gen.packet_gen(protocols, cfg)
-        packet = scapy.packet.Packet()
-        for pr in protocols:
-            packet = packet/pr
-      
-        packet_fuzz = scapy.packet.fuzz(packet)
-        try:
-            pcap_file.write(packet_fuzz)
-        except:
-            pcap_file.write(packet)
-        
-    pcap_file.close()
+    #run generator
+    gen.gen();
 
 
 if __name__ == "__main__":
