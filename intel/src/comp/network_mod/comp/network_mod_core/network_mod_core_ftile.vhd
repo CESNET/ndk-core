@@ -897,6 +897,8 @@ architecture FULL of NETWORK_MOD_CORE is
     signal ftile_rx_pcs_fully_aligned : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
     signal ftile_tx_lanes_stable      : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
     signal ftile_rx_am_lock           : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
+    signal ftile_local_fault          : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
+    signal ftile_remote_fault         : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
 
     signal ftile_tx_mac_data      : slv_array_t     (ETH_PORT_CHAN-1 downto 0)(MAC_DATA_WIDTH        -1 downto 0);
     signal ftile_tx_mac_valid     : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
@@ -1309,8 +1311,8 @@ begin
                 o_reconfig_xcvr7_waitrequest    => mi_ia_ardy_phy_n(8),
                 o_rx_block_lock                 => ftile_rx_block_lock(0),
                 o_rx_am_lock                    => ftile_rx_am_lock(0),
-                o_local_fault_status            => open,
-                o_remote_fault_status           => open,
+                o_local_fault_status            => ftile_local_fault(0),
+                o_remote_fault_status           => ftile_remote_fault(0),
                 i_stats_snapshot                => '1',
                 o_rx_hi_ber                     => ftile_rx_hi_ber(0),
                 o_rx_pcs_fully_aligned          => ftile_rx_pcs_fully_aligned(0),
@@ -1341,7 +1343,7 @@ begin
                         RX_LINK_UP(0) <= '0';
                         TX_LINK_UP(0) <= '0';
                     else
-                        RX_LINK_UP(0) <= ftile_rx_pcs_ready(0) and ftile_rx_pcs_fully_aligned(0);
+                        RX_LINK_UP(0) <= ftile_rx_pcs_ready(0) and ftile_rx_pcs_fully_aligned(0) and (not ftile_remote_fault(0));
                         TX_LINK_UP(0) <= ftile_tx_lanes_stable(0);
                     end if;
                 end if;
@@ -1528,8 +1530,8 @@ begin
                     o_reconfig_xcvr3_waitrequest    => mi_ia_ardy_phy_n(3 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
                     o_rx_block_lock                 => ftile_rx_block_lock(i),
                     o_rx_am_lock                    => ftile_rx_am_lock(i),
-                    o_local_fault_status            => open,
-                    o_remote_fault_status           => open,
+                    o_local_fault_status            => ftile_local_fault(i),
+                    o_remote_fault_status           => ftile_remote_fault(i),
                     i_stats_snapshot                => '1',
                     o_rx_hi_ber                     => ftile_rx_hi_ber(i),
                     o_rx_pcs_fully_aligned          => ftile_rx_pcs_fully_aligned(i),
@@ -1560,7 +1562,7 @@ begin
                             RX_LINK_UP(i) <= '0';
                             TX_LINK_UP(i) <= '0';
                         else
-                            RX_LINK_UP(i) <= ftile_rx_pcs_ready(i) and ftile_rx_pcs_fully_aligned(i);
+                            RX_LINK_UP(i) <= ftile_rx_pcs_ready(i) and ftile_rx_pcs_fully_aligned(i) and (not ftile_remote_fault(i));
                             TX_LINK_UP(i) <= ftile_tx_lanes_stable(i);
                         end if;
                     end if;
@@ -1726,8 +1728,8 @@ begin
                     o_reconfig_xcvr1_waitrequest    => mi_ia_ardy_phy_n(1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
                     o_rx_block_lock                 => ftile_rx_block_lock(i),
                     o_rx_am_lock                    => ftile_rx_am_lock(i),
-                    o_local_fault_status            => open,
-                    o_remote_fault_status           => open,
+                    o_local_fault_status            => ftile_local_fault(i),
+                    o_remote_fault_status           => ftile_remote_fault(i),
                     i_stats_snapshot                => '1',
                     o_rx_hi_ber                     => ftile_rx_hi_ber(i),
                     o_rx_pcs_fully_aligned          => ftile_rx_pcs_fully_aligned(i),
@@ -1758,7 +1760,7 @@ begin
                             RX_LINK_UP(i) <= '0';
                             TX_LINK_UP(i) <= '0';
                         else
-                            RX_LINK_UP(i) <= ftile_rx_pcs_ready(i) and ftile_rx_pcs_fully_aligned(i);
+                            RX_LINK_UP(i) <= ftile_rx_pcs_ready(i) and ftile_rx_pcs_fully_aligned(i) and (not ftile_remote_fault(i));
                             TX_LINK_UP(i) <= ftile_tx_lanes_stable(i);
                         end if;
                     end if;
@@ -1902,8 +1904,8 @@ begin
                     o_reconfig_xcvr0_waitrequest    => mi_ia_ardy_phy_n(i + ETH_PORT_CHAN),
                     o_rx_block_lock                 => ftile_rx_block_lock(i),
                     o_rx_am_lock                    => ftile_rx_am_lock(i),
-                    o_local_fault_status            => open,
-                    o_remote_fault_status           => open,
+                    o_local_fault_status            => ftile_local_fault(i),
+                    o_remote_fault_status           => ftile_remote_fault(i),
                     i_stats_snapshot                => '1',
                     o_rx_hi_ber                     => ftile_rx_hi_ber(i),
                     o_rx_pcs_fully_aligned          => ftile_rx_pcs_fully_aligned(i),
@@ -1934,7 +1936,7 @@ begin
                             RX_LINK_UP(i) <= '0';
                             TX_LINK_UP(i) <= '0';
                         else
-                            RX_LINK_UP(i) <= ftile_rx_pcs_ready(i) and ftile_rx_pcs_fully_aligned(i);
+                            RX_LINK_UP(i) <= ftile_rx_pcs_ready(i) and ftile_rx_pcs_fully_aligned(i) and (not ftile_remote_fault(i));
                             TX_LINK_UP(i) <= ftile_tx_lanes_stable(i);
                         end if;
                     end if;
@@ -2102,8 +2104,8 @@ begin
                     o_reconfig_xcvr3_waitrequest    => mi_ia_ardy_phy_n(3 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
                     o_rx_block_lock                 => ftile_rx_block_lock(i),
                     o_rx_am_lock                    => ftile_rx_am_lock(i),
-                    o_local_fault_status            => open,
-                    o_remote_fault_status           => open,
+                    o_local_fault_status            => ftile_local_fault(i),
+                    o_remote_fault_status           => ftile_remote_fault(i),
                     i_stats_snapshot                => '1',
                     o_rx_hi_ber                     => ftile_rx_hi_ber(i),
                     o_rx_pcs_fully_aligned          => ftile_rx_pcs_fully_aligned(i),
@@ -2134,7 +2136,7 @@ begin
                             RX_LINK_UP(i) <= '0';
                             TX_LINK_UP(i) <= '0';
                         else
-                            RX_LINK_UP(i) <= ftile_rx_pcs_ready(i) and ftile_rx_pcs_fully_aligned(i);
+                            RX_LINK_UP(i) <= ftile_rx_pcs_ready(i) and ftile_rx_pcs_fully_aligned(i) and (not ftile_remote_fault(i));
                             TX_LINK_UP(i) <= ftile_tx_lanes_stable(i);
                         end if;
                     end if;
@@ -2278,8 +2280,8 @@ begin
                     o_reconfig_xcvr0_waitrequest    => mi_ia_ardy_phy_n(i + ETH_PORT_CHAN),
                     o_rx_block_lock                 => ftile_rx_block_lock(i),
                     o_rx_am_lock                    => ftile_rx_am_lock(i),
-                    o_local_fault_status            => open,
-                    o_remote_fault_status           => open,
+                    o_local_fault_status            => ftile_local_fault(i),
+                    o_remote_fault_status           => ftile_remote_fault(i),
                     i_stats_snapshot                => '1',
                     o_rx_hi_ber                     => ftile_rx_hi_ber(i),
                     o_rx_pcs_fully_aligned          => ftile_rx_pcs_fully_aligned(i),
@@ -2310,7 +2312,7 @@ begin
                             RX_LINK_UP(i) <= '0';
                             TX_LINK_UP(i) <= '0';
                         else
-                            RX_LINK_UP(i) <= ftile_rx_pcs_ready(i) and ftile_rx_pcs_fully_aligned(i);
+                            RX_LINK_UP(i) <= ftile_rx_pcs_ready(i) and ftile_rx_pcs_fully_aligned(i) and (not ftile_remote_fault(i));
                             TX_LINK_UP(i) <= ftile_tx_lanes_stable(i);
                         end if;
                     end if;
@@ -2454,8 +2456,8 @@ begin
                     o_reconfig_xcvr0_waitrequest    => mi_ia_ardy_phy_n(i + ETH_PORT_CHAN),
                     o_rx_block_lock                 => ftile_rx_block_lock(i),
                     o_rx_am_lock                    => ftile_rx_am_lock(i),
-                    o_local_fault_status            => open,
-                    o_remote_fault_status           => open,
+                    o_local_fault_status            => ftile_local_fault(i),
+                    o_remote_fault_status           => ftile_remote_fault(i),
                     i_stats_snapshot                => '1',
                     o_rx_hi_ber                     => ftile_rx_hi_ber(i),
                     o_rx_pcs_fully_aligned          => ftile_rx_pcs_fully_aligned(i),
@@ -2486,7 +2488,7 @@ begin
                             RX_LINK_UP(i) <= '0';
                             TX_LINK_UP(i) <= '0';
                         else
-                            RX_LINK_UP(i) <= ftile_rx_pcs_ready(i) and ftile_rx_pcs_fully_aligned(i);
+                            RX_LINK_UP(i) <= ftile_rx_pcs_ready(i) and ftile_rx_pcs_fully_aligned(i) and (not ftile_remote_fault(i));
                             TX_LINK_UP(i) <= ftile_tx_lanes_stable(i);
                         end if;
                     end if;
