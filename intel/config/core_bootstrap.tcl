@@ -14,6 +14,7 @@ set CORE_BASE     $env(CORE_BASE)
 
 set CORE_CONF  $CORE_BASE/config/core_conf.tcl
 set CORE_CONST $CORE_BASE/config/core_const.tcl
+set CORE_FUNC  $CORE_BASE/config/core_func.tcl
 
 set CARD_CONF  $CARD_BASE/config/card_conf.tcl
 set CARD_CONST $CARD_BASE/config/card_const.tcl
@@ -25,6 +26,9 @@ source $OFM_PATH/build/Shared.tcl
 
 VhdlPkgBegin
 
+# Source CORE functions
+source $CORE_FUNC
+
 # Source CORE user configurable parameters
 source $CORE_CONF
 
@@ -33,7 +37,7 @@ source $CARD_CONF
 
 # Source application user configurable parameters
 if {$APP_CONF ne ""} {
-	source $APP_CONF
+    source $APP_CONF
 }
 
 # Source card-specific default parameters
