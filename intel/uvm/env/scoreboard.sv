@@ -92,13 +92,17 @@ class scoreboard #(ETH_STREAMS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS,
 
     function void delay_max_set(time delay_max);
         for (int unsigned it = 0; it < ETH_STREAMS; it++) begin
-            eth_mvb_cmp[it].delay_max_set(delay_max);
-            eth_mfb_cmp[it].delay_max_set(delay_max);
+            eth_mvb_cmp[it].dut_delay_max_set(delay_max);
+            eth_mvb_cmp[it].wait_delay_max_set(10us);
+            eth_mfb_cmp[it].dut_delay_max_set(delay_max);
+            eth_mfb_cmp[it].wait_delay_max_set(10us);
         end
 
         for (int unsigned it = 0; it < DMA_STREAMS; it++) begin
-            dma_mvb_cmp[it].delay_max_set(delay_max);
-            dma_mfb_cmp[it].delay_max_set(delay_max);
+            dma_mvb_cmp[it].dut_delay_max_set(delay_max);
+            dma_mvb_cmp[it].wait_delay_max_set(10us);
+            dma_mfb_cmp[it].dut_delay_max_set(delay_max);
+            dma_mfb_cmp[it].wait_delay_max_set(10us);
         end
     endfunction
 
