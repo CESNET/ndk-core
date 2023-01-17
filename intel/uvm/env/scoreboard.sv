@@ -90,19 +90,19 @@ class scoreboard #(ETH_STREAMS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS,
         m_model = model#(ETH_STREAMS, ETH_RX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, ITEM_WIDTH)::type_id::create("m_model", this);
     endfunction
 
-    function void delay_max_set(time delay_max);
+    function void timeout_set(time delay_max, time model_timeout = 0ns);
         for (int unsigned it = 0; it < ETH_STREAMS; it++) begin
-            eth_mvb_cmp[it].dut_delay_max_set(delay_max);
-            eth_mvb_cmp[it].wait_delay_max_set(10us);
-            eth_mfb_cmp[it].dut_delay_max_set(delay_max);
-            eth_mfb_cmp[it].wait_delay_max_set(10us);
+            eth_mvb_cmp[it].dut_tr_timeout_set(delay_max);
+            eth_mvb_cmp[it].model_tr_timeout_set(model_timeout);
+            eth_mfb_cmp[it].dut_tr_timeout_set(delay_max);
+            eth_mfb_cmp[it].model_tr_timeout_set(model_timeout);
         end
 
         for (int unsigned it = 0; it < DMA_STREAMS; it++) begin
-            dma_mvb_cmp[it].dut_delay_max_set(delay_max);
-            dma_mvb_cmp[it].wait_delay_max_set(10us);
-            dma_mfb_cmp[it].dut_delay_max_set(delay_max);
-            dma_mfb_cmp[it].wait_delay_max_set(10us);
+            dma_mvb_cmp[it].dut_tr_timeout_set(delay_max);
+            dma_mvb_cmp[it].model_tr_timeout_set(model_timeout);
+            dma_mfb_cmp[it].dut_tr_timeout_set(delay_max);
+            dma_mfb_cmp[it].model_tr_timeout_set(model_timeout);
         end
     endfunction
 
@@ -248,5 +248,10 @@ class scoreboard #(ETH_STREAMS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS,
         end else begin
             `uvm_info(get_type_name(), {str, "\n\n\t---------------------------------------\n\t----     VERIFICATION FAIL      ----\n\t---------------------------------------"}, UVM_NONE)
         end
+    endfunction
+
+    //DEPRECAITED
+    function void delay_max_set(time delay_max, time model_timeout = 10us);
+        this.timeout_set(delay_max, model_timeout);
     endfunction
 endclass
