@@ -158,7 +158,8 @@ proc dts_build_netcope {} {
         set TX_HDR_BUFF_SIZE_HEX    [format "0x%x" $TX_HDR_BUFF_SIZE]
 
         for {set i 0} {$i < $CHAN_PER_EP} {incr i} {
-            set    var_buff_base [expr $TX_HDR_BUFF_BASE + $i * $TX_HDR_BUFF_SIZE_HEX]
+            # The HDR buffer is not the same size as the data buffer but address-wise it is.
+            set    var_buff_base [expr $TX_HDR_BUFF_BASE + $i * $TX_DATA_BUFF_SIZE_HEX]
             append ret [dts_dma_calypte_tx_buffer "hdr" $i $var_buff_base $TX_HDR_BUFF_SIZE_HEX "0"]
         }
         append ret "};"
