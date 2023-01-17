@@ -45,11 +45,8 @@ proc dts_build_netcope {} {
     append ret "width = <0x20>;"
 
     # BOOT component
-    set BOOT_TYPE 2
-    if {$CARD_NAME == "FB2CGHH"} {
-        set BOOT_TYPE 3
-    }
-    if {$CARD_NAME == "FB4CGG3" || $CARD_NAME == "FB2CGG3" || $CARD_NAME == "FB2CGHH" || $CARD_NAME == "COMBO-400G1" || $CARD_NAME == "NFB-200G2QL"} {
+    global BOOT_TYPE
+    if {$BOOT_TYPE == 2 || $BOOT_TYPE == 3} {
         append ret "boot:" [dts_boot_controller $ADDR_BOOT_CTRL $BOOT_TYPE]
     }
 
@@ -86,6 +83,9 @@ proc dts_build_netcope {} {
     # Intel FPGA SDM controller
     if {$SDM_SYSMON_ARCH == "INTEL_SDM"} {
         set boot_active_serial 0
+        if {$BOOT_TYPE == 4} {
+            set boot_active_serial 1
+        }
         append ret [dts_sdm_controller $ADDR_SDM_SYSMON $boot_active_serial]
     }
     # Deprecated ID component to access Xilinx SYSMON
