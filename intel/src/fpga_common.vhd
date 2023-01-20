@@ -639,7 +639,7 @@ begin
         PCIE_LANES          => PCIE_LANES,
 
         PTC_DISABLE         => PTC_DISABLE,
-        DMA_BAR_ENABLE      => false,
+        DMA_BAR_ENABLE      => (DMA_TYPE = 4),
         XVC_ENABLE          => false,
         CARD_ID_WIDTH       => FPGA_ID_WIDTH,
         DEVICE              => DEVICE

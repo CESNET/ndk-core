@@ -411,20 +411,20 @@ architecture USP of PCIE_CORE is
     signal cfg_ltssm_state          : slv_array_t(PCIE_ENDPOINTS -1 downto 0)(5 downto 0);
 
     -- attribute mark_debug                 : string;
-    -- -- special signals for debugging
-    -- attribute mark_debug of RQ_AXI_DATA  : signal is "true";
-    -- attribute mark_debug of RQ_AXI_USER  : signal is "true";
-    -- attribute mark_debug of RQ_AXI_KEEP  : signal is "true";
-    -- attribute mark_debug of RQ_AXI_LAST  : signal is "true";
-    -- attribute mark_debug of RQ_AXI_READY : signal is "true";
-    -- attribute mark_debug of RQ_AXI_VALID : signal is "true";
+    -- special signals for debugging
+    -- attribute mark_debug of pcie_cq_axi_data  : signal is "true";
+    -- attribute mark_debug of pcie_cq_axi_user  : signal is "true";
+    -- attribute mark_debug of pcie_cq_axi_keep  : signal is "true";
+    -- attribute mark_debug of pcie_cq_axi_last  : signal is "true";
+    -- attribute mark_debug of pcie_cq_axi_ready : signal is "true";
+    -- attribute mark_debug of pcie_cq_axi_valid : signal is "true";
 
-    -- attribute mark_debug of RC_AXI_DATA  : signal is "true";
-    -- attribute mark_debug of RC_AXI_USER  : signal is "true";
-    -- attribute mark_debug of RC_AXI_KEEP  : signal is "true";
-    -- attribute mark_debug of RC_AXI_LAST  : signal is "true";
-    -- attribute mark_debug of RC_AXI_READY : signal is "true";
-    -- attribute mark_debug of RC_AXI_VALID : signal is "true";
+    -- attribute mark_debug of pcie_cc_axi_data  : signal is "true";
+    -- attribute mark_debug of pcie_cc_axi_user  : signal is "true";
+    -- attribute mark_debug of pcie_cc_axi_keep  : signal is "true";
+    -- attribute mark_debug of pcie_cc_axi_last  : signal is "true";
+    -- attribute mark_debug of pcie_cc_axi_ready : signal is "true";
+    -- attribute mark_debug of pcie_cc_axi_valid : signal is "true";
 
     -- attribute mark_debug of cfg_phy_link_down        : signal is "true";
     -- attribute mark_debug of cfg_phy_link_status      : signal is "true";
@@ -432,7 +432,7 @@ architecture USP of PCIE_CORE is
     -- attribute mark_debug of cfg_max_payload          : signal is "true";
     -- attribute mark_debug of cfg_max_read_req         : signal is "true";
 
-    -- attribute mark_debug of cfg_negotiated_width    : signal is "true";
+    -- attribute mark_debug of cfg_negotiated_width     : signal is "true";
     -- attribute mark_debug of cfg_current_speed        : signal is "true";
     -- attribute mark_debug of cfg_function_status      : signal is "true";
     -- attribute mark_debug of cfg_function_power_state : signal is "true";
