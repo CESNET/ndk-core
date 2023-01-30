@@ -94,6 +94,22 @@ class TCP(base_node):
             proto.update(proto_weight)
         return proto
 
+
+class SCTP(base_node):
+    def __init__(self):
+        super().__init__("SCTP");
+
+    def protocol_add(self, config):
+        return scapy.all.SCTP()
+
+    def protocol_next(self, config):
+        proto = { "Empty" : 1, "Payload" : 1 }
+        cfg_obj = config.object_get([self.name, "weight"])
+        if (cfg_obj != None):
+            proto.update(cfg_obj);
+        return proto
+
+
 #################################
 # IP protocols
 #################################
@@ -122,7 +138,7 @@ class IPv4(base_node):
         return scapy.all.IP(version=4, src = src, dst = dst)
 
     def protocol_next(self, config):
-        proto = { "Payload" : 1, "Empty" : 1, "ICMPv4" : 1, "UDP" : 1, "TCP" : 1}
+        proto = { "Payload" : 1, "Empty" : 1, "ICMPv4" : 1, "UDP" : 1, "TCP" : 1, "SCTP" : 1}
         proto_weight = config.object_get([self.name, "weight"]);
         if (proto_weight != None):
             proto.update(proto_weight)
@@ -155,7 +171,7 @@ class IPv6(base_node):
 
 
     def protocol_next(self, config):
-        proto = { "Payload" : 1, "Empty" : 1, "ICMPv4" : 1, "UDP" : 1, "TCP" : 1}
+        proto = { "Payload" : 1, "Empty" : 1, "ICMPv4" : 1, "ICMPv6" : 1, "UDP" : 1, "TCP" : 1, "SCTP" : 1}
         proto_weight = config.object_get([self.name, "weight"]);
         if (proto_weight != None):
             proto.update(proto_weight)
@@ -217,7 +233,6 @@ class VLAN(base_node):
         # check if it is last generated VLAN
         if (config.vlan != 0):
             config.vlan -= 1
-        print("TEST VLAN %d" % (config.vlan))
         if (config.vlan == 0):
             proto["VLAN"] = 0;
 
@@ -243,8 +258,8 @@ class ETH(base_node):
 class parser:
     def __init__(self, pcap_file, cfg, seed):
         self.protocols = {"ETH" : ETH(), "VLAN" : VLAN(), "PPP" : PPP(), "MPLS" : MPLS(), "IPv6" : IPv6(),
-                          "IPv4" : IPv4(), "TCP" : TCP(), "UDP" : UDP(), "ICMPv6" : ICMPv6(), "ICMPv4" : ICMPv4(),
-                          "Payload" : Payload(), "Empty" : Empty()};
+                "IPv4" : IPv4(), "TCP" : TCP(), "UDP" : UDP(), "ICMPv6" : ICMPv6(), "ICMPv4" : ICMPv4(), "SCTP" : SCTP(),
+                "Payload" : Payload(), "Empty" : Empty()};
         self.pcap_file = scapy.utils.PcapWriter(pcap_file, append=False, sync=True)
         self.cfg = None
         if (cfg != None):
