@@ -14,6 +14,7 @@ class sequence_pcap#(ITEM_WIDTH) extends uvm_common::sequence_base#(uvm_logic_ve
     `uvm_object_param_utils(uvm_app_core_packet::sequence_pcap#(ITEM_WIDTH))
     `uvm_declare_p_sequencer(uvm_logic_vector_array::sequencer#(ITEM_WIDTH));
 
+    int unsigned pkt_size_min = 60;
     string config_json = "./filter.json";
     string rule_ipv6   = ""; 
     string rule_ipv4   = "";
@@ -170,6 +171,9 @@ class sequence_pcap#(ITEM_WIDTH) extends uvm_common::sequence_base#(uvm_logic_ve
             pkt_num++;
             // Generate random request, which must be in interval from min length to max length
             start_item(req);
+            if (data.size() < pkt_size_min) begin
+                data = new[pkt_size_min](data);
+            end
             req.data = {>>{data}};
             finish_item(req);
         end
