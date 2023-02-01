@@ -976,6 +976,7 @@ begin
     signal mi_ia_dwr    : std_logic_vector(MI_DATA_WIDTH_PHY-1 downto 0);
     signal mi_ia_ardy   : std_logic;
     signal ia_rd_sel    : std_logic_vector(mi_ia_sel'range);
+    signal ia_rd        : std_logic;
 
     begin
         mgmt_i : entity work.mgmt
@@ -1034,7 +1035,7 @@ begin
             -- Dynamic reconfiguration interface
             DRPCLK        => MI_CLK_PHY,
             DRPDO         => mi_ia_drd,
-            DRPRDY        => mi_ia_drdy,
+            DRPRDY        => (mi_ia_drdy and ia_rd), -- DRDY is set during JTAG operations, therefore using ia_rd as mask 
             DRPEN         => mi_ia_en,
             DRPWE         => mi_ia_we_phy,
             DRPADDR       => mi_ia_addr,
@@ -1050,6 +1051,11 @@ begin
                 if mi_ia_en = '1' then
                     ia_rd_sel <= mi_ia_sel;
                 end if;
+                if (mi_ia_drdy = '1') then
+                    ia_rd <= '0';
+                elsif (mi_ia_en = '1') and (mi_ia_we_phy = '0') then
+                    ia_rd <= '1';
+                 end if;
             end if;
         end process;
         -- Assign WR/RD signals for Eth blocks
@@ -1313,7 +1319,7 @@ begin
                 o_rx_am_lock                    => ftile_rx_am_lock(0),
                 o_local_fault_status            => ftile_local_fault(0),
                 o_remote_fault_status           => ftile_remote_fault(0),
-                i_stats_snapshot                => '1',
+                i_stats_snapshot                => '0',
                 o_rx_hi_ber                     => ftile_rx_hi_ber(0),
                 o_rx_pcs_fully_aligned          => ftile_rx_pcs_fully_aligned(0),
                 i_tx_mac_data                   => ftile_tx_mac_data(0),
@@ -1532,7 +1538,7 @@ begin
                     o_rx_am_lock                    => ftile_rx_am_lock(i),
                     o_local_fault_status            => ftile_local_fault(i),
                     o_remote_fault_status           => ftile_remote_fault(i),
-                    i_stats_snapshot                => '1',
+                    i_stats_snapshot                => '0',
                     o_rx_hi_ber                     => ftile_rx_hi_ber(i),
                     o_rx_pcs_fully_aligned          => ftile_rx_pcs_fully_aligned(i),
                     i_tx_mac_data                   => ftile_tx_mac_data(i),
@@ -1730,7 +1736,7 @@ begin
                     o_rx_am_lock                    => ftile_rx_am_lock(i),
                     o_local_fault_status            => ftile_local_fault(i),
                     o_remote_fault_status           => ftile_remote_fault(i),
-                    i_stats_snapshot                => '1',
+                    i_stats_snapshot                => '0',
                     o_rx_hi_ber                     => ftile_rx_hi_ber(i),
                     o_rx_pcs_fully_aligned          => ftile_rx_pcs_fully_aligned(i),
                     i_tx_mac_data                   => ftile_tx_mac_data(i),
@@ -1906,7 +1912,7 @@ begin
                     o_rx_am_lock                    => ftile_rx_am_lock(i),
                     o_local_fault_status            => ftile_local_fault(i),
                     o_remote_fault_status           => ftile_remote_fault(i),
-                    i_stats_snapshot                => '1',
+                    i_stats_snapshot                => '0',
                     o_rx_hi_ber                     => ftile_rx_hi_ber(i),
                     o_rx_pcs_fully_aligned          => ftile_rx_pcs_fully_aligned(i),
                     i_tx_mac_data                   => ftile_tx_mac_data(i),
@@ -2106,7 +2112,7 @@ begin
                     o_rx_am_lock                    => ftile_rx_am_lock(i),
                     o_local_fault_status            => ftile_local_fault(i),
                     o_remote_fault_status           => ftile_remote_fault(i),
-                    i_stats_snapshot                => '1',
+                    i_stats_snapshot                => '0',
                     o_rx_hi_ber                     => ftile_rx_hi_ber(i),
                     o_rx_pcs_fully_aligned          => ftile_rx_pcs_fully_aligned(i),
                     i_tx_mac_data                   => ftile_tx_mac_data(i),
@@ -2282,7 +2288,7 @@ begin
                     o_rx_am_lock                    => ftile_rx_am_lock(i),
                     o_local_fault_status            => ftile_local_fault(i),
                     o_remote_fault_status           => ftile_remote_fault(i),
-                    i_stats_snapshot                => '1',
+                    i_stats_snapshot                => '0',
                     o_rx_hi_ber                     => ftile_rx_hi_ber(i),
                     o_rx_pcs_fully_aligned          => ftile_rx_pcs_fully_aligned(i),
                     i_tx_mac_data                   => ftile_tx_mac_data(i),
@@ -2458,7 +2464,7 @@ begin
                     o_rx_am_lock                    => ftile_rx_am_lock(i),
                     o_local_fault_status            => ftile_local_fault(i),
                     o_remote_fault_status           => ftile_remote_fault(i),
-                    i_stats_snapshot                => '1',
+                    i_stats_snapshot                => '0',
                     o_rx_hi_ber                     => ftile_rx_hi_ber(i),
                     o_rx_pcs_fully_aligned          => ftile_rx_pcs_fully_aligned(i),
                     i_tx_mac_data                   => ftile_tx_mac_data(i),
