@@ -37,13 +37,13 @@ generic(
     -- MFB configuration:
     -- =====================================================================
     -- Set according to eth port mode:
-    --     400G1            card:     "400g1", "200g2", "100g4", "50g8" | "40g2", "25g8" | "10g8".
-    --     DK-DEV-AGI027RES card:     "400g1", "200g2", "100g4", "50g8" | "40g2", "25g8" | "10g8".
-    --     DK-DEV-1SDX-P    card:            , "100g1",        ,                , "25g4" | "10g4".
-    REGIONS           : natural := 1; -- 2   ,    1   ,    1   ,        1       ,        1       .
-    REGION_SIZE       : natural := 1; -- 8   ,    8   ,    4   ,        2       ,        1       .
-    BLOCK_SIZE        : natural := 8; -- 8   ,    8   ,    8   ,        8       ,        8       .
-    ITEM_WIDTH        : natural := 8; -- 8   ,    8   ,    8   ,        8       ,        8       .
+    --     400G1            card:     "400g1", "200g2", "100g4",  "100g2", "50g8" | "40g2", "25g8" | "10g8".
+    --     DK-DEV-AGI027RES card:     "400g1", "200g2", "100g4",  "100g2", "50g8" | "40g2", "25g8" | "10g8".
+    --     DK-DEV-1SDX-P    card:            , "100g1",        ,                          , "25g4" | "10g4".
+    REGIONS           : natural := 1; -- 2   ,    1   ,    1   ,     1   ,        1       ,        1       .
+    REGION_SIZE       : natural := 1; -- 8   ,    8   ,    4   ,     2   ,        2       ,        1       .
+    BLOCK_SIZE        : natural := 8; -- 8   ,    8   ,    8   ,     8   ,        8       ,        8       .
+    ITEM_WIDTH        : natural := 8; -- 8   ,    8   ,    8   ,     8   ,        8       ,        8       .
 
     -- =====================================================================
     -- MI configuration:

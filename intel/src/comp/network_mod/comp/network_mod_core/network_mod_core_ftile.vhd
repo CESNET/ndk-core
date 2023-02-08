@@ -345,6 +345,103 @@ architecture FULL of NETWORK_MOD_CORE is
     );
     end component ftile_eth_4x100g;
 
+    -- 100g2 (NRZ)
+    component ftile_eth_2x100g is
+    port (
+        i_clk_tx                        : in  std_logic                      := 'X';             -- clk
+        i_clk_rx                        : in  std_logic                      := 'X';             -- clk
+        o_clk_pll                       : out std_logic;                                         -- clk
+        i_reconfig_clk                  : in  std_logic                      := 'X';             -- clk
+        i_reconfig_reset                : in  std_logic                      := 'X';             -- reset
+        o_sys_pll_locked                : out std_logic;                                         -- o_sys_pll_locked
+        o_tx_serial                     : out std_logic_vector(3 downto 0);                      -- o_tx_serial
+        i_rx_serial                     : in  std_logic_vector(3 downto 0)   := (others => 'X'); -- i_rx_serial
+        o_tx_serial_n                   : out std_logic_vector(3 downto 0);                      -- o_tx_serial_n
+        i_rx_serial_n                   : in  std_logic_vector(3 downto 0)   := (others => 'X'); -- i_rx_serial_n
+        i_clk_ref                       : in  std_logic                      := 'X';             -- clk
+        i_clk_sys                       : in  std_logic                      := 'X';             -- clk
+        i_reconfig_eth_addr             : in  std_logic_vector(13 downto 0)  := (others => 'X'); -- address
+        i_reconfig_eth_byteenable       : in  std_logic_vector(3 downto 0)   := (others => 'X'); -- byteenable
+        o_reconfig_eth_readdata_valid   : out std_logic;                                         -- readdatavalid
+        i_reconfig_eth_read             : in  std_logic                      := 'X';             -- read
+        i_reconfig_eth_write            : in  std_logic                      := 'X';             -- write
+        o_reconfig_eth_readdata         : out std_logic_vector(31 downto 0);                     -- readdata
+        i_reconfig_eth_writedata        : in  std_logic_vector(31 downto 0)  := (others => 'X'); -- writedata
+        o_reconfig_eth_waitrequest      : out std_logic;                                         -- waitrequest
+        i_rst_n                         : in  std_logic                      := 'X';             -- reset_n
+        i_tx_rst_n                      : in  std_logic                      := 'X';             -- reset_n
+        i_rx_rst_n                      : in  std_logic                      := 'X';             -- reset_n
+        o_rst_ack_n                     : out std_logic;                                         -- o_rst_ack_n
+        o_tx_rst_ack_n                  : out std_logic;                                         -- o_tx_rst_ack_n
+        o_rx_rst_ack_n                  : out std_logic;                                         -- o_rx_rst_ack_n
+        o_cdr_lock                      : out std_logic;                                         -- o_cdr_lock
+        o_tx_pll_locked                 : out std_logic;                                         -- o_tx_pll_locked
+        o_tx_lanes_stable               : out std_logic;                                         -- o_tx_lanes_stable
+        o_rx_pcs_ready                  : out std_logic;                                         -- o_rx_pcs_ready
+        o_clk_tx_div                    : out std_logic;                                         -- clk
+        o_clk_rec_div64                 : out std_logic;                                         -- clk
+        o_clk_rec_div                   : out std_logic;                                         -- clk
+        o_rx_block_lock                 : out std_logic;                                         -- o_rx_block_lock
+        o_rx_am_lock                    : out std_logic;                                         -- o_rx_am_lock
+        o_local_fault_status            : out std_logic;                                         -- o_local_fault_status
+        o_remote_fault_status           : out std_logic;                                         -- o_remote_fault_status
+        i_stats_snapshot                : in  std_logic                      := 'X';             -- i_stats_snapshot
+        o_rx_hi_ber                     : out std_logic;                                         -- o_rx_hi_ber
+        o_rx_pcs_fully_aligned          : out std_logic;                                         -- o_rx_pcs_fully_aligned
+        i_tx_mac_data                   : in  std_logic_vector(255 downto 0) := (others => 'X'); -- i_tx_mac_data
+        i_tx_mac_valid                  : in  std_logic                      := 'X';             -- i_tx_mac_valid
+        i_tx_mac_inframe                : in  std_logic_vector(3 downto 0)   := (others => 'X'); -- i_tx_mac_inframe
+        i_tx_mac_eop_empty              : in  std_logic_vector(11 downto 0)  := (others => 'X'); -- i_tx_mac_eop_empty
+        o_tx_mac_ready                  : out std_logic;                                         -- o_tx_mac_ready
+        i_tx_mac_error                  : in  std_logic_vector(3 downto 0)   := (others => 'X'); -- i_tx_mac_error
+        i_tx_mac_skip_crc               : in  std_logic_vector(3 downto 0)   := (others => 'X'); -- i_tx_mac_skip_crc
+        o_rx_mac_data                   : out std_logic_vector(255 downto 0);                    -- o_rx_mac_data
+        o_rx_mac_valid                  : out std_logic;                                         -- o_rx_mac_valid
+        o_rx_mac_inframe                : out std_logic_vector(3 downto 0);                      -- o_rx_mac_inframe
+        o_rx_mac_eop_empty              : out std_logic_vector(11 downto 0);                     -- o_rx_mac_eop_empty
+        o_rx_mac_fcs_error              : out std_logic_vector(3 downto 0);                      -- o_rx_mac_fcs_error
+        o_rx_mac_error                  : out std_logic_vector(7 downto 0);                      -- o_rx_mac_error
+        o_rx_mac_status                 : out std_logic_vector(11 downto 0);                     -- o_rx_mac_status
+        i_tx_pfc                        : in  std_logic_vector(7 downto 0)   := (others => 'X'); -- i_tx_pfc
+        o_rx_pfc                        : out std_logic_vector(7 downto 0);                      -- o_rx_pfc
+        i_tx_pause                      : in  std_logic                      := 'X';             -- i_tx_pause
+        o_rx_pause                      : out std_logic;                                         -- o_rx_pause
+        i_reconfig_xcvr0_addr           : in  std_logic_vector(17 downto 0)  := (others => 'X'); -- address
+        i_reconfig_xcvr0_byteenable     : in  std_logic_vector(3 downto 0)   := (others => 'X'); -- byteenable
+        o_reconfig_xcvr0_readdata_valid : out std_logic;                                         -- readdatavalid
+        i_reconfig_xcvr0_read           : in  std_logic                      := 'X';             -- read
+        i_reconfig_xcvr0_write          : in  std_logic                      := 'X';             -- write
+        o_reconfig_xcvr0_readdata       : out std_logic_vector(31 downto 0);                     -- readdata
+        i_reconfig_xcvr0_writedata      : in  std_logic_vector(31 downto 0)  := (others => 'X'); -- writedata
+        o_reconfig_xcvr0_waitrequest    : out std_logic;                                         -- waitrequest
+        i_reconfig_xcvr1_addr           : in  std_logic_vector(17 downto 0)  := (others => 'X'); -- address
+        i_reconfig_xcvr1_byteenable     : in  std_logic_vector(3 downto 0)   := (others => 'X'); -- byteenable
+        o_reconfig_xcvr1_readdata_valid : out std_logic;                                         -- readdatavalid
+        i_reconfig_xcvr1_read           : in  std_logic                      := 'X';             -- read
+        i_reconfig_xcvr1_write          : in  std_logic                      := 'X';             -- write
+        o_reconfig_xcvr1_readdata       : out std_logic_vector(31 downto 0);                     -- readdata
+        i_reconfig_xcvr1_writedata      : in  std_logic_vector(31 downto 0)  := (others => 'X'); -- writedata
+        o_reconfig_xcvr1_waitrequest    : out std_logic;                                         -- waitrequest
+        i_reconfig_xcvr2_addr           : in  std_logic_vector(17 downto 0)  := (others => 'X'); -- address
+        i_reconfig_xcvr2_byteenable     : in  std_logic_vector(3 downto 0)   := (others => 'X'); -- byteenable
+        o_reconfig_xcvr2_readdata_valid : out std_logic;                                         -- readdatavalid
+        i_reconfig_xcvr2_read           : in  std_logic                      := 'X';             -- read
+        i_reconfig_xcvr2_write          : in  std_logic                      := 'X';             -- write
+        o_reconfig_xcvr2_readdata       : out std_logic_vector(31 downto 0);                     -- readdata
+        i_reconfig_xcvr2_writedata      : in  std_logic_vector(31 downto 0)  := (others => 'X'); -- writedata
+        o_reconfig_xcvr2_waitrequest    : out std_logic;                                         -- waitrequest
+        i_reconfig_xcvr3_addr           : in  std_logic_vector(17 downto 0)  := (others => 'X'); -- address
+        i_reconfig_xcvr3_byteenable     : in  std_logic_vector(3 downto 0)   := (others => 'X'); -- byteenable
+        o_reconfig_xcvr3_readdata_valid : out std_logic;                                         -- readdatavalid
+        i_reconfig_xcvr3_read           : in  std_logic                      := 'X';             -- read
+        i_reconfig_xcvr3_write          : in  std_logic                      := 'X';             -- write
+        o_reconfig_xcvr3_readdata       : out std_logic_vector(31 downto 0);                     -- readdata
+        i_reconfig_xcvr3_writedata      : in  std_logic_vector(31 downto 0)  := (others => 'X'); -- writedata
+        o_reconfig_xcvr3_waitrequest    : out std_logic;                                         -- waitrequest
+        i_clk_pll                       : in  std_logic                      := 'X'              -- clk
+    );
+    end component ftile_eth_2x100g;
+
     -- 50g8
     component ftile_pll_8x50g is
     port (
@@ -797,6 +894,22 @@ architecture FULL of NETWORK_MOD_CORE is
         end case;
     end function;
 
+    -- Select the number of PCS lanes
+    function pcs_lanes_num_f return natural is
+    begin
+        case ETH_PORT_SPEED is
+            when 400 => return 16;
+            when 200 => return 8;
+            when 100 => return 20;
+            when 50  => return 4;
+            when 40  => return 4;
+            when 25  => return 1;
+            when 10  => return 1;
+            when others  => return 1;
+        end case;
+    end function;
+
+
     function speed_cap_f return std_logic_vector is
         variable speed_cap_v : std_logic_vector(15 downto 0);
     begin
@@ -833,6 +946,7 @@ architecture FULL of NETWORK_MOD_CORE is
     constant RX_MAC_FCS_ERROR_WIDTH : natural := rx_mac_fcs_error_width_f;
     constant RX_MAC_ERROR_WIDTH     : natural := rx_mac_error_width_f;
     constant RX_MAC_STATUS_WIDTH    : natural := rx_mac_status_width_f;
+    constant PCS_LANES_NUM          : natural := pcs_lanes_num_f;
 
     constant MI_ADDR_BASES_PHY      : natural := ETH_PORT_CHAN;
     constant MGMT_OFF               : std_logic_vector(MI_ADDR_WIDTH_PHY-1 downto 0) := X"0004_0000";
@@ -981,7 +1095,7 @@ begin
     begin
         mgmt_i : entity work.mgmt
         generic map (
-            NUM_LANES  => LANES_PER_CHANNEL,
+            NUM_LANES  => PCS_LANES_NUM,
             PMA_LANES  => LANES_PER_CHANNEL,
             SPEED      => ETH_PORT_SPEED,
             SPEED_CAP  => SPEED_CAP,
@@ -1667,167 +1781,306 @@ begin
             ftile_clk_out <= ftile_clk_out_vec(0);
             CLK_ETH       <= ftile_clk_out;
 
-            -- Distribution of serial lanes to IP cores
-            qsfp_rx_p_sig <= slv_array_deser(QSFP_RX_P, ETH_PORT_CHAN);
-            qsfp_rx_n_sig <= slv_array_deser(QSFP_RX_N, ETH_PORT_CHAN);
-            QSFP_TX_P <= slv_array_ser(qsfp_tx_p_sig);
-            QSFP_TX_N <= slv_array_ser(qsfp_tx_n_sig);
+            pam4_100g_g: if (ETH_PORT_CHAN = 4) generate
 
-            -- can have upto four 100g channels
-            eth_ftile_g : for i in ETH_PORT_CHAN-1 downto 0 generate
-                -- =========================================================================
-                -- F-TILE Ethernet
-                -- =========================================================================
-                ftile_eth_ip_i : component ftile_eth_4x100g
-                port map (
-                    i_clk_tx                        => ftile_clk_out,
-                    i_clk_rx                        => ftile_clk_out,
-                    o_clk_pll                       => ftile_clk_out_vec(i),
-                    o_clk_tx_div                    => open,
-                    o_clk_rec_div64                 => open,
-                    o_clk_rec_div                   => open,
-                    i_tx_rst_n                      => '1',
-                    i_rx_rst_n                      => ftile_rx_rst_n(i),
-                    i_rst_n                         => not RESET_ETH,
-                    o_rst_ack_n                     => open,
-                    o_tx_rst_ack_n                  => open,
-                    o_rx_rst_ack_n                  => ftile_rx_rst_ack_n(i),
-                    i_reconfig_clk                  => MI_CLK_PHY,
-                    i_reconfig_reset                => MI_RESET_PHY,
-                    o_cdr_lock                      => open,
-                    o_tx_pll_locked                 => open,
-                    o_tx_lanes_stable               => ftile_tx_lanes_stable(i),
-                    o_rx_pcs_ready                  => ftile_rx_pcs_ready(i),
-                    o_tx_serial                     => qsfp_tx_p_sig(i),
-                    i_rx_serial                     => qsfp_rx_p_sig(i),
-                    o_tx_serial_n                   => qsfp_tx_n_sig(i),
-                    i_rx_serial_n                   => qsfp_rx_n_sig(i),
-                    i_clk_ref                       => ftile_pll_refclk,
-                    i_clk_sys                       => ftile_pll_clk,
-                    -- Eth (+ RSFEC + transciever) reconfig infs (0x3 downto 0x0)
-                    i_reconfig_eth_addr             => mi_ia_addr_phy  (i)(14-1 downto 0),
-                    i_reconfig_eth_byteenable       => (others => '1')    ,
-                    o_reconfig_eth_readdata_valid   => mi_ia_drdy_phy  (i),
-                    i_reconfig_eth_read             => mi_ia_rd_phy    (i),
-                    i_reconfig_eth_write            => mi_ia_wr_phy    (i),
-                    o_reconfig_eth_readdata         => mi_ia_drd_phy   (i),
-                    i_reconfig_eth_writedata        => mi_ia_dwr_phy   (i),
-                    o_reconfig_eth_waitrequest      => mi_ia_ardy_phy_n(i),
-                    -- mi_ia_xxx(item); item = XCVR ID per IP core + IP core offset + Eth infs offset
-                    -- XCVR reconfig inf (0x10 for IP core #3 or 0x8 for IP core #2 or 0x6 for IP core #1 or 0x4 for IP core #0)
-                    i_reconfig_xcvr0_addr           => mi_ia_addr_phy  (0 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN)(18-1 downto 0),
-                    i_reconfig_xcvr0_byteenable     => (others => '1')                                          ,
-                    o_reconfig_xcvr0_readdata_valid => mi_ia_drdy_phy  (0 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
-                    i_reconfig_xcvr0_read           => mi_ia_rd_phy    (0 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
-                    i_reconfig_xcvr0_write          => mi_ia_wr_phy    (0 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
-                    o_reconfig_xcvr0_readdata       => mi_ia_drd_phy   (0 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
-                    i_reconfig_xcvr0_writedata      => mi_ia_dwr_phy   (0 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
-                    o_reconfig_xcvr0_waitrequest    => mi_ia_ardy_phy_n(0 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
-                    -- XCVR reconfig inf (0x7 for IP1 or 0x3 for IP0)
-                    i_reconfig_xcvr1_addr           => mi_ia_addr_phy  (1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN)(18-1 downto 0),
-                    i_reconfig_xcvr1_byteenable     => (others => '1')                                          ,
-                    o_reconfig_xcvr1_readdata_valid => mi_ia_drdy_phy  (1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
-                    i_reconfig_xcvr1_read           => mi_ia_rd_phy    (1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
-                    i_reconfig_xcvr1_write          => mi_ia_wr_phy    (1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
-                    o_reconfig_xcvr1_readdata       => mi_ia_drd_phy   (1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
-                    i_reconfig_xcvr1_writedata      => mi_ia_dwr_phy   (1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
-                    o_reconfig_xcvr1_waitrequest    => mi_ia_ardy_phy_n(1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
-                    o_rx_block_lock                 => ftile_rx_block_lock(i),
-                    o_rx_am_lock                    => ftile_rx_am_lock(i),
-                    o_local_fault_status            => ftile_local_fault(i),
-                    o_remote_fault_status           => ftile_remote_fault(i),
-                    i_stats_snapshot                => '0',
-                    o_rx_hi_ber                     => ftile_rx_hi_ber(i),
-                    o_rx_pcs_fully_aligned          => ftile_rx_pcs_fully_aligned(i),
-                    i_tx_mac_data                   => ftile_tx_mac_data(i),
-                    i_tx_mac_valid                  => ftile_tx_mac_valid(i),
-                    i_tx_mac_inframe                => ftile_tx_mac_inframe(i),
-                    i_tx_mac_eop_empty              => ftile_tx_mac_eop_empty(i),
-                    o_tx_mac_ready                  => ftile_tx_mac_ready(i),
-                    i_tx_mac_error                  => ftile_tx_mac_error(i),
-                    i_tx_mac_skip_crc               => (others => '0'),
-                    o_rx_mac_data                   => ftile_rx_mac_data(i),
-                    o_rx_mac_valid                  => ftile_rx_mac_valid(i),
-                    o_rx_mac_inframe                => ftile_rx_mac_inframe(i),
-                    o_rx_mac_eop_empty              => ftile_rx_mac_eop_empty(i),
-                    o_rx_mac_fcs_error              => ftile_rx_mac_fcs_error(i),
-                    o_rx_mac_error                  => ftile_rx_mac_error(i),
-                    o_rx_mac_status                 => ftile_rx_mac_status(i),
-                    i_tx_pfc                        => (others => '0'),
-                    o_rx_pfc                        => open,
-                    i_tx_pause                      => '0',
-                    o_rx_pause                      => open
-                );
+                -- Distribution of serial lanes to IP cores
+                qsfp_rx_p_sig <= slv_array_deser(QSFP_RX_P, ETH_PORT_CHAN);
+                qsfp_rx_n_sig <= slv_array_deser(QSFP_RX_N, ETH_PORT_CHAN);
+                QSFP_TX_P <= slv_array_ser(qsfp_tx_p_sig);
+                QSFP_TX_N <= slv_array_ser(qsfp_tx_n_sig);
 
-                process(ftile_clk_out)
-                begin
-                    if rising_edge(ftile_clk_out) then
-                        if (RESET_ETH = '1') then
-                            RX_LINK_UP(i) <= '0';
-                            TX_LINK_UP(i) <= '0';
-                        else
-                            RX_LINK_UP(i) <= ftile_rx_pcs_ready(i) and ftile_rx_pcs_fully_aligned(i) and (not ftile_remote_fault(i));
-                            TX_LINK_UP(i) <= ftile_tx_lanes_stable(i);
+                -- can have upto four 100g-2 (PAM4) channels
+                eth_ftile_g : for i in ETH_PORT_CHAN-1 downto 0 generate
+                    -- =========================================================================
+                    -- F-TILE Ethernet
+                    -- =========================================================================
+                    ftile_eth_ip_i : component ftile_eth_4x100g
+                    port map (
+                        i_clk_tx                        => ftile_clk_out,
+                        i_clk_rx                        => ftile_clk_out,
+                        o_clk_pll                       => ftile_clk_out_vec(i),
+                        o_clk_tx_div                    => open,
+                        o_clk_rec_div64                 => open,
+                        o_clk_rec_div                   => open,
+                        i_tx_rst_n                      => '1',
+                        i_rx_rst_n                      => ftile_rx_rst_n(i),
+                        i_rst_n                         => not RESET_ETH,
+                        o_rst_ack_n                     => open,
+                        o_tx_rst_ack_n                  => open,
+                        o_rx_rst_ack_n                  => ftile_rx_rst_ack_n(i),
+                        i_reconfig_clk                  => MI_CLK_PHY,
+                        i_reconfig_reset                => MI_RESET_PHY,
+                        o_cdr_lock                      => open,
+                        o_tx_pll_locked                 => open,
+                        o_tx_lanes_stable               => ftile_tx_lanes_stable(i),
+                        o_rx_pcs_ready                  => ftile_rx_pcs_ready(i),
+                        o_tx_serial                     => qsfp_tx_p_sig(i),
+                        i_rx_serial                     => qsfp_rx_p_sig(i),
+                        o_tx_serial_n                   => qsfp_tx_n_sig(i),
+                        i_rx_serial_n                   => qsfp_rx_n_sig(i),
+                        i_clk_ref                       => ftile_pll_refclk,
+                        i_clk_sys                       => ftile_pll_clk,
+                        -- Eth (+ RSFEC + transciever) reconfig infs (0x3 downto 0x0)
+                        i_reconfig_eth_addr             => mi_ia_addr_phy  (i)(14-1 downto 0),
+                        i_reconfig_eth_byteenable       => (others => '1')    ,
+                        o_reconfig_eth_readdata_valid   => mi_ia_drdy_phy  (i),
+                        i_reconfig_eth_read             => mi_ia_rd_phy    (i),
+                        i_reconfig_eth_write            => mi_ia_wr_phy    (i),
+                        o_reconfig_eth_readdata         => mi_ia_drd_phy   (i),
+                        i_reconfig_eth_writedata        => mi_ia_dwr_phy   (i),
+                        o_reconfig_eth_waitrequest      => mi_ia_ardy_phy_n(i),
+                        -- mi_ia_xxx(item); item = XCVR ID per IP core + IP core offset + Eth infs offset
+                        -- XCVR reconfig inf (0x10 for IP core #3 or 0x8 for IP core #2 or 0x6 for IP core #1 or 0x4 for IP core #0)
+                        i_reconfig_xcvr0_addr           => mi_ia_addr_phy  (0 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN)(18-1 downto 0),
+                        i_reconfig_xcvr0_byteenable     => (others => '1')                                          ,
+                        o_reconfig_xcvr0_readdata_valid => mi_ia_drdy_phy  (0 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        i_reconfig_xcvr0_read           => mi_ia_rd_phy    (0 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        i_reconfig_xcvr0_write          => mi_ia_wr_phy    (0 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        o_reconfig_xcvr0_readdata       => mi_ia_drd_phy   (0 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        i_reconfig_xcvr0_writedata      => mi_ia_dwr_phy   (0 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        o_reconfig_xcvr0_waitrequest    => mi_ia_ardy_phy_n(0 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        -- XCVR reconfig inf (0x7 for IP1 or 0x3 for IP0)
+                        i_reconfig_xcvr1_addr           => mi_ia_addr_phy  (1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN)(18-1 downto 0),
+                        i_reconfig_xcvr1_byteenable     => (others => '1')                                          ,
+                        o_reconfig_xcvr1_readdata_valid => mi_ia_drdy_phy  (1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        i_reconfig_xcvr1_read           => mi_ia_rd_phy    (1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        i_reconfig_xcvr1_write          => mi_ia_wr_phy    (1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        o_reconfig_xcvr1_readdata       => mi_ia_drd_phy   (1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        i_reconfig_xcvr1_writedata      => mi_ia_dwr_phy   (1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        o_reconfig_xcvr1_waitrequest    => mi_ia_ardy_phy_n(1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        o_rx_block_lock                 => ftile_rx_block_lock(i),
+                        o_rx_am_lock                    => ftile_rx_am_lock(i),
+                        o_local_fault_status            => ftile_local_fault(i),
+                        o_remote_fault_status           => ftile_remote_fault(i),
+                        i_stats_snapshot                => '0',
+                        o_rx_hi_ber                     => ftile_rx_hi_ber(i),
+                        o_rx_pcs_fully_aligned          => ftile_rx_pcs_fully_aligned(i),
+                        i_tx_mac_data                   => ftile_tx_mac_data(i),
+                        i_tx_mac_valid                  => ftile_tx_mac_valid(i),
+                        i_tx_mac_inframe                => ftile_tx_mac_inframe(i),
+                        i_tx_mac_eop_empty              => ftile_tx_mac_eop_empty(i),
+                        o_tx_mac_ready                  => ftile_tx_mac_ready(i),
+                        i_tx_mac_error                  => ftile_tx_mac_error(i),
+                        i_tx_mac_skip_crc               => (others => '0'),
+                        o_rx_mac_data                   => ftile_rx_mac_data(i),
+                        o_rx_mac_valid                  => ftile_rx_mac_valid(i),
+                        o_rx_mac_inframe                => ftile_rx_mac_inframe(i),
+                        o_rx_mac_eop_empty              => ftile_rx_mac_eop_empty(i),
+                        o_rx_mac_fcs_error              => ftile_rx_mac_fcs_error(i),
+                        o_rx_mac_error                  => ftile_rx_mac_error(i),
+                        o_rx_mac_status                 => ftile_rx_mac_status(i),
+                        i_tx_pfc                        => (others => '0'),
+                        o_rx_pfc                        => open,
+                        i_tx_pause                      => '0',
+                        o_rx_pause                      => open
+                    );
+
+                    process(ftile_clk_out)
+                    begin
+                        if rising_edge(ftile_clk_out) then
+                            if (RESET_ETH = '1') then
+                                RX_LINK_UP(i) <= '0';
+                                TX_LINK_UP(i) <= '0';
+                            else
+                                RX_LINK_UP(i) <= ftile_rx_pcs_ready(i) and ftile_rx_pcs_fully_aligned(i) and (not ftile_remote_fault(i));
+                                TX_LINK_UP(i) <= ftile_tx_lanes_stable(i);
+                            end if;
                         end if;
-                    end if;
-                end process;
+                    end process;
+
+                end generate;
+
+            else generate
+
+                -- Distribution of serial lanes to IP cores
+                qsfp_rx_p_sig <= slv_array_deser(QSFP_RX_P, ETH_PORT_CHAN);
+                qsfp_rx_n_sig <= slv_array_deser(QSFP_RX_N, ETH_PORT_CHAN);
+                QSFP_TX_P <= slv_array_ser(qsfp_tx_p_sig);
+                QSFP_TX_N <= slv_array_ser(qsfp_tx_n_sig);
+
+                -- 100G-4 NRZ (up to 2 channels)
+                eth_ftile_g : for i in ETH_PORT_CHAN-1 downto 0 generate
+                begin 
+                    -- =========================================================================
+                    -- F-TILE Ethernet
+                    -- =========================================================================
+
+                   ftile_eth_ip_i : component ftile_eth_2x100g
+                   port map (
+                        i_clk_tx                        => ftile_clk_out,
+                        i_clk_rx                        => ftile_clk_out,
+                        o_clk_pll                       => ftile_clk_out_vec(i),
+                        o_clk_tx_div                    => open,
+                        o_clk_rec_div64                 => open,
+                        o_clk_rec_div                   => open,
+                        i_tx_rst_n                      => '1',
+                        i_rx_rst_n                      => ftile_rx_rst_n(i),
+                        i_rst_n                         => not RESET_ETH,
+                        o_rst_ack_n                     => open,
+                        o_tx_rst_ack_n                  => open,
+                        o_rx_rst_ack_n                  => ftile_rx_rst_ack_n(i),
+                        i_reconfig_clk                  => MI_CLK_PHY,
+                        i_reconfig_reset                => MI_RESET_PHY,
+                        o_cdr_lock                      => open,
+                        o_tx_pll_locked                 => open,
+                        o_tx_lanes_stable               => ftile_tx_lanes_stable(i),
+                        o_rx_pcs_ready                  => ftile_rx_pcs_ready(i),
+                        o_tx_serial                     => qsfp_tx_p_sig(i),
+                        i_rx_serial                     => qsfp_rx_p_sig(i),
+                        o_tx_serial_n                   => qsfp_tx_n_sig(i),
+                        i_rx_serial_n                   => qsfp_rx_n_sig(i),
+                        i_clk_ref                       => ftile_pll_refclk,
+                        i_clk_sys                       => ftile_pll_clk,
+                        -- Eth (+ RSFEC + transciever) reconfig infs (0x3 downto 0x0)
+                        i_reconfig_eth_addr             => mi_ia_addr_phy  (i)(14-1 downto 0),
+                        i_reconfig_eth_byteenable       => (others => '1')    ,
+                        o_reconfig_eth_readdata_valid   => mi_ia_drdy_phy  (i),
+                        i_reconfig_eth_read             => mi_ia_rd_phy    (i),
+                        i_reconfig_eth_write            => mi_ia_wr_phy    (i),
+                        o_reconfig_eth_readdata         => mi_ia_drd_phy   (i),
+                        i_reconfig_eth_writedata        => mi_ia_dwr_phy   (i),
+                        o_reconfig_eth_waitrequest      => mi_ia_ardy_phy_n(i),
+                        -- mi_ia_xxx(item); item = XCVR ID per IP core + IP core offset + Eth infs offset
+                        -- XCVR reconfig inf 
+                        i_reconfig_xcvr0_addr           => mi_ia_addr_phy  (0 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN)(18-1 downto 0),
+                        i_reconfig_xcvr0_byteenable     => (others => '1')                                          ,
+                        o_reconfig_xcvr0_readdata_valid => mi_ia_drdy_phy  (0 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        i_reconfig_xcvr0_read           => mi_ia_rd_phy    (0 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        i_reconfig_xcvr0_write          => mi_ia_wr_phy    (0 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        o_reconfig_xcvr0_readdata       => mi_ia_drd_phy   (0 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        i_reconfig_xcvr0_writedata      => mi_ia_dwr_phy   (0 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        o_reconfig_xcvr0_waitrequest    => mi_ia_ardy_phy_n(0 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        -- XCVR reconfig inf
+                        i_reconfig_xcvr1_addr           => mi_ia_addr_phy  (1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN)(18-1 downto 0),
+                        i_reconfig_xcvr1_byteenable     => (others => '1')                                          ,
+                        o_reconfig_xcvr1_readdata_valid => mi_ia_drdy_phy  (1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        i_reconfig_xcvr1_read           => mi_ia_rd_phy    (1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        i_reconfig_xcvr1_write          => mi_ia_wr_phy    (1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        o_reconfig_xcvr1_readdata       => mi_ia_drd_phy   (1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        i_reconfig_xcvr1_writedata      => mi_ia_dwr_phy   (1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        o_reconfig_xcvr1_waitrequest    => mi_ia_ardy_phy_n(1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        -- XCVR reconfig inf (0x7 for IP1 or 0x3 for IP0)
+                        i_reconfig_xcvr2_addr           => mi_ia_addr_phy  (2 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN)(18-1 downto 0),
+                        i_reconfig_xcvr2_byteenable     => (others => '1')                                          ,
+                        o_reconfig_xcvr2_readdata_valid => mi_ia_drdy_phy  (2 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        i_reconfig_xcvr2_read           => mi_ia_rd_phy    (2 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        i_reconfig_xcvr2_write          => mi_ia_wr_phy    (2 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        o_reconfig_xcvr2_readdata       => mi_ia_drd_phy   (2 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        i_reconfig_xcvr2_writedata      => mi_ia_dwr_phy   (2 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        o_reconfig_xcvr2_waitrequest    => mi_ia_ardy_phy_n(2 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        -- XCVR reconfig inf
+                        i_reconfig_xcvr3_addr           => mi_ia_addr_phy  (3 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN)(18-1 downto 0),
+                        i_reconfig_xcvr3_byteenable     => (others => '1')                                          ,
+                        o_reconfig_xcvr3_readdata_valid => mi_ia_drdy_phy  (3 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        i_reconfig_xcvr3_read           => mi_ia_rd_phy    (3 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        i_reconfig_xcvr3_write          => mi_ia_wr_phy    (3 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        o_reconfig_xcvr3_readdata       => mi_ia_drd_phy   (3 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        i_reconfig_xcvr3_writedata      => mi_ia_dwr_phy   (3 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        o_reconfig_xcvr3_waitrequest    => mi_ia_ardy_phy_n(3 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN),
+                        --
+                        o_rx_block_lock                 => ftile_rx_block_lock(i),
+                        o_rx_am_lock                    => ftile_rx_am_lock(i),
+                        o_local_fault_status            => ftile_local_fault(i),
+                        o_remote_fault_status           => ftile_remote_fault(i),
+                        i_stats_snapshot                => '0',
+                        o_rx_hi_ber                     => ftile_rx_hi_ber(i),
+                        o_rx_pcs_fully_aligned          => ftile_rx_pcs_fully_aligned(i),
+                        i_tx_mac_data                   => ftile_tx_mac_data(i),
+                        i_tx_mac_valid                  => ftile_tx_mac_valid(i),
+                        i_tx_mac_inframe                => ftile_tx_mac_inframe(i),
+                        i_tx_mac_eop_empty              => ftile_tx_mac_eop_empty(i),
+                        o_tx_mac_ready                  => ftile_tx_mac_ready(i),
+                        i_tx_mac_error                  => ftile_tx_mac_error(i),
+                        i_tx_mac_skip_crc               => (others => '0'),
+                        o_rx_mac_data                   => ftile_rx_mac_data(i),
+                        o_rx_mac_valid                  => ftile_rx_mac_valid(i),
+                        o_rx_mac_inframe                => ftile_rx_mac_inframe(i),
+                        o_rx_mac_eop_empty              => ftile_rx_mac_eop_empty(i),
+                        o_rx_mac_fcs_error              => ftile_rx_mac_fcs_error(i),
+                        o_rx_mac_error                  => ftile_rx_mac_error(i),
+                        o_rx_mac_status                 => ftile_rx_mac_status(i),
+                        i_tx_pfc                        => (others => '0'),
+                        o_rx_pfc                        => open,
+                        i_tx_pause                      => '0',
+                        o_rx_pause                      => open
+                    );
+
+                    process(ftile_clk_out)
+                    begin
+                        if rising_edge(ftile_clk_out) then
+                            if (RESET_ETH = '1') then
+                                RX_LINK_UP(i) <= '0';
+                                TX_LINK_UP(i) <= '0';
+                            else
+                                RX_LINK_UP(i) <= ftile_rx_pcs_ready(i) and ftile_rx_pcs_fully_aligned(i) and (not ftile_remote_fault(i));
+                                TX_LINK_UP(i) <= ftile_tx_lanes_stable(i);
+                            end if;
+                        end if;
+                    end process;
+
+                end generate; -- for ... 2x100GE IP
 
                 -- =========================================================================
                 -- ADAPTERS
                 -- =========================================================================
-                rx_ftile_adapter_i : entity work.RX_MAC_LITE_ADAPTER_MAC_SEG
-                generic map(
-                    REGIONS     => REGIONS,
-                    REGION_SIZE => REGION_SIZE
-                )
-                port map(
-                    CLK              => ftile_clk_out,
-                    RESET            => RESET_ETH,
 
-                    IN_MAC_DATA      => ftile_rx_mac_data(i),
-                    IN_MAC_INFRAME   => ftile_rx_mac_inframe(i),
-                    IN_MAC_EOP_EMPTY => ftile_rx_mac_eop_empty(i),
-                    IN_MAC_FCS_ERROR => ftile_rx_mac_fcs_error(i),
-                    IN_MAC_ERROR     => ftile_rx_mac_error(i),
-                    IN_MAC_STATUS    => ftile_rx_mac_status(i),
-                    IN_MAC_VALID     => ftile_rx_mac_valid(i),
+                eth_adapt_g : for i in ETH_PORT_CHAN-1 downto 0 generate
 
-                    OUT_MFB_DATA     => TX_MFB_DATA(i),
-                    OUT_MFB_ERROR    => TX_MFB_ERROR(i),
-                    OUT_MFB_SOF      => TX_MFB_SOF(i),
-                    OUT_MFB_EOF      => TX_MFB_EOF(i),
-                    OUT_MFB_SOF_POS  => TX_MFB_SOF_POS(i),
-                    OUT_MFB_EOF_POS  => TX_MFB_EOF_POS(i),
-                    OUT_MFB_SRC_RDY  => TX_MFB_SRC_RDY(i),
-                    OUT_LINK_UP      => open
-                );
+                    rx_ftile_adapter_i : entity work.RX_MAC_LITE_ADAPTER_MAC_SEG
+                    generic map(
+                        REGIONS     => REGIONS,
+                        REGION_SIZE => REGION_SIZE
+                    )
+                    port map(
+                        CLK              => ftile_clk_out,
+                        RESET            => RESET_ETH,
 
-                tx_ftile_adapter_i : entity work.TX_MAC_LITE_ADAPTER_MAC_SEG
-                generic map(
-                    REGIONS     => REGIONS,
-                    REGION_SIZE => REGION_SIZE
-                )
-                port map(
-                    CLK               => ftile_clk_out,
-                    RESET             => RESET_ETH,
+                        IN_MAC_DATA      => ftile_rx_mac_data(i),
+                        IN_MAC_INFRAME   => ftile_rx_mac_inframe(i),
+                        IN_MAC_EOP_EMPTY => ftile_rx_mac_eop_empty(i),
+                        IN_MAC_FCS_ERROR => ftile_rx_mac_fcs_error(i),
+                        IN_MAC_ERROR     => ftile_rx_mac_error(i),
+                        IN_MAC_STATUS    => ftile_rx_mac_status(i),
+                        IN_MAC_VALID     => ftile_rx_mac_valid(i),
 
-                    IN_MFB_DATA       => RX_MFB_DATA(i),
-                    IN_MFB_SOF        => RX_MFB_SOF(i),
-                    IN_MFB_EOF        => RX_MFB_EOF(i),
-                    IN_MFB_SOF_POS    => RX_MFB_SOF_POS(i),
-                    IN_MFB_EOF_POS    => RX_MFB_EOF_POS(i),
-                    IN_MFB_ERROR      => (others => '0'),
-                    IN_MFB_SRC_RDY    => RX_MFB_SRC_RDY(i),
-                    IN_MFB_DST_RDY    => RX_MFB_DST_RDY(i),
+                        OUT_MFB_DATA     => TX_MFB_DATA(i),
+                        OUT_MFB_ERROR    => TX_MFB_ERROR(i),
+                        OUT_MFB_SOF      => TX_MFB_SOF(i),
+                        OUT_MFB_EOF      => TX_MFB_EOF(i),
+                        OUT_MFB_SOF_POS  => TX_MFB_SOF_POS(i),
+                        OUT_MFB_EOF_POS  => TX_MFB_EOF_POS(i),
+                        OUT_MFB_SRC_RDY  => TX_MFB_SRC_RDY(i),
+                        OUT_LINK_UP      => open
+                    );
 
-                    OUT_MAC_DATA      => ftile_tx_mac_data(i),
-                    OUT_MAC_INFRAME   => ftile_tx_mac_inframe(i),
-                    OUT_MAC_EOP_EMPTY => ftile_tx_mac_eop_empty(i),
-                    OUT_MAC_ERROR     => ftile_tx_mac_error(i),
-                    OUT_MAC_VALID     => ftile_tx_mac_valid(i),
-                    OUT_MAC_READY     => ftile_tx_mac_ready(i)
-                );
-            end generate;
+                    tx_ftile_adapter_i : entity work.TX_MAC_LITE_ADAPTER_MAC_SEG
+                    generic map(
+                        REGIONS     => REGIONS,
+                        REGION_SIZE => REGION_SIZE
+                    )
+                    port map(
+                        CLK               => ftile_clk_out,
+                        RESET             => RESET_ETH,
+
+                        IN_MFB_DATA       => RX_MFB_DATA(i),
+                        IN_MFB_SOF        => RX_MFB_SOF(i),
+                        IN_MFB_EOF        => RX_MFB_EOF(i),
+                        IN_MFB_SOF_POS    => RX_MFB_SOF_POS(i),
+                        IN_MFB_EOF_POS    => RX_MFB_EOF_POS(i),
+                        IN_MFB_ERROR      => (others => '0'),
+                        IN_MFB_SRC_RDY    => RX_MFB_SRC_RDY(i),
+                        IN_MFB_DST_RDY    => RX_MFB_DST_RDY(i),
+
+                        OUT_MAC_DATA      => ftile_tx_mac_data(i),
+                        OUT_MAC_INFRAME   => ftile_tx_mac_inframe(i),
+                        OUT_MAC_EOP_EMPTY => ftile_tx_mac_eop_empty(i),
+                        OUT_MAC_ERROR     => ftile_tx_mac_error(i),
+                        OUT_MAC_VALID     => ftile_tx_mac_valid(i),
+                        OUT_MAC_READY     => ftile_tx_mac_ready(i)
+                    );
+                end generate; -- eth_adapt
+
+            end generate; -- 100
 
         when 50 =>
             -- =========================================================================
