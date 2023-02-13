@@ -10,6 +10,7 @@
 #    Radek Iša <isa@cesnet.cz>
 
 from config import *
+from layers import trill
 import scapy.all
 import scapy.utils
 import scapy.contrib.mpls
@@ -45,6 +46,20 @@ class Payload(base_node):
 
     def protocol_add(self, config):
         return scapy.all.Raw()
+
+
+class TRILL(base_node):
+    def __init__(self):
+        super().__init__("TRILL");
+
+    def protocol_add(self, config):
+        return trill.Trill(version = 0, res=0)
+
+    def protocol_next(self, config):
+        if (config.trill != 0):
+            config.trill -= 1
+        proto = {"ETH" : 1}
+        return proto
 
 
 #################################
@@ -226,7 +241,7 @@ class VLAN(base_node):
         return scapy.all.Dot1Q()
 
     def protocol_next(self, config):
-        proto   = {"IPv4" : 1, "IPv6" : 1, "VLAN" : 1 , "MPLS" : 1, "Empty" : 1, "PPP" : 1}
+        proto   = {"IPv4" : 1, "IPv6" : 1, "VLAN" : 1 , "TRILL" : 1, "MPLS" : 1, "Empty" : 1, "PPP" : 1}
         proto_weight = config.object_get([self.name, "weight"]);
         if (proto_weight != None):
             proto.update(proto_weight)
@@ -235,6 +250,8 @@ class VLAN(base_node):
             config.vlan -= 1
         if (config.vlan == 0):
             proto["VLAN"] = 0;
+        if (config.trill == 0):
+            proto["TRILL"] = 0;
 
         return proto
 
@@ -247,17 +264,20 @@ class ETH(base_node):
         return scapy.all.Ether()
 
     def protocol_next(self, config):
-        proto = {"IPv4" : 1, "IPv6" : 1, "VLAN" : 1, "MPLS" : 1, "Empty" : 1, "PPP" : 1}
+        proto = {"IPv4" : 1, "IPv6" : 1, "VLAN" : 1, "TRILL" : 1, "MPLS" : 1, "Empty" : 1, "PPP" : 1}
         proto_weight = config.object_get([self.name, "weight"]);
         if (proto_weight != None):
             proto.update(proto_weight)
+
+        if (config.trill == 0):
+            proto["TRILL"] = 0;
 
         return proto
 
 
 class parser:
     def __init__(self, pcap_file, cfg, seed):
-        self.protocols = {"ETH" : ETH(), "VLAN" : VLAN(), "PPP" : PPP(), "MPLS" : MPLS(), "IPv6" : IPv6(),
+        self.protocols = {"ETH" : ETH(), "VLAN" : VLAN(), "TRILL" : TRILL(), "PPP" : PPP(), "MPLS" : MPLS(), "IPv6" : IPv6(),
                 "IPv4" : IPv4(), "TCP" : TCP(), "UDP" : UDP(), "ICMPv6" : ICMPv6(), "ICMPv4" : ICMPv4(), "SCTP" : SCTP(),
                 "Payload" : Payload(), "Empty" : Empty()};
         self.pcap_file = scapy.utils.PcapWriter(pcap_file, append=False, sync=True)

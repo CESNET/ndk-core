@@ -13,8 +13,9 @@ import json
 class packet_config:
     def __init__(self, constraints = None):
         #init values
-        self.vlan = 4
-        self.mpls = 4
+        self.trill = 1
+        self.vlan  = 4
+        self.mpls  = 4
         self.constraints = None
   
         #configure
@@ -31,6 +32,7 @@ class packet_config:
 
     def copy(self):
         ret = packet_config()
+        ret.trill = self.trill
         ret.vlan = self.vlan
         ret.mpls = self.mpls
         ret.constraints = self.constraints
