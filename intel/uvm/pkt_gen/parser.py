@@ -26,7 +26,7 @@ class base_node:
         return self.name
 
     def protocol_add(self, config):
-        return None 
+        return None
 
     def protocol_next(self, config):
         return {}
@@ -284,11 +284,24 @@ class parser:
         self.cfg = None
         if (cfg != None):
             conf_file = open(cfg)
-            self.cfg  = conf_file.read()
+            json_cfg  = conf_file.read()
             conf_file.close();
+            self.cfg = json.loads(json_cfg);
         random.seed(seed)
 
-    
+        pkt_size_min = json_object_get(self.cfg, ["packet", "size_min"]);
+        if (pkt_size_min != None):
+            self.pkt_size_min  = pkt_size_min
+        else:
+            self.pkt_size_min  = 60
+
+        pkt_err_probability = json_object_get(self.cfg, ["packet", "err_probability"]);
+        if (pkt_err_probability != None):
+            self.pkt_err_probability = pkt_err_probability
+        else:
+            self.pkt_err_probability = 0
+
+
     def __del__(self):
         self.pcap_file.close()
 
@@ -308,8 +321,18 @@ class parser:
 
     def write(self, packet):
         packet_fuzz = scapy.packet.fuzz(packet)
+        packet_wr   = b""
         try:
-            self.pcap_file.write(packet_fuzz)
+            packet_wr = packet_fuzz.build();
         except:
-            self.pcap_file.write(packet)
+            packet_wr = packet.build();
+
+        # GENERATE ERROR PACKETS
+        if (random.randint(0, 99) < self.pkt_err_probability):
+            packet_wr = packet_wr[0:random.randint(0,len(packet_wr))];
+        # SET MINIMAL SIZE
+        if (len(packet_wr) < self.pkt_size_min):
+            packet_wr += b"\0" * (self.pkt_size_min -len(packet_wr))
+        self.pcap_file.write(packet_wr);
+
 

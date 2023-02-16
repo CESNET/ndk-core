@@ -10,17 +10,26 @@
 
 import json
 
+def json_object_get(json, path):
+    index = 0
+    obj   = json 
+    while (index < len(path) and obj != None):
+        obj = obj.get(path[index])
+        index += 1
+
+    return obj;
+
 class packet_config:
     def __init__(self, constraints = None):
         #init values
         self.trill = 1
         self.vlan  = 4
         self.mpls  = 4
+
         self.constraints = None
   
         #configure
-        if (constraints != None):
-            self.constraints = json.loads(constraints);
+        self.constraints
 
         mpls_stack = self.object_get(["mpls", "stack"]);
         if (mpls_stack != None):
@@ -39,10 +48,5 @@ class packet_config:
         return ret;
 
     def object_get(self, path):
-        index = 0
-        obj   = self.constraints
-        while (index < len(path) and obj != None):
-            obj = obj.get(path[index])
-            index += 1
+        return json_object_get(self.constraints, path)
 
-        return obj;
