@@ -29,9 +29,9 @@ lappend COMPONENTS [ list "MI_ASYNC" $MI_ASYNC_BASE "FULL" ]
 
 if { $ARCHGRP == "MEDUSA" } {
 
-    lappend COMPONENTS [ list "MI_SPLITTER_PLUS"   $MI_SPLITTER_PLUS_BASE  "FULL" ]
-    lappend COMPONENTS [ list "ASYNC_RESET"        $ASYNC_RESET_BASE       "FULL" ]
-    lappend COMPONENTS [ list "DMA_MEDUSA"         $DMA_MEDUSA_BASE        "FULL" ]
+    lappend COMPONENTS [ list "MI_SPLITTER_PLUS_GEN" $MI_SPLITTER_PLUS_GEN_BASE "FULL" ]
+    lappend COMPONENTS [ list "ASYNC_RESET"          $ASYNC_RESET_BASE          "FULL" ]
+    lappend COMPONENTS [ list "DMA_MEDUSA"           $DMA_MEDUSA_BASE           "FULL" ]
 
     # Source files for implemented component
     lappend MOD "$ENTITY_BASE/dma_medusa_wrapper_arch.vhd"

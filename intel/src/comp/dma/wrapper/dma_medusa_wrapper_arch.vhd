@@ -21,6 +21,16 @@ architecture MEDUSA of DMA_WRAPPER is
     constant DMA_RST_REPLICAS  : natural := DMA_STREAMS+PCIE_ENDPOINTS;
     constant CROX_RST_REPLICAS : natural := DMA_STREAMS;
     constant TOTAL_CHANNELS    : natural := max(RX_CHANNELS,TX_CHANNELS)*DMA_STREAMS;
+    constant DPP_MI_OFFSET     : unsigned(32-1 downto 0) := (TOTAL_CHANNELS/DMA_ENDPOINTS)*X"0080";
+
+    function dma_mi_addr_base_f return slv_array_t is
+        variable mi_addr_base_var : slv_array_t(DMA_PER_PCIE-1 downto 0)(32-1 downto 0);
+    begin
+        for i in 0 to DMA_PER_PCIE-1 loop
+            mi_addr_base_var(i) := std_logic_vector(resize(i*DPP_MI_OFFSET, 32));
+        end loop;
+        return mi_addr_base_var;
+    end function;
 
     signal dma_rst_dup  : std_logic_vector(DMA_RST_REPLICAS-1 downto 0);
     signal crox_rst_dup : std_logic_vector(CROX_RST_REPLICAS-1 downto 0);
@@ -59,11 +69,12 @@ architecture MEDUSA of DMA_WRAPPER is
     --  UP MVB Endpoint tagging
     -- =====================================================================
 
-    signal dma_rq_mvb_data : slv_array_t(DMA_ENDPOINTS-1 downto 0)(PCIE_RQ_MFB_REGIONS*DMA_UPHDR_WIDTH-1 downto 0);
+    signal dma_rq_mvb_data      : slv_array_t(DMA_ENDPOINTS-1 downto 0)(PCIE_RQ_MFB_REGIONS*DMA_UPHDR_WIDTH-1 downto 0);
     signal PCIE_RQ_MVB_DATA_arr : slv_array_2d_t(DMA_ENDPOINTS-1 downto 0)(PCIE_RQ_MFB_REGIONS-1 downto 0)(DMA_UPHDR_WIDTH-1 downto 0);
     signal PCIE_RQ_MVB_DATA_vec : std_logic_vector(DMA_ENDPOINTS*PCIE_RQ_MFB_REGIONS*DMA_UPHDR_WIDTH-1 downto 0);
 
     -- =====================================================================
+
 begin
 
     dma_rst_i : entity work.ASYNC_RESET
@@ -133,64 +144,40 @@ begin
     --  MI DMA Endpoint Splitter
     -- =====================================================================
 
-    dma_end_mi_spl_gen : if (DMA_PER_PCIE=2) generate
+    dma_end_mi_spl_gen : if (DMA_PER_PCIE > 1) generate
 
         dma_end_mi_spl_end_gen : for i in 0 to PCIE_ENDPOINTS-1 generate
-            signal dma_end_vec_mi_addr : std_logic_vector(2*32-1 downto 0);
-            signal dma_end_vec_mi_dwr  : std_logic_vector(2*32-1 downto 0);
-            signal dma_end_vec_mi_be   : std_logic_vector(2*32/8-1 downto 0);
-            signal dma_end_vec_mi_rd   : std_logic_vector(2-1 downto 0);
-            signal dma_end_vec_mi_wr   : std_logic_vector(2-1 downto 0);
-            signal dma_end_vec_mi_drd  : std_logic_vector(2*32-1 downto 0);
-            signal dma_end_vec_mi_ardy : std_logic_vector(2-1 downto 0);
-            signal dma_end_vec_mi_drdy : std_logic_vector(2-1 downto 0);
-            signal dma_end_mi_drd_tmp  : slv_array_t     (2-1 downto 0)(32-1 downto 0);
-        begin
 
-            dma_end_mi_spl_i : entity work.MI_SPLITTER_PLUS
+            mi_splitter_i : entity work.MI_SPLITTER_PLUS_GEN
             generic map(
-                DATA_WIDTH    => 32,
-                ITEMS         => 2 ,
-                -- The splitting is determined by one of the top bits of DMA Channel selection
-                ADDR_CMP_MASK => (log2(TOTAL_CHANNELS/PCIE_ENDPOINTS)+7-1 downto log2(TOTAL_CHANNELS/DMA_ENDPOINTS)+7 => '1', others => '0'),
-                PORT1_BASE    => (log2(TOTAL_CHANNELS/PCIE_ENDPOINTS)+7-1 downto log2(TOTAL_CHANNELS/DMA_ENDPOINTS)+7 => '1', others => '0'),
-                PIPE          => true  ,
-                PIPE_OUTREG   => false ,
-                DEVICE        => DEVICE
+                ADDR_WIDTH  => 32,
+                DATA_WIDTH  => 32,
+                PORTS       => DMA_PER_PCIE,
+                ADDR_BASE   => dma_mi_addr_base_f,
+                DEVICE      => DEVICE
             )
             port map(
-                CLK      => DMA_CLK  ,
-                RESET    => dma_rst_dup(i),
+                CLK     => DMA_CLK,
+                RESET   => dma_rst_dup(i),
 
-                IN_DWR   => dma_sync_mi_dwr (i),
-                IN_ADDR  => dma_sync_mi_addr(i),
-                IN_BE    => dma_sync_mi_be  (i),
-                IN_RD    => dma_sync_mi_rd  (i),
-                IN_WR    => dma_sync_mi_wr  (i),
-                IN_ARDY  => dma_sync_mi_ardy(i),
-                IN_DRD   => dma_sync_mi_drd (i),
-                IN_DRDY  => dma_sync_mi_drdy(i),
+                RX_DWR  => dma_sync_mi_dwr (i),
+                RX_ADDR => dma_sync_mi_addr(i),
+                RX_BE   => dma_sync_mi_be  (i),
+                RX_RD   => dma_sync_mi_rd  (i),
+                RX_WR   => dma_sync_mi_wr  (i),
+                RX_ARDY => dma_sync_mi_ardy(i),
+                RX_DRD  => dma_sync_mi_drd (i),
+                RX_DRDY => dma_sync_mi_drdy(i),
 
-                OUT_DWR  => dma_end_vec_mi_dwr ,
-                OUT_ADDR => dma_end_vec_mi_addr,
-                OUT_BE   => dma_end_vec_mi_be  ,
-                OUT_RD   => dma_end_vec_mi_rd  ,
-                OUT_WR   => dma_end_vec_mi_wr  ,
-                OUT_ARDY => dma_end_vec_mi_ardy,
-                OUT_DRD  => dma_end_vec_mi_drd ,
-                OUT_DRDY => dma_end_vec_mi_drdy
+                TX_DWR  => dma_end_mi_dwr((i+1)*DMA_PER_PCIE-1 downto i*DMA_PER_PCIE),
+                TX_ADDR => dma_end_mi_addr((i+1)*DMA_PER_PCIE-1 downto i*DMA_PER_PCIE),
+                TX_BE   => dma_end_mi_be((i+1)*DMA_PER_PCIE-1 downto i*DMA_PER_PCIE),
+                TX_RD   => dma_end_mi_rd((i+1)*DMA_PER_PCIE-1 downto i*DMA_PER_PCIE),
+                TX_WR   => dma_end_mi_wr((i+1)*DMA_PER_PCIE-1 downto i*DMA_PER_PCIE),
+                TX_ARDY => dma_end_mi_ardy((i+1)*DMA_PER_PCIE-1 downto i*DMA_PER_PCIE),
+                TX_DRD  => dma_end_mi_drd((i+1)*DMA_PER_PCIE-1 downto i*DMA_PER_PCIE),
+                TX_DRDY => dma_end_mi_drdy((i+1)*DMA_PER_PCIE-1 downto i*DMA_PER_PCIE)
             );
-
-            dma_end_mi_addr(i*2+2-1 downto i*2) <= slv_array_deser(dma_end_vec_mi_addr,2);
-            dma_end_mi_dwr (i*2+2-1 downto i*2) <= slv_array_deser(dma_end_vec_mi_dwr ,2);
-            dma_end_mi_be  (i*2+2-1 downto i*2) <= slv_array_deser(dma_end_vec_mi_be  ,2);
-            dma_end_mi_rd  (i*2+2-1 downto i*2) <= dma_end_vec_mi_rd;
-            dma_end_mi_wr  (i*2+2-1 downto i*2) <= dma_end_vec_mi_wr;
-
-            dma_end_mi_drd_tmp  <= dma_end_mi_drd(i*2+2-1 downto i*2);
-            dma_end_vec_mi_drd  <= slv_array_ser(dma_end_mi_drd_tmp);
-            dma_end_vec_mi_ardy <= dma_end_mi_ardy(i*2+2-1 downto i*2);
-            dma_end_vec_mi_drdy <= dma_end_mi_drdy(i*2+2-1 downto i*2);
 
         end generate;
 
@@ -220,7 +207,7 @@ begin
     begin
         PCIE_RQ_MVB_DATA <= dma_rq_mvb_data;
 
-        if (DMA_PER_PCIE=2) then
+        if (DMA_PER_PCIE > 1) then
             for i in 0 to PCIE_ENDPOINTS-1 loop
                 for e in 0 to DMA_PER_PCIE-1 loop
                     PCIE_RQ_MVB_DATA_arr(i*DMA_PER_PCIE+e) <= slv_array_deser(dma_rq_mvb_data(i*DMA_PER_PCIE+e),PCIE_RQ_MFB_REGIONS);
