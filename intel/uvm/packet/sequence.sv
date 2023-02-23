@@ -31,9 +31,15 @@ class sequence_pcap#(ITEM_WIDTH) extends uvm_common::sequence_base#(uvm_logic_ve
     rand int unsigned proto_next_prot[2]; //empty/payload
     rand int unsigned algorithm; // 0 -> rand; 1 -> dfs
 
+    rand int unsigned packet_err_prob; //empty/payload
+
     constraint c_alg{
         algorithm dist {0 :/ 10, 1 :/ 1};
     }
+
+    constraint c_err {
+        packet_err_prob dist {[0:10] :/ 70, [11:70] :/ 20, [71:99] :/ 10};
+    };
 
     constraint c_eth{
         foreach(eth_next_prot[it]) { 
@@ -119,7 +125,7 @@ class sequence_pcap#(ITEM_WIDTH) extends uvm_common::sequence_base#(uvm_logic_ve
         end
         $fwrite(file, "{\n");
         //ETH
-
+        $fwrite(file, "\"packet\" : { \"err_probability\" : %0d},\n", packet_err_prob);
         $fwrite(file, "\"ETH\"  : { \"weight\" : %s},\n", proto_dist_gen(eth_next_prot, {"IPv4", "IPv6", "VLAN", "MPLS", "Empty", "PPP"}));
         $fwrite(file, "\"VLAN\" : { \"weight\" : %s},\n", proto_dist_gen(vlan_next_prot, {"IPv4", "IPv6", "VLAN", "MPLS", "Empty", "PPP"}));
         $fwrite(file, "\"PPP\" : { \"weight\" : %s},\n",  proto_dist_gen(ppp_next_prot, {"IPv4", "IPv6", "MPLS", "Empty"}));

@@ -10,6 +10,7 @@
 #    Radek Iša <isa@cesnet.cz>
 
 from config import *
+from layers import trill
 import scapy.all
 import scapy.utils
 import scapy.contrib.mpls
@@ -25,7 +26,7 @@ class base_node:
         return self.name
 
     def protocol_add(self, config):
-        return None 
+        return None
 
     def protocol_next(self, config):
         return {}
@@ -45,6 +46,20 @@ class Payload(base_node):
 
     def protocol_add(self, config):
         return scapy.all.Raw()
+
+
+class TRILL(base_node):
+    def __init__(self):
+        super().__init__("TRILL");
+
+    def protocol_add(self, config):
+        return trill.Trill(version = 0, res=0)
+
+    def protocol_next(self, config):
+        if (config.trill != 0):
+            config.trill -= 1
+        proto = {"ETH" : 1}
+        return proto
 
 
 #################################
@@ -94,6 +109,22 @@ class TCP(base_node):
             proto.update(proto_weight)
         return proto
 
+
+class SCTP(base_node):
+    def __init__(self):
+        super().__init__("SCTP");
+
+    def protocol_add(self, config):
+        return scapy.all.SCTP()
+
+    def protocol_next(self, config):
+        proto = { "Empty" : 1, "Payload" : 1 }
+        cfg_obj = config.object_get([self.name, "weight"])
+        if (cfg_obj != None):
+            proto.update(cfg_obj);
+        return proto
+
+
 #################################
 # IP protocols
 #################################
@@ -122,7 +153,7 @@ class IPv4(base_node):
         return scapy.all.IP(version=4, src = src, dst = dst)
 
     def protocol_next(self, config):
-        proto = { "Payload" : 1, "Empty" : 1, "ICMPv4" : 1, "UDP" : 1, "TCP" : 1}
+        proto = { "Payload" : 1, "Empty" : 1, "ICMPv4" : 1, "UDP" : 1, "TCP" : 1, "SCTP" : 1}
         proto_weight = config.object_get([self.name, "weight"]);
         if (proto_weight != None):
             proto.update(proto_weight)
@@ -155,7 +186,7 @@ class IPv6(base_node):
 
 
     def protocol_next(self, config):
-        proto = { "Payload" : 1, "Empty" : 1, "ICMPv4" : 1, "UDP" : 1, "TCP" : 1}
+        proto = { "Payload" : 1, "Empty" : 1, "ICMPv4" : 1, "ICMPv6" : 1, "UDP" : 1, "TCP" : 1, "SCTP" : 1}
         proto_weight = config.object_get([self.name, "weight"]);
         if (proto_weight != None):
             proto.update(proto_weight)
@@ -210,16 +241,17 @@ class VLAN(base_node):
         return scapy.all.Dot1Q()
 
     def protocol_next(self, config):
-        proto   = {"IPv4" : 1, "IPv6" : 1, "VLAN" : 1 , "MPLS" : 1, "Empty" : 1, "PPP" : 1}
+        proto   = {"IPv4" : 1, "IPv6" : 1, "VLAN" : 1 , "TRILL" : 1, "MPLS" : 1, "Empty" : 1, "PPP" : 1}
         proto_weight = config.object_get([self.name, "weight"]);
         if (proto_weight != None):
             proto.update(proto_weight)
         # check if it is last generated VLAN
         if (config.vlan != 0):
             config.vlan -= 1
-        print("TEST VLAN %d" % (config.vlan))
         if (config.vlan == 0):
             proto["VLAN"] = 0;
+        if (config.trill == 0):
+            proto["TRILL"] = 0;
 
         return proto
 
@@ -232,28 +264,44 @@ class ETH(base_node):
         return scapy.all.Ether()
 
     def protocol_next(self, config):
-        proto = {"IPv4" : 1, "IPv6" : 1, "VLAN" : 1, "MPLS" : 1, "Empty" : 1, "PPP" : 1}
+        proto = {"IPv4" : 1, "IPv6" : 1, "VLAN" : 1, "TRILL" : 1, "MPLS" : 1, "Empty" : 1, "PPP" : 1}
         proto_weight = config.object_get([self.name, "weight"]);
         if (proto_weight != None):
             proto.update(proto_weight)
+
+        if (config.trill == 0):
+            proto["TRILL"] = 0;
 
         return proto
 
 
 class parser:
     def __init__(self, pcap_file, cfg, seed):
-        self.protocols = {"ETH" : ETH(), "VLAN" : VLAN(), "PPP" : PPP(), "MPLS" : MPLS(), "IPv6" : IPv6(),
-                          "IPv4" : IPv4(), "TCP" : TCP(), "UDP" : UDP(), "ICMPv6" : ICMPv6(), "ICMPv4" : ICMPv4(),
-                          "Payload" : Payload(), "Empty" : Empty()};
+        self.protocols = {"ETH" : ETH(), "VLAN" : VLAN(), "TRILL" : TRILL(), "PPP" : PPP(), "MPLS" : MPLS(), "IPv6" : IPv6(),
+                "IPv4" : IPv4(), "TCP" : TCP(), "UDP" : UDP(), "ICMPv6" : ICMPv6(), "ICMPv4" : ICMPv4(), "SCTP" : SCTP(),
+                "Payload" : Payload(), "Empty" : Empty()};
         self.pcap_file = scapy.utils.PcapWriter(pcap_file, append=False, sync=True)
         self.cfg = None
         if (cfg != None):
             conf_file = open(cfg)
-            self.cfg  = conf_file.read()
+            json_cfg  = conf_file.read()
             conf_file.close();
+            self.cfg = json.loads(json_cfg);
         random.seed(seed)
 
-    
+        pkt_size_min = json_object_get(self.cfg, ["packet", "size_min"]);
+        if (pkt_size_min != None):
+            self.pkt_size_min  = pkt_size_min
+        else:
+            self.pkt_size_min  = 60
+
+        pkt_err_probability = json_object_get(self.cfg, ["packet", "err_probability"]);
+        if (pkt_err_probability != None):
+            self.pkt_err_probability = pkt_err_probability
+        else:
+            self.pkt_err_probability = 0
+
+
     def __del__(self):
         self.pcap_file.close()
 
@@ -273,8 +321,18 @@ class parser:
 
     def write(self, packet):
         packet_fuzz = scapy.packet.fuzz(packet)
+        packet_wr   = b""
         try:
-            self.pcap_file.write(packet_fuzz)
+            packet_wr = packet_fuzz.build();
         except:
-            self.pcap_file.write(packet)
+            packet_wr = packet.build();
+
+        # GENERATE ERROR PACKETS
+        if (random.randint(0, 99) < self.pkt_err_probability):
+            packet_wr = packet_wr[0:random.randint(0,len(packet_wr))];
+        # SET MINIMAL SIZE
+        if (len(packet_wr) < self.pkt_size_min):
+            packet_wr += b"\0" * (self.pkt_size_min -len(packet_wr))
+        self.pcap_file.write(packet_wr);
+
 
