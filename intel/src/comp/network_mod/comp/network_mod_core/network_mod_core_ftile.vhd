@@ -926,6 +926,29 @@ architecture FULL of NETWORK_MOD_CORE is
         return speed_cap_v;
     end function;
 
+    -- Return FS-FEC ability for selected Ethernet type
+    function rsfec_cap_f return std_logic is
+        variable fec_cap : std_logic;
+    begin
+        fec_cap := '0';
+        case ETH_PORT_SPEED is
+            when 400 => fec_cap := '1';
+            when 200 => fec_cap := '1';
+            when 100 =>
+                if (LANES/ETH_PORT_CHAN) = 4 then
+                    fec_cap := '0';  -- 4 lane NRZ mode: FEC off
+                else
+                    fec_cap := '1';  -- 1 or 2 lane PAM4 mode: FEC on
+                end if;
+            when 50  => fec_cap := '1';
+            when 40  => fec_cap := '0';
+            when 25  => fec_cap := '1';
+            when others => fec_cap := '0'; -- 10GE
+        end case;
+        return fec_cap;
+    end function;
+
+
     -- =========================================================================
     --                               CONSTANTS
     -- =========================================================================
@@ -947,6 +970,7 @@ architecture FULL of NETWORK_MOD_CORE is
     constant RX_MAC_ERROR_WIDTH     : natural := rx_mac_error_width_f;
     constant RX_MAC_STATUS_WIDTH    : natural := rx_mac_status_width_f;
     constant PCS_LANES_NUM          : natural := pcs_lanes_num_f;
+    constant RSFEC_CAP              : std_logic := rsfec_cap_f;
 
     constant MI_ADDR_BASES_PHY      : natural := ETH_PORT_CHAN;
     constant MGMT_OFF               : std_logic_vector(MI_ADDR_WIDTH_PHY-1 downto 0) := X"0004_0000";
@@ -1100,6 +1124,8 @@ begin
             SPEED      => ETH_PORT_SPEED,
             SPEED_CAP  => SPEED_CAP,
             DEVICE     => DEVICE,
+            RSFEC_ABLE => RSFEC_CAP,
+            AN_ABLE    => '0',
             DRP_DWIDTH => MI_DATA_WIDTH_PHY,
             DRP_AWIDTH => 32
         )
