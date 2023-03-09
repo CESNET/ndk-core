@@ -145,12 +145,14 @@ class scoreboard #(ETH_STREAMS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS,
             if (previs == 0) begin
                 string msg = "";
                 $sformat(msg, "\n\tRESET DESIGN scoreboard compared data before reset");
-                for (int unsigned it = 0; it < ETH_STREAMS; it++) begin
-                    $sformat(msg, "%s\n\t\t ETH [%0d] compared Header %0d Packets %0d", msg, it, eth_mvb_cmp[it].compared, eth_mfb_cmp[it].compared); 
+                for(int it = 0; it < ETH_STREAMS; it++) begin
+                    $swrite(msg, "%s\n\tETH[%0d] MFB %s", msg, it, eth_mfb_cmp[it].info());
+                    $swrite(msg, "%s\n\tETH[%0d] MVB %s", msg, it, eth_mvb_cmp[it].info());
                 end
 
-                for (int unsigned it = 0; it < DMA_STREAMS; it++) begin
-                    $sformat(msg, "%s\n\t\t DMA [%0d] compared Header %0d Packets %0d", msg, it, dma_mvb_cmp[it].compared, dma_mfb_cmp[it].compared); 
+                for(int it = 0; it < DMA_STREAMS; it++) begin
+                    $swrite(msg, "%s\n\tDMA[%0d] MFB %s", msg, it, dma_mvb_cmp[it].info());
+                    $swrite(msg, "%s\n\tDMA[%0d] MVB %s", msg, it, dma_mvb_cmp[it].info());
                 end
                 `uvm_info(this.get_full_name(), msg, UVM_LOW);
             end
@@ -169,60 +171,35 @@ class scoreboard #(ETH_STREAMS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS,
         previs = tr.reset;
     endfunction
 
+    virtual function int unsigned success();
+        int unsigned ret = 1;
 
-    task watch_dog();
-        logic stack;
-        int unsigned old_compare_eth_header[ETH_STREAMS] = '{ETH_STREAMS{0}};
-        int unsigned old_compare_eth_packet[ETH_STREAMS] = '{ETH_STREAMS{0}};
-        int unsigned old_compare_dma_header[DMA_STREAMS] = '{DMA_STREAMS{0}};
-        int unsigned old_compare_dma_packet[DMA_STREAMS] = '{DMA_STREAMS{0}};
-
-        forever begin
-            do begin
-                for (int unsigned it = 0; it < ETH_STREAMS; it ++) begin
-                    old_compare_eth_header[it] = eth_mvb_cmp[it].compared;
-                    old_compare_eth_packet[it] = eth_mfb_cmp[it].compared; //compare_eth_packet[it];
-                end
-
-                for (int unsigned it = 0; it < DMA_STREAMS; it ++) begin
-                    old_compare_dma_header[it] = dma_mvb_cmp[it].compared;
-                    old_compare_dma_packet[it] = dma_mfb_cmp[it].compared;
-                end
-
-                #2000ns; //wait time
-
-                stack = 0;
-
-                for (int unsigned it = 0; it < ETH_STREAMS; it ++) begin
-                    stack |= old_compare_eth_header[it] != eth_mvb_cmp[it].compared;
-                    stack |= old_compare_eth_packet[it] != eth_mfb_cmp[it].compared;
-                end
-
-                for (int unsigned it = 0; it < DMA_STREAMS; it ++) begin
-                    stack |= old_compare_dma_header[it] != dma_mvb_cmp[it].compared;
-                    stack |= old_compare_dma_packet[it] != dma_mfb_cmp[it].compared;
-                end
-            end while(stack == 1'b0);
-            `uvm_error (this.get_full_name(), "\n\tDesign is probubly stuck\n");
-            errors++;
+        for(int it = 0; it < ETH_STREAMS; it++) begin
+            ret |= eth_mvb_cmp[it].success();
+            ret |= eth_mfb_cmp[it].success();
         end
-    endtask
+
+        for(int it = 0; it < DMA_STREAMS; it++) begin
+            ret |= dma_mvb_cmp[it].success();
+            ret |= dma_mfb_cmp[it].success();
+        end
+        ret &= (errors == 0);
+
+        return ret;
+    endfunction
+
 
     function int unsigned used();
         int unsigned ret = 0;
 
         for(int it = 0; it < ETH_STREAMS; it++) begin
             ret |= eth_mvb_cmp[it].used();
-            ret |= eth_mvb_cmp[it].errors != 0;
             ret |= eth_mfb_cmp[it].used();
-            ret |= eth_mfb_cmp[it].errors != 0;
         end
 
         for(int it = 0; it < DMA_STREAMS; it++) begin
             ret |= dma_mvb_cmp[it].used();
-            ret |= dma_mvb_cmp[it].errors != 0;
             ret |= dma_mfb_cmp[it].used();
-            ret |= dma_mfb_cmp[it].errors != 0;
         end
         ret |= m_model.used();
 
@@ -233,17 +210,17 @@ class scoreboard #(ETH_STREAMS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS,
         string str = "";
 
         for(int it = 0; it < ETH_STREAMS; it++) begin
-            $swrite(str, "%s\n\tETH[%0d] wait on    %d mvb %d mfb transactions from DUT", str, it, eth_mvb_cmp[it].model_items.size(), eth_mfb_cmp[it].model_items.size());
-            $swrite(str, "%s\n\tETH[%0d] copared transaction Headers %0d Packets %d", str, it, eth_mvb_cmp[it].compared, eth_mfb_cmp[it].compared);
+            $swrite(str, "%s\n\tETH[%0d] MFB %s", str, it, eth_mfb_cmp[it].info());
+            $swrite(str, "%s\n\tETH[%0d] MVB %s", str, it, eth_mvb_cmp[it].info());
         end
 
         for(int it = 0; it < DMA_STREAMS; it++) begin
-            $swrite(str, "%s\n\tDMA[%0d] wait on    %d mvb %d mfb transactions from DUT", str, it, dma_mvb_cmp[it].model_items.size(), dma_mfb_cmp[it].model_items.size());
-            $swrite(str, "%s\n\tDMA[%0d] copared transaction Headers %0d Packets %0d ", str, it,   dma_mvb_cmp[it].compared, dma_mfb_cmp[it].compared);
+            $swrite(str, "%s\n\tDMA[%0d] MFB %s", str, it, dma_mvb_cmp[it].info());
+            $swrite(str, "%s\n\tDMA[%0d] MVB %s", str, it, dma_mvb_cmp[it].info());
         end
 
         $swrite(str, "%s\n\tother errors %0d\n\tModel working %b", str, errors, m_model.used());
-        if (errors == 0 && this.used() == 0) begin
+        if (this.used() == 0 && this.success()) begin
             `uvm_info(get_type_name(), {str, "\n\n\t---------------------------------------\n\t----     VERIFICATION SUCCESS      ----\n\t---------------------------------------"}, UVM_NONE)
         end else begin
             `uvm_info(get_type_name(), {str, "\n\n\t---------------------------------------\n\t----     VERIFICATION FAIL      ----\n\t---------------------------------------"}, UVM_NONE)
