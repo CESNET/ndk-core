@@ -49,6 +49,10 @@ proc dts_build_netcope {} {
     if {$BOOT_TYPE == 2 || $BOOT_TYPE == 3} {
         append ret "boot:" [dts_boot_controller $ADDR_BOOT_CTRL $BOOT_TYPE]
     }
+    if {$BOOT_TYPE == 5} {
+        # OFS PMCI BOOT component
+        append ret "boot:" [dts_ofs_pmci $ADDR_BOOT_CTRL]
+    }
 
     append ret [dts_mi_test_space "mi_test_space" $ADDR_TEST_SPACE]
 
@@ -84,6 +88,7 @@ proc dts_build_netcope {} {
     if {$SDM_SYSMON_ARCH == "INTEL_SDM"} {
         set boot_active_serial 0
         if {$BOOT_TYPE == 4} {
+            # ASx4 BOOT via Intel SDM client
             set boot_active_serial 1
         }
         append ret [dts_sdm_controller $ADDR_SDM_SYSMON $boot_active_serial]
