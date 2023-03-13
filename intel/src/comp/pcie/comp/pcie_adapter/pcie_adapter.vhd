@@ -43,6 +43,8 @@ entity PCIE_ADAPTER is
         DEVICE             : string  := "STRATIX10";
         -- Depth of CQ FIFO (R-Tile only)
         CQ_FIFO_ITEMS      : natural := 512;
+        -- Maximum write request (payload) size (in DWORDs)
+        PCIE_MPS_DW        : natural := 512/4;
 
         -- =====================================================================
         -- AXI configuration
@@ -457,6 +459,7 @@ begin
             MFB_UP_META_WIDTH   => 128+32,
             MFB_DOWN_META_WIDTH => 128+32+3,
             MTC_FIFO_DEPTH      => CQ_FIFO_ITEMS,
+            PCIE_MPS_DW         => PCIE_MPS_DW,
             ENDPOINT_TYPE       => ENDPOINT_TYPE,
             DEVICE              => DEVICE
         )
