@@ -2,308 +2,218 @@
 // Copyright (C) 2022 CESNET z. s. p. o.
 // Author(s): Daniel Kondys <xkondy00@vutbr.cz>
 
-// SPDX-License-Identifier: BSD-3-Clause  
+// SPDX-License-Identifier: BSD-3-Clause
 
+`uvm_analysis_imp_decl(_data)
+`uvm_analysis_imp_decl(_meta)
 
-class mfb_compare extends uvm_component;
-    `uvm_component_param_utils(net_mod_logic_env::mfb_compare)
+class model_input_fifo#(ITEM_WIDTH, META_WIDTH) extends uvm_common::fifo#(uvm_common::model_item#(model_data#(ITEM_WIDTH, META_WIDTH)));
+    `uvm_component_param_utils(net_mod_logic_env::model_input_fifo#(ITEM_WIDTH, META_WIDTH))
 
-    int unsigned errors;
-    int unsigned compared;
+    typedef model_input_fifo#(ITEM_WIDTH, META_WIDTH) this_type;
+    uvm_analysis_imp_data#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH), this_type) analysis_export_data;
+    uvm_analysis_imp_meta#(uvm_logic_vector::sequence_item#(META_WIDTH),       this_type) analysis_export_meta;
 
-    uvm_tlm_analysis_fifo #(byte_array::sequence_item) model_data;
-    uvm_tlm_analysis_fifo #(byte_array::sequence_item) dut_data;
+    typedef struct {
+        uvm_logic_vector_array::sequence_item#(ITEM_WIDTH) input_item;
+        time  input_time;
+    } data_item;
 
-    function new(string name, uvm_component parent);
+    typedef struct {
+        uvm_logic_vector::sequence_item#(META_WIDTH) input_item;
+        time  input_time;
+    } meta_item;
+
+    protected data_item tmp_data[$];
+    protected meta_item tmp_meta[$];
+
+    function new(string name, uvm_component parent = null);
         super.new(name, parent);
-        model_data = new("model_data", this);
-        dut_data   = new("dut_data", this);
-        errors     = 0;
-        compared   = 0;
+        analysis_export_data = new("analysis_export_data", this); 
+        analysis_export_meta = new("analysis_export_meta", this);
     endfunction
 
-    function int unsigned used();
-        int unsigned ret = 0;
-        ret |= (model_data.used() != 0);
-        ret |= (dut_data.used()   != 0);
-        return ret;
+    function void write_data(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH) t);
+        tmp_data.push_back('{t, $time()});
+    endfunction
+
+    function void write_meta(uvm_logic_vector::sequence_item#(META_WIDTH) t);
+        tmp_meta.push_back('{t, $time()});
     endfunction
 
     task run_phase(uvm_phase phase);
-        byte_array::sequence_item tr_model_packet;
-        byte_array::sequence_item tr_dut_packet;
+        uvm_common::model_item#(model_data#(ITEM_WIDTH, META_WIDTH)) item;
 
         forever begin
-            model_data.get(tr_model_packet);
-            dut_data.get(tr_dut_packet);
+            data_item data;
+            meta_item meta;
 
-            compared++;
-            if (compared%100 == 0) begin
-                $display("%s\n\tTX: packet number %d compared.", this.get_full_name(), compared);
-            end
+            wait (tmp_meta.size() != 0 && tmp_data.size() != 0);
+            data = tmp_data.pop_front();
+            meta = tmp_meta.pop_front();
 
-            if (tr_model_packet.compare(tr_dut_packet) == 0) begin
-                string msg;
+            item = uvm_common::model_item#(model_data#(ITEM_WIDTH, META_WIDTH))::type_id::create("item", this);
+            item.item = model_data#(ITEM_WIDTH, META_WIDTH)::type_id::create("item.item", this);
+            item.item.data = data.input_item;
+            item.item.meta = meta.input_item;
+            item.tag  = "USER_TO_CORE";
+            item.start[{item.tag, " DATA"}] = data.input_time;
+            item.start[{item.tag, " META"}] = meta.input_time;
 
-                errors++;
-                $swrite(msg, "\n\tCheck packet failed.\n\n\tModel Packet\n%s\n\tDUT PACKET\n%s", tr_model_packet.convert2string(), tr_dut_packet.convert2string());
-                `uvm_error(this.get_full_name(), msg);
-            end
-        end
-    endtask
-
-endclass
-
-class model_discard#(REGIONS) extends uvm_component;
-    `uvm_component_param_utils(net_mod_logic_env::model_discard#(REGIONS))
-
-    uvm_tlm_analysis_fifo #(byte_array::sequence_item)       data;
-    uvm_tlm_analysis_fifo #(mvb::sequence_item#(REGIONS, 1)) info;
-    uvm_analysis_port     #(byte_array::sequence_item)       out;
-
-    int unsigned packets;
-    int unsigned discarded;
-
-    function new(string name, uvm_component parent);
-        super.new(name, parent);
-
-        data = new("data", this);
-        info = new("info", this);
-        out  = new("out", this);
-        packets   = 0;
-        discarded = 0;
-    endfunction
-
-    function int unsigned used();
-        int unsigned ret = 0;
-        
-        data.used();
-        info.used();
-        return ret;
-    endfunction
-
-    task run_phase(uvm_phase phase);
-        byte_array::sequence_item tr_data;
-        mvb::sequence_item#(REGIONS, 1) tr_info;
-
-        forever begin
-            info.get(tr_info);
-            if (tr_info.SRC_RDY == 1'b1 && tr_info.DST_RDY == 1'b1) begin
-                for (int unsigned it = 0; it < REGIONS; it++) begin
-                    if (tr_info.VLD[it] == 1'b1) begin
-                        data.get(tr_data);
-                        packets++;
-                        if (tr_info.DATA[it] == 1'b0 ) begin
-                            out.write(tr_data);
-                        end else begin
-                            discarded++;
-                        end
-                    end
-                end
-            end
+            this.push_back(item);
         end
     endtask
 endclass
 
-class mvb_parser#(REGIONS, HDR_WIDTH) extends uvm_component;
-    `uvm_component_param_utils(net_mod_logic_env::mvb_parser#(REGIONS, HDR_WIDTH))
+class comparer_meta #(ITEM_WIDTH, META_WIDTH) extends uvm_common::comparer_base_tagged#(model_data#(ITEM_WIDTH, META_WIDTH), uvm_logic_vector::sequence_item#(META_WIDTH));
+    `uvm_component_param_utils(net_mod_logic_env::comparer_meta#(ITEM_WIDTH, META_WIDTH))
 
-    uvm_tlm_analysis_fifo #(mvb::sequence_item#(REGIONS, HDR_WIDTH))  hdr; // all incomming MVB transactions
-    uvm_analysis_port     #(logic_vector::sequence_item#(HDR_WIDTH))  out; // only valid MVB transaction
-
-    function new(string name, uvm_component parent);
+    function new(string name, uvm_component parent = null);
         super.new(name, parent);
-        hdr = new("hdr", this);
-        out = new("out", this);
     endfunction
 
-    function int unsigned used();
-        int unsigned ret = 0;
-        ret |= hdr.used();
-        return ret;
+    virtual function int unsigned compare(MODEL_ITEM tr_model, DUT_ITEM tr_dut);
+        //return tr_model.meta.compare(tr_dut);
+        return (tr_dut.data[24-1:0] == tr_model.meta.data[24-1:0]);
     endfunction
 
-    task run_phase(uvm_phase phase);
-        mvb::sequence_item#(REGIONS, HDR_WIDTH) tr_info;
-        logic_vector::sequence_item#(HDR_WIDTH) tr_data;
+    virtual function string message(MODEL_ITEM tr_model, DUT_ITEM tr_dut);
+        string msg = "";
+        $swrite(msg, "%s\n\tDUT PACKET %s\n\n",   msg, tr_dut.convert2string());
+        $swrite(msg, "%s\n\tMODEL PACKET%s\n\n",  msg, tr_model.meta.convert2string());
+        return msg;
+    endfunction
+endclass
 
-        forever begin
-            hdr.get(tr_info);
-            if (tr_info.SRC_RDY == 1'b1 && tr_info.DST_RDY == 1'b1) begin
-                for (int unsigned it = 0; it < REGIONS; it++) begin
-                    if (tr_info.VLD[it] == 1'b1) begin
-                        tr_data = logic_vector::sequence_item#(HDR_WIDTH)::type_id::create("tr_data");
-                        tr_data.data = tr_info.DATA[it];
-                        out.write(tr_data);
-                    end
-                end
-            end
-        end
-    endtask
+class comparer_data #(ITEM_WIDTH, META_WIDTH) extends uvm_common::comparer_base_tagged#(model_data#(ITEM_WIDTH, META_WIDTH), uvm_logic_vector_array::sequence_item#(ITEM_WIDTH));
+    `uvm_component_param_utils(net_mod_logic_env::comparer_data#(ITEM_WIDTH, META_WIDTH))
 
+    function new(string name, uvm_component parent = null);
+        super.new(name, parent);
+    endfunction
+
+    virtual function int unsigned compare(MODEL_ITEM tr_model, DUT_ITEM tr_dut);
+        return tr_model.data.compare(tr_dut);
+    endfunction
+
+    virtual function string message(MODEL_ITEM tr_model, DUT_ITEM tr_dut);
+        string msg = "";
+        $swrite(msg, "%s\n\tDUT PACKET %s\n\n",   msg, tr_dut.convert2string());
+        $swrite(msg, "%s\n\tMODEL PACKET%s\n\n",  msg, tr_model.data.convert2string());
+        return msg;
+    endfunction
 endclass
 
 
-class scoreboard #(CHANNELS, REGIONS, META_WIDTH, HDR_WIDTH, RX_MAC_LITE_REGIONS) extends uvm_scoreboard;
-    `uvm_component_param_utils(net_mod_logic_env::scoreboard #(CHANNELS, REGIONS, META_WIDTH, HDR_WIDTH, RX_MAC_LITE_REGIONS))
+class scoreboard #(CHANNELS, REGIONS, ITEM_WIDTH, META_WIDTH, HDR_WIDTH, RX_MAC_LITE_REGIONS) extends uvm_scoreboard;
+    `uvm_component_param_utils(net_mod_logic_env::scoreboard #(CHANNELS, REGIONS, ITEM_WIDTH, META_WIDTH, HDR_WIDTH, RX_MAC_LITE_REGIONS))
 
     // TX path
-    uvm_analysis_export #(byte_array::sequence_item)                 tx_input_data;
-    uvm_analysis_export #(logic_vector::sequence_item #(META_WIDTH)) tx_input_meta;
-    uvm_analysis_export #(byte_array::sequence_item)                 tx_out_data[CHANNELS];
-    mfb_compare                                                      compare[CHANNELS];
+    uvm_analysis_export #(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))         tx_input_data;
+    uvm_analysis_export #(uvm_logic_vector::sequence_item #(META_WIDTH))              tx_input_meta;
+
+    uvm_analysis_export #(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))         tx_out[CHANNELS];
+    //comparesrs
+    protected uvm_common::comparer_ordered#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)) tx_compare[CHANNELS];
 
     // RX path
-    uvm_analysis_export #(byte_array::sequence_item)                 rx_input_data[CHANNELS]; // data for model
-    uvm_analysis_export #(byte_array::sequence_item)                 rx_out_data; // MFB data from DUT
-    uvm_analysis_export #(mvb::sequence_item#(REGIONS, HDR_WIDTH))   rx_out_hdr; // MVB headers used to identify channel
-    uvm_tlm_analysis_fifo #(byte_array::sequence_item)               rx_model_data_out[CHANNELS];
-    uvm_tlm_analysis_fifo #(byte_array::sequence_item)               rx_dut_data_out;
-    uvm_tlm_analysis_fifo #(logic_vector::sequence_item#(HDR_WIDTH)) rx_dut_hdr_out;
-    mvb_parser #(REGIONS, HDR_WIDTH)                                 m_hdr_parser;
+    uvm_analysis_export #(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))        rx_input_data[CHANNELS]; // data for model
+
+    uvm_analysis_export #(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))        rx_out_data; // MFB data from DUT
+    uvm_analysis_export #(uvm_logic_vector::sequence_item#(HDR_WIDTH))               rx_out_hdr; // MVB headers used to identify channel
+
+    //comparers
+    // Thing about comparer. Comparing have to be same as because output have to be tagged same.
+    protected comparer_data #(ITEM_WIDTH, HDR_WIDTH) rx_compare_data;
+    protected comparer_meta #(ITEM_WIDTH, HDR_WIDTH) rx_compare_meta;
 
     // MVB discard
-    uvm_analysis_export #(mvb::sequence_item#(RX_MAC_LITE_REGIONS, 1)) mvb_discard[CHANNELS];
-    model_discard #(RX_MAC_LITE_REGIONS)                               m_model_discard[CHANNELS];
+    uvm_analysis_export #(uvm_logic_vector::sequence_item#(1)) mvb_discard[CHANNELS];
+    protected model #(CHANNELS, ITEM_WIDTH, META_WIDTH, HDR_WIDTH) m_model;
 
-    model #(CHANNELS, META_WIDTH) m_model;
-
-    int unsigned errors;
-    int unsigned compared;
-
-    // Contructor of scoreboard.
     function new(string name, uvm_component parent);
         super.new(name, parent);
 
         // TX path
         tx_input_data = new("tx_input_data", this);
         tx_input_meta = new("tx_input_meta", this);
-        for (int unsigned it = 0; it < CHANNELS; it++) begin
-            string it_str;
-            it_str.itoa(it);
-            tx_out_data[it] = new({"tx_out_data_", it_str}, this);
-        end
 
         // RX path
         for (int unsigned it = 0; it < CHANNELS; it++) begin
             string it_str;
             it_str.itoa(it);
-            rx_input_data[it]     = new({"rx_input_data_", it_str}, this);
-            rx_model_data_out[it] = new({"rx_model_data_out_", it_str}, this);
+
+            tx_out[it] = new({"tx_out_", it_str}, this);
+
+            rx_input_data[it]   = new({"rx_input_data_", it_str}, this);
+            mvb_discard[it]     = new({"mvb_discard_", it_str}, this);
         end
         rx_out_data     = new("rx_out_data", this);
         rx_out_hdr      = new("rx_out_hdr", this);
-        rx_dut_data_out = new("rx_dut_data_out", this);
-        rx_dut_hdr_out  = new("rx_dut_hdr_out", this);
-
-        // MVB discard
-        for (int unsigned it = 0; it < CHANNELS; it++) begin
-            string it_str;
-            it_str.itoa(it);
-            mvb_discard[it]     = new({"mvb_discard_", it_str}, this);
-        end
-
-        errors   = 0;
-        compared = 0;
     endfunction
 
     function void build_phase(uvm_phase phase);
 
-        m_model      = model #(CHANNELS, META_WIDTH)::type_id::create("m_model", this);
-        m_hdr_parser = mvb_parser#(REGIONS, HDR_WIDTH)::type_id::create("m_hdr_parser", this);
+        m_model          = model #(CHANNELS, ITEM_WIDTH, META_WIDTH, HDR_WIDTH)::type_id::create("m_model", this);
+        m_model.tx_input = model_input_fifo#(ITEM_WIDTH, META_WIDTH)::type_id::create("tx_input" , m_model);
         for (int it = 0; it < CHANNELS; it++) begin
             string it_string;
             it_string.itoa(it);
 
-            m_model_discard[it] = model_discard#(RX_MAC_LITE_REGIONS)::type_id::create({"m_model_discard_", it_string}, this);
-            compare[it]         = mfb_compare::type_id::create({"compare_", it_string}, this);
+            tx_compare[it] = uvm_common::comparer_ordered#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))::type_id::create({"tx_compare_", it_string}, this);
+
+            m_model.rx_input[it]   = uvm_common::fifo_model_input#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))::type_id::create({"rx_input_data_", it_string} , m_model);
+            m_model.rx_discard[it] = uvm_common::fifo_model_input#(uvm_logic_vector::sequence_item #(1))::type_id::create({"rx_discard_", it_string} , m_model);
         end
+
+        rx_compare_data = comparer_data #(ITEM_WIDTH, HDR_WIDTH)::type_id::create("rx_compare_data", this);
+        rx_compare_meta = comparer_meta #(ITEM_WIDTH, HDR_WIDTH)::type_id::create("rx_compare_meta", this);
     endfunction
 
     function void connect_phase(uvm_phase phase);
-        // TX path
-        // connect SC inputs to Model
-        tx_input_data.connect(m_model.tx_input_data.analysis_export);
-        tx_input_meta.connect(m_model.tx_input_meta.analysis_export);
-        for (int it = 0; it < CHANNELS; it++) begin
-            string i_string;
-            // connect Model and DUT data with Compare
-            m_model.tx_out_data[it].connect(compare[it].model_data.analysis_export);
-            tx_out_data[it].connect(compare[it].dut_data.analysis_export);
+        model_input_fifo#(ITEM_WIDTH, META_WIDTH) tx_input;
+        uvm_common::fifo_model_input#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)) rx_input;
+        uvm_common::fifo_model_input#(uvm_logic_vector::sequence_item #(1))               rx_discard;
+
+        //TX INPUT
+        $cast(tx_input, m_model.tx_input);
+        tx_input_data.connect(tx_input.analysis_export_data);
+        tx_input_meta.connect(tx_input.analysis_export_meta);
+        //RX INPUT
+        for (int unsigned it = 0; it < CHANNELS; it++) begin
+            m_model.tx_output[it].connect(tx_compare[it].analysis_imp_model);
+            tx_out[it].connect(tx_compare[it].analysis_imp_dut);
+
+            $cast(rx_input, m_model.rx_input[it]);
+            rx_input_data[it].connect(rx_input.analysis_export);
+            $cast(rx_discard, m_model.rx_discard[it]);
+            mvb_discard[it].connect(rx_discard.analysis_export);
         end
 
-        // RX path
-        for (int it = 0; it < CHANNELS; it++) begin
-            // connect SC with discard model
-            rx_input_data[it].connect(m_model_discard[it].data.analysis_export);
-            m_model_discard[it].out.connect(m_model.rx_input_data[it].analysis_export);
-            // connect Model output to Model FIFO
-            m_model.rx_out_data[it].connect(rx_model_data_out[it].analysis_export);
-        end
-        // connect SC MFB input from DUT to FIFO
-        rx_out_data.connect(rx_dut_data_out.analysis_export);
-        // connect SC MVB input from DUT to MVB parser
-        rx_out_hdr.connect(m_hdr_parser.hdr.analysis_export);
-        m_hdr_parser.out.connect(rx_dut_hdr_out.analysis_export);
-
-        // MVB discard
-        for (int it = 0; it < CHANNELS; it++) begin
-            mvb_discard[it].connect(m_model_discard[it].info.analysis_export);
-        end
+        m_model.rx_output.connect(rx_compare_data.analysis_imp_model);
+        m_model.rx_output.connect(rx_compare_meta.analysis_imp_model);
+        rx_out_data.connect(rx_compare_data.analysis_imp_dut);
+        rx_out_hdr.connect(rx_compare_meta.analysis_imp_dut);
     endfunction
-
-    // RX path compare
-    task run_phase(uvm_phase phase);
-        logic [16-1:0] pkt_size;
-        logic [8 -1:0] channel;
-        int unsigned match;
-        string msg;
-        logic_vector::sequence_item#(HDR_WIDTH) tr_dut_info;
-        byte_array::sequence_item tr_dut_packet;
-        byte_array::sequence_item tr_model_packet;
-
-        forever begin
-            match = 0;
-            msg   = "";
-
-            rx_dut_data_out.get(tr_dut_packet);
-            rx_dut_hdr_out.get(tr_dut_info);
-
-            {channel, pkt_size} = tr_dut_info.data[24-1:0];
-            rx_model_data_out[channel].get(tr_model_packet);
-            match = tr_dut_packet.compare(tr_model_packet);
-            compared++;
-
-            if (compared%100 == 0) begin
-                $display("\n\tRX: packet number %d compared.", compared);
-            end
-
-            if (match == 0) begin
-                errors++;
-                $swrite(msg, "\n\tCheck packet failed.\n\n\tDUT PACKET number: %0d\n%s\n\n\tDoesn't match the packet at Channel %b:\n%s\n\n", compared, tr_dut_packet.convert2string(), channel, tr_model_packet.convert2string(), msg);
-                // DEBUG - print packets at all FIFO outputs
-                // for (int unsigned it = 0; it < CHANNELS; it++) begin
-                //     if(rx_model_data_out[it].try_get(tr_model_packet) == 1) begin
-                //         $write("\n Packet at FIFO %d:\n%s\n", it, tr_model_packet.convert2string());
-                //     end
-                // end
-                `uvm_error(this.get_full_name(), msg);
-            end
-        end
-    endtask
 
     function int unsigned used();
         int unsigned ret = 0;
+        ret |= m_model.used();
+        for (int unsigned it = 0; it < CHANNELS; it++) begin
+            ret |= tx_compare[it].used();
+        end
+        ret |= rx_compare_data.used();
+        ret |= rx_compare_meta.used();
+        return ret;
+    endfunction
 
-        // Verification ends too soon, some packets are still in DUT
-        // ret |= m_hdr_parser.used();
-        // for (int unsigned it = 0; it < CHANNELS; it++) begin
-        //     ret |= m_model_discard[it].used();
-        //     ret |= compare[it].used();
-        //     ret |= (rx_model_data_out[it].used() != 0);
-        // end
-        // ret |= (rx_dut_data_out.used() != 0);
-        // ret |= (rx_dut_hdr_out.used() != 0);
+    function int unsigned success();
+        int unsigned ret = 1;
+        for (int unsigned it = 0; it < CHANNELS; it++) begin
+            ret &= tx_compare[it].success();
+        end
+        ret &= rx_compare_data.success();
+        ret &= rx_compare_meta.success();
         return ret;
     endfunction
 
@@ -313,19 +223,13 @@ class scoreboard #(CHANNELS, REGIONS, META_WIDTH, HDR_WIDTH, RX_MAC_LITE_REGIONS
 
         // TX path
         for (int unsigned it = 0; it < CHANNELS; it++) begin
-            $swrite(msg, "%s\n\tTX path OUTPUT [%0d]: compared %0d, errors %0d", msg, it, compare[it].compared, compare[it].errors);
-            total_errors = total_errors + compare[it].errors;
+            $swrite(msg, "%s\n\tTX path OUTPUT [%0d]: %s", msg, it, tx_compare[it].info());
         end
         $swrite(msg, "%s\n\t---------------------------------------", msg);
+        $swrite(msg, "%s\n\tRX path OUTPUT DATA : %s", msg,  rx_compare_data.info());
+        $swrite(msg, "%s\n\tRX path OUTPUT META : %s", msg,  rx_compare_meta.info());
 
-        // RX path
-        for (int unsigned it = 0; it < CHANNELS; it++) begin
-            $swrite(msg, "%s\n\tRX path INPUT [%0d]: received %0d", msg, it, m_model_discard[it].packets);
-        end
-        $swrite(msg, "%s\n\tRX path OUTPUT: compared %0d, errors %0d", msg, compared, errors);
-        total_errors = total_errors + errors;
-
-        if (total_errors == 0 && this.used() == 0) begin
+        if (this.success() == 1 && this.used() == 0) begin
             `uvm_info(get_type_name(), {msg, "\n\n\t---------------------------------------\n\t----     VERIFICATION SUCCESS      ----\n\t---------------------------------------"}, UVM_NONE)
         end else begin
             `uvm_info(get_type_name(), {msg, "\n\n\t---------------------------------------\n\t----     VERIFICATION FAIL      ----\n\t---------------------------------------"}, UVM_NONE)

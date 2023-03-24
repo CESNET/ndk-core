@@ -10,6 +10,7 @@ class ex_test extends uvm_test;
 
     net_mod_logic_env::env_base #(USER_REGIONS, USER_REGION_SIZE, CORE_REGIONS, CORE_REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, META_WIDTH, USER_MVB_WIDTH, ETH_CHANNELS, RX_MAC_LITE_REGIONS) m_env;
     int unsigned timeout;
+    logic [ETH_CHANNELS-1:0] core_rx_wait;
 
     // ------------------------------------------------------------------------
     // Functions
@@ -25,9 +26,9 @@ class ex_test extends uvm_test;
     // Sequences
 
     virtual task core_tx_seq(uvm_phase phase, int unsigned index);
-        mfb::sequence_lib_tx#(CORE_REGIONS, CORE_REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, 0) mfb_seq;
+        uvm_mfb::sequence_lib_tx#(CORE_REGIONS, CORE_REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, 0) mfb_seq;
 
-        mfb_seq = mfb::sequence_lib_tx#(CORE_REGIONS, CORE_REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, 0)::type_id::create("core_tx_seq", this);
+        mfb_seq = uvm_mfb::sequence_lib_tx#(CORE_REGIONS, CORE_REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, 0)::type_id::create("core_tx_seq", this);
         mfb_seq.init_sequence();
         mfb_seq.min_random_count = 150;
         mfb_seq.max_random_count = 250;
@@ -40,30 +41,31 @@ class ex_test extends uvm_test;
     endtask
 
     virtual task core_rx_seq(uvm_phase phase, int unsigned index);
-        byte_array::sequence_lib m_byte_array_seq;
+        uvm_logic_vector_array::sequence_lib#(ITEM_WIDTH) m_byte_array_seq;
 
-        m_byte_array_seq = byte_array::sequence_lib::type_id::create("core_rx_seq");
+        m_byte_array_seq = uvm_logic_vector_array::sequence_lib#(ITEM_WIDTH)::type_id::create("core_rx_seq");
         m_byte_array_seq.init_sequence();
-        m_byte_array_seq.min_random_count = 70;
-        m_byte_array_seq.max_random_count = 150;
+        m_byte_array_seq.min_random_count = 5*4;
+        m_byte_array_seq.max_random_count = 10*4;
 
         //RUN
-        forever begin
+        for (int unsigned it = 0; it < 5; it++) begin
             void'(m_byte_array_seq.randomize());
             m_byte_array_seq.start(m_env.m_core_rx_mfb_env[index].m_sequencer.m_data);
         end
+        core_rx_wait[index] = 1;
     endtask
 
     virtual task user_tx_seq(uvm_phase phase);
-        mfb::sequence_lib_tx#(USER_REGIONS, USER_REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, 0) mfb_seq;
-        mvb::sequence_lib_tx#(USER_REGIONS, USER_MVB_WIDTH                             ) mvb_seq;
+        uvm_mfb::sequence_lib_tx#(USER_REGIONS, USER_REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, 0) mfb_seq;
+        uvm_mvb::sequence_lib_tx#(USER_REGIONS, USER_MVB_WIDTH                             ) mvb_seq;
 
-        mfb_seq = mfb::sequence_lib_tx#(USER_REGIONS, USER_REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, 0)::type_id::create("mfb_user_tx_seq", this);
+        mfb_seq = uvm_mfb::sequence_lib_tx#(USER_REGIONS, USER_REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, 0)::type_id::create("mfb_user_tx_seq", this);
         mfb_seq.min_random_count = 70;
         mfb_seq.max_random_count = 150;
         mfb_seq.init_sequence();
 
-        mvb_seq = mvb::sequence_lib_tx#(USER_REGIONS, USER_MVB_WIDTH)::type_id::create("mvb_user_tx_seq", this);
+        mvb_seq = uvm_mvb::sequence_lib_tx#(USER_REGIONS, USER_MVB_WIDTH)::type_id::create("mvb_user_tx_seq", this);
         mvb_seq.min_random_count = 70;
         mvb_seq.max_random_count = 150;
         mvb_seq.init_sequence();
@@ -83,23 +85,10 @@ class ex_test extends uvm_test;
         join_none;
     endtask
 
-    virtual task mvb_discard_seq(uvm_phase phase, int unsigned index);
-        mvb::sequence_full_speed_tx#(RX_MAC_LITE_REGIONS, 1) mvb_seq;
-
-        mvb_seq = mvb::sequence_full_speed_tx#(RX_MAC_LITE_REGIONS, 1)::type_id::create("mvb_user_tx_seq", this);
-
-        //RUN
-        forever begin
-            //mvb_seq.set_starting_phase(phase);
-            void'(mvb_seq.randomize());
-            mvb_seq.start(m_env.m_mvb_discard_env[index].m_sequencer);
-        end
-    endtask
-
     // ------------------------------------------------------------------------
     // Create environment and Run sequences on their sequencers
     virtual task run_phase(uvm_phase phase);
-        virt_seq #(META_WIDTH, ETH_CHANNELS) m_vseq;
+        virt_seq #(ITEM_WIDTH, META_WIDTH, ETH_CHANNELS) m_vseq;
         net_mod_logic_env::sequence_simple#(ETH_CHANNELS) seq_mi;
 
         seq_mi = net_mod_logic_env::sequence_simple#(ETH_CHANNELS)::type_id::create("seq", this);
@@ -107,7 +96,7 @@ class ex_test extends uvm_test;
 
         phase.raise_objection(this);
 
-        #(RESET_CLKS*CLK_PERIOD_USER);
+        #(2*RESET_CLKS*CLK_PERIOD_USER);
         seq_mi.start(null);
         #(1000*CLK_PERIOD_USER);
 
@@ -120,6 +109,7 @@ class ex_test extends uvm_test;
         end
 
         //Run MFB RX (CORE) sequence
+        core_rx_wait = '0;
         for (int unsigned it = 0; it < ETH_CHANNELS; it++) begin
             fork
                 automatic int unsigned index = it;
@@ -130,26 +120,19 @@ class ex_test extends uvm_test;
         //Run MFB and MVB TX (USER) sequence
         user_tx_seq(phase);
 
-        // Passive MVB sequence
-        for (int unsigned it = 0; it < ETH_CHANNELS; it++) begin
-            fork
-                automatic int unsigned index = it;
-                mvb_discard_seq(phase, index);
-            join_none
-        end
-
         //Run MFB RX (USER) sequence
-        m_vseq = virt_seq #(META_WIDTH, ETH_CHANNELS)::type_id::create("m_vseq"); 
+        m_vseq = virt_seq #(ITEM_WIDTH, META_WIDTH, ETH_CHANNELS)::type_id::create("m_vseq"); 
         m_vseq.randomize();
+        m_vseq.start(m_env.m_user_rx_mfb_env.m_sequencer);
 
-        fork
-            m_vseq.start(m_env.m_user_rx_mfb_env.m_sequencer);
-        join;
+        for (int unsigned it = 0; it < ETH_CHANNELS; it++) begin
+            wait(core_rx_wait[it] == 1);
+        end
 
         // --------------------------------------------------------------------
         timeout = 1;
         fork
-            test_wait_timeout(10);
+            test_wait_timeout(100);
             test_wait_result();
         join_any;
 

@@ -27,9 +27,9 @@ module testbench;
     // RX path
     mfb_if #(CORE_REGIONS, CORE_REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, 0         ) core_mfb_rx[ETH_CHANNELS](CLK_CORE);
     mfb_if #(USER_REGIONS, USER_REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, 0         ) user_mfb_tx              (CLK_USER);
-    mvb_if #(USER_REGIONS, USER_MVB_WIDTH                                      ) user_mvb_tx              (CLK_USER, RESET_USER[0]);
+    mvb_if #(USER_REGIONS, USER_MVB_WIDTH                                      ) user_mvb_tx              (CLK_USER);
     // MVB discard (monitors discard of RX MAC Lites)
-    mvb_if #(RX_MAC_LITE_REGIONS, 1                                            ) mvb_discard[ETH_CHANNELS](CLK_CORE, RESET_CORE[0]);
+    mvb_if #(RX_MAC_LITE_REGIONS, 1                                            ) mvb_discard[ETH_CHANNELS](CLK_CORE);
     // MI
     mi_if  #(MI_DATA_WIDTH, MI_ADDR_WIDTH                                      ) mi_config(MI_CLK);
 
