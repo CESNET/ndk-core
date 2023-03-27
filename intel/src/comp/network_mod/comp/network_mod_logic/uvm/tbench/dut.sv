@@ -77,6 +77,7 @@ module DUT (
             assign mvb_discard[i].DATA    = mvb_data[i];
             assign mvb_discard[i].VLD     = mvb_vld[i];
             assign mvb_discard[i].SRC_RDY = |mvb_vld[i];
+            assign mvb_discard[i].DST_RDY = 1;
         end
 
     endgenerate
@@ -94,6 +95,7 @@ module DUT (
         .MI_ADDR_WIDTH      (MI_ADDR_WIDTH),
         .RESET_USER_WIDTH   (RESET_USER_WIDTH),
         .RESET_CORE_WIDTH   (RESET_CORE_WIDTH),
+        .RESIZE_BUFFER      (RESIZE_BUFFER),
         .DEVICE             (DEVICE),
         .BOARD              (BOARD)
     ) VHDL_DUT_U (

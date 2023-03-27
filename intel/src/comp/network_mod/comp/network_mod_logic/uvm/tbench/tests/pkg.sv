@@ -38,7 +38,8 @@ package test;
 
     parameter DEVICE = "AGILEX";
     parameter BOARD = "DK-DEV-1SDX-P"; // 400G1, DK-DEV-AGI027RES, DK-DEV-1SDX-P
-    parameter RX_MAC_LITE_REGIONS = (BOARD == "DK-DEV-1SDX-P") ? CORE_REGIONS : 2*CORE_REGIONS;
+    parameter RESIZE_BUFFER = 1'b1;
+    parameter RX_MAC_LITE_REGIONS = (RESIZE_BUFFER == 1'b1) ? 2*CORE_REGIONS : CORE_REGIONS;
 
     parameter DRAIN_TIME = 20ns;
     parameter TRANSACTION_COUNT = 1000;
