@@ -39,8 +39,9 @@ module testbench;
     always #(CLK_PERIOD_CORE) CLK_CORE = ~CLK_CORE;
     always #(CLK_PERIOD_CORE) MI_CLK   = ~MI_CLK;
 
+    reset_if reset(CLK_USER);
     // -------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    // Initial reset 
+    // Initial reset
     initial begin
         RESET_USER = '1;
         RESET_CORE = '1;
