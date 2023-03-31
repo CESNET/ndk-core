@@ -49,6 +49,21 @@ class model #(ETH_STREAMS, ETH_RX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_T
 
     function new(string name, uvm_component parent = null);
         super.new(name, parent);
+        for (int unsigned it = 0; it < ETH_STREAMS; it++) begin
+            string it_num;
+            it_num.itoa(it);
+
+            eth_mvb_rx[it] = null;
+            eth_mfb_rx[it] = null;
+        end
+
+        for (int unsigned it = 0; it < DMA_STREAMS; it++) begin
+            string it_num;
+            it_num.itoa(it);
+
+            dma_mvb_rx[it] = null;
+            dma_mfb_rx[it] = null;
+        end
     endfunction
 
     function void build_phase(uvm_phase phase);
@@ -56,8 +71,6 @@ class model #(ETH_STREAMS, ETH_RX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_T
             string it_num;
             it_num.itoa(it);
 
-            eth_mvb_rx[it] = null;
-            eth_mfb_rx[it] = null;
             eth_mvb_tx[it] = new({"eth_mvb_tx_", it_num}, this);
             eth_mfb_tx[it] = new({"eth_mfb_tx_", it_num}, this);
         end
@@ -68,8 +81,6 @@ class model #(ETH_STREAMS, ETH_RX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_T
             string it_num;
             it_num.itoa(it);
 
-            dma_mvb_rx[it] = null;
-            dma_mfb_rx[it] = null;
             dma_mvb_tx[it] = new({"dma_mvb_tx_", it_num}, this);
             dma_mfb_tx[it] = new({"dma_mfb_tx_", it_num}, this);
         end

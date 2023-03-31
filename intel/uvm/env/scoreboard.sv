@@ -50,6 +50,10 @@ class scoreboard #(ETH_STREAMS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS,
         analysis_imp_reset = new("analysis_imp_reset", this);
     endfunction
 
+    function model#(ETH_STREAMS, ETH_RX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, ITEM_WIDTH) model_get();
+        return m_model;
+    endfunction
+
     function void build_phase(uvm_phase phase);
         ///////////////
         // ETH BUILD ANALYSIS EXPORTS
