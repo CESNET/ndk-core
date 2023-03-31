@@ -183,12 +183,10 @@ class env #(ETH_STREAMS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_ST
     endfunction
 
     function void connect_phase(uvm_phase phase);
-        m_resets_app.m_monitor.analysis_port.connect(m_scoreboard.m_model.analysis_imp_reset);
         m_resets_app.m_monitor.analysis_port.connect(m_scoreboard.analysis_imp_reset);
-        //m_resets_app.sync_connect(m_scoreboard.reset_sync);
 
         //connect regmodel to model
-        m_scoreboard.m_model.regmodel_set(m_regmodel.m_regmodel);
+        m_scoreboard.regmodel_set(m_regmodel.m_regmodel);
 
         for (int unsigned it = 0; it < ETH_STREAMS; it++) begin
             string it_num;
