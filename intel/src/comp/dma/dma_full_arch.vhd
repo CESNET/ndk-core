@@ -18,7 +18,7 @@ architecture FULL of DMA is
 
     constant IUSR_MVB_ITEMS    : natural                         := tsel(DMA_400G_DEMO, 4, USR_MVB_ITEMS);
     constant IUSR_MFB_REGIONS  : natural                         := tsel(DMA_400G_DEMO, 4, USR_MFB_REGIONS);
-    constant GLS_MI_OFFSET     : std_logic_vector(32-1 downto 0) := X"0000_0100";
+    constant GLS_MI_OFFSET     : std_logic_vector(32-1 downto 0) := X"0000_0200";
 
     function gls_mi_addr_base_f return slv_array_t is
         variable mi_addr_base_var : slv_array_t(DMA_STREAMS-1 downto 0)(32-1 downto 0);
