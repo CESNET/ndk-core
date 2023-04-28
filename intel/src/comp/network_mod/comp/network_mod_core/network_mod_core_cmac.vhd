@@ -20,23 +20,30 @@ architecture CMAC of NETWORK_MOD_CORE is
 
     component cmac_eth_1x100g
     port (
-        gt0_rxp_in                     : in std_logic;
-        gt0_rxn_in                     : in std_logic;
-        gt1_rxp_in                     : in std_logic;
-        gt1_rxn_in                     : in std_logic;
-        gt2_rxp_in                     : in std_logic;
-        gt2_rxn_in                     : in std_logic;
-        gt3_rxp_in                     : in std_logic;
-        gt3_rxn_in                     : in std_logic;
+        --Vivado 2019.1 and older
+        --gt0_rxp_in                     : in std_logic;
+        --gt0_rxn_in                     : in std_logic;
+        --gt1_rxp_in                     : in std_logic;
+        --gt1_rxn_in                     : in std_logic;
+        --gt2_rxp_in                     : in std_logic;
+        --gt2_rxn_in                     : in std_logic;
+        --gt3_rxp_in                     : in std_logic;
+        --gt3_rxn_in                     : in std_logic;
 
-        gt0_txp_out                    : out std_logic;
-        gt0_txn_out                    : out std_logic;
-        gt1_txp_out                    : out std_logic;
-        gt1_txn_out                    : out std_logic;
-        gt2_txp_out                    : out std_logic;
-        gt2_txn_out                    : out std_logic;
-        gt3_txp_out                    : out std_logic;
-        gt3_txn_out                    : out std_logic;
+        --gt0_txp_out                    : out std_logic;
+        --gt0_txn_out                    : out std_logic;
+        --gt1_txp_out                    : out std_logic;
+        --gt1_txn_out                    : out std_logic;
+        --gt2_txp_out                    : out std_logic;
+        --gt2_txn_out                    : out std_logic;
+        --gt3_txp_out                    : out std_logic;
+        --gt3_txn_out                    : out std_logic;
+
+        --Vivado 2022.1 and newer
+        gt_rxp_in  : in STD_LOGIC_VECTOR ( 3 downto 0 );
+        gt_rxn_in  : in STD_LOGIC_VECTOR ( 3 downto 0 );
+        gt_txp_out : out STD_LOGIC_VECTOR ( 3 downto 0 );
+        gt_txn_out : out STD_LOGIC_VECTOR ( 3 downto 0 );
 
         gt_txusrclk2                   : out std_logic;
         gt_rxusrclk2                   : out std_logic;
@@ -1030,23 +1037,30 @@ begin
 
     cmac_eth_1x100g_i : cmac_eth_1x100g
     port map(
-        gt0_rxp_in  => QSFP_RX_P(0),
-        gt0_rxn_in  => QSFP_RX_N(0),
-        gt1_rxp_in  => QSFP_RX_P(1),
-        gt1_rxn_in  => QSFP_RX_N(1),
-        gt2_rxp_in  => QSFP_RX_P(2),
-        gt2_rxn_in  => QSFP_RX_N(2),
-        gt3_rxp_in  => QSFP_RX_P(3),
-        gt3_rxn_in  => QSFP_RX_N(3),
+        --Vivado 2019.1 and older
+        --gt0_rxp_in  => QSFP_RX_P(0),
+        --gt0_rxn_in  => QSFP_RX_N(0),
+        --gt1_rxp_in  => QSFP_RX_P(1),
+        --gt1_rxn_in  => QSFP_RX_N(1),
+        --gt2_rxp_in  => QSFP_RX_P(2),
+        --gt2_rxn_in  => QSFP_RX_N(2),
+        --gt3_rxp_in  => QSFP_RX_P(3),
+        --gt3_rxn_in  => QSFP_RX_N(3),
 
-        gt0_txn_out => QSFP_TX_N(0),
-        gt0_txp_out => QSFP_TX_P(0),
-        gt1_txn_out => QSFP_TX_N(1),
-        gt1_txp_out => QSFP_TX_P(1),
-        gt2_txn_out => QSFP_TX_N(2),
-        gt2_txp_out => QSFP_TX_P(2),
-        gt3_txn_out => QSFP_TX_N(3),
-        gt3_txp_out => QSFP_TX_P(3),
+        --gt0_txn_out => QSFP_TX_N(0),
+        --gt0_txp_out => QSFP_TX_P(0),
+        --gt1_txn_out => QSFP_TX_N(1),
+        --gt1_txp_out => QSFP_TX_P(1),
+        --gt2_txn_out => QSFP_TX_N(2),
+        --gt2_txp_out => QSFP_TX_P(2),
+        --gt3_txn_out => QSFP_TX_N(3),
+        --gt3_txp_out => QSFP_TX_P(3),
+
+        --Vivado 2022.1 and newer
+        gt_rxp_in  => QSFP_RX_P,
+        gt_rxn_in  => QSFP_RX_N,
+        gt_txp_out => QSFP_TX_P,
+        gt_txn_out => QSFP_TX_N,
 
         gt_txusrclk2   => cmac_gt_tx_clk_322m,
         gt_rxusrclk2   => cmac_gt_rx_clk_322m,
