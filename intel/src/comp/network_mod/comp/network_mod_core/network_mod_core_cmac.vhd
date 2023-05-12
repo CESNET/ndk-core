@@ -530,9 +530,12 @@ architecture CMAC of NETWORK_MOD_CORE is
     signal cmac_gt_txpolarity      : std_logic_vector(4-1 downto 0);
 
     signal cmac_rx_local_fault     : std_logic;
+    signal cmac_rx_remote_fault    : std_logic;
+    signal cmac_rx_local_fault_int : std_logic;
     signal cmac_tx_local_fault     : std_logic;
     signal rx_link_cnt             : unsigned(25-1 downto 0);
     signal rx_link_rst             : std_logic;
+    signal link_up_cntr            : unsigned(25 downto 0);
     signal cmac_reset_rx_datapath  : std_logic;
 
     signal cmac_rx_lbus_data       : slv_array_t(4-1 downto 0)(128-1 downto 0);
@@ -1019,12 +1022,16 @@ begin
     begin
         if rising_edge(cmac_clk_322m) then
             if (cmac_rst_322m = '1') then
-                RX_LINK_UP <= (others => '0');
                 TX_LINK_UP <= (others => '0');
             else
-                RX_LINK_UP(0) <= not cmac_rx_local_fault;
                 TX_LINK_UP(0) <= not cmac_tx_local_fault;
             end if;
+            if (cmac_rx_local_fault = '1') or (cmac_rx_remote_fault = '1') or (cmac_rx_status = '0') then
+                link_up_cntr <= (others => '0');
+            elsif link_up_cntr(link_up_cntr'high) = '0' then
+                link_up_cntr <= link_up_cntr + 1;
+            end if;
+            RX_LINK_UP(0) <= link_up_cntr(link_up_cntr'high);
         end if;
     end process;
 
@@ -1227,7 +1234,7 @@ begin
         stat_rx_got_signal_os        => open,
         stat_rx_hi_ber               => cmac_rx_hi_ber,
         stat_rx_inrangeerr           => open,
-        stat_rx_internal_local_fault => open,
+        stat_rx_internal_local_fault => cmac_rx_local_fault_int, -- high when the rx link is down or pattern generator on
         stat_rx_jabber               => open,
         stat_rx_local_fault          => cmac_rx_local_fault,
         stat_rx_mf_err               => open,
@@ -1261,7 +1268,7 @@ begin
         rx_clk        => cmac_clk_322m,
 
         stat_rx_received_local_fault  => open,
-        stat_rx_remote_fault          => open,
+        stat_rx_remote_fault          => cmac_rx_remote_fault,
         stat_rx_status                => cmac_rx_status,
         stat_rx_stomped_fcs           => open,
         stat_rx_synced                => cmac_rx_synced,
@@ -1327,9 +1334,9 @@ begin
         stat_tx_unicast            => open,
         stat_tx_vlan               => open,
 
-        ctl_tx_enable       => '1',
+        ctl_tx_enable       => (not cmac_rx_remote_fault),
         ctl_tx_send_idle    => '0',
-        ctl_tx_send_rfi     => '0', --TODO
+        ctl_tx_send_rfi     => cmac_rx_local_fault_int,
         ctl_tx_send_lfi     => '0',
         ctl_tx_test_pattern => '0',
 
