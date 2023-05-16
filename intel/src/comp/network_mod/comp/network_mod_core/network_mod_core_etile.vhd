@@ -438,8 +438,41 @@ architecture ETILE of NETWORK_MOD_CORE is
         return speed_cap_v;
     end function;
 
+    -- Select the number of PCS lanes
+    function pcs_lanes_num_f return natural is
+    begin
+        case ETH_PORT_SPEED is
+            when 400 => return 16;
+            when 200 => return 8;
+            when 100 => return 20;
+            when 50  => return 4;
+            when 40  => return 4;
+            when 25  => return 1;
+            when 10  => return 1;
+            when others  => return 1;
+        end case;
+    end function;
+
+    -- Return FS-FEC ability for selected Ethernet type
+    function rsfec_cap_f return std_logic is
+        variable fec_cap : std_logic;
+    begin
+        fec_cap := '0';
+        case ETH_PORT_SPEED is
+            when 400 => fec_cap := '1';
+            when 200 => fec_cap := '1';
+            when 100 => fec_cap := '1';
+            when 50  => fec_cap := '1';
+            when 40  => fec_cap := '0';
+            when 25  => fec_cap := '1';
+            when others => fec_cap := '0'; -- 10GE
+        end case;
+        return fec_cap;
+    end function;
+
     constant SPEED_CAP : std_logic_vector(16-1 downto 0) := speed_cap_f;
-    constant PCS_LANES : natural := tsel(ETH_PORT_SPEED = 100, 20 , 1 ); -- 20 lanes for "100g1" mode, 1 lane for "25g4" and "10g4"
+    constant RSFEC_CAP : std_logic                       := rsfec_cap_f;
+    constant PCS_LANES : natural := pcs_lanes_num_f;
 
     -- =========================================================================
     --                                SIGNALS
@@ -485,6 +518,7 @@ architecture ETILE of NETWORK_MOD_CORE is
     signal rx_block_lock     : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
     signal rx_am_lock        : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
     signal tx_lanes_stable   : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
+    signal ehip_ready        : std_logic_vector(LANES-1 downto 0);
 
     -- MI_PHY for E-tile reconfiguration interfaces (Ethernet, Transceiver (XCVR), RS-FEC)
     -- from MI Indirect Access (-> mi_ia_)
@@ -520,6 +554,8 @@ architecture ETILE of NETWORK_MOD_CORE is
     signal xcvr_inf_drd_phy          : slv_array_t     (LANES-1 downto 0)(MI_DATA_WIDTH_PHY-1 downto 0);
     signal xcvr_inf_drd_phy_res      : slv_array_t     (LANES-1 downto 0)(8                -1 downto 0);
     signal xcvr_inf_drd_phy_res_ser  : std_logic_vector(LANES*            8                -1 downto 0);
+    signal xcvr_init_status          : slv_array_t(ETH_PORT_CHAN-1 downto 0)(32-1 downto 0);
+    signal init_lane_status          : slv_array_t(LANES-1 downto 0)(32-1 downto 0);
     -- rsfec reconfig interface
     signal rsfec_inf_dwr_phy      : std_logic_vector(MI_DATA_WIDTH_PHY-1 downto 0);
     signal rsfec_inf_dwr_phy_res  : std_logic_vector(8                -1 downto 0);
@@ -590,13 +626,16 @@ begin
 
         mgmt_i : entity work.mgmt
         generic map (
-            NUM_LANES => PCS_LANES,
-            PMA_LANES => LANES_PER_CHANNEL,
-            SPEED     => ETH_PORT_SPEED,
-            SPEED_CAP => SPEED_CAP,
-            DEVICE    => DEVICE,
-            DRP_DWIDTH => MI_DATA_WIDTH_PHY,
-            DRP_AWIDTH => 32
+            NUM_LANES     => PCS_LANES,
+            PMA_LANES     => LANES_PER_CHANNEL,
+            SPEED         => ETH_PORT_SPEED,
+            SPEED_CAP     => SPEED_CAP,
+            RSFEC_ABLE    => RSFEC_CAP,
+            RSFEC_EN_INIT => RSFEC_CAP,
+            AN_ABLE       => '0',
+            DEVICE        => DEVICE,
+            DRP_DWIDTH    => MI_DATA_WIDTH_PHY,
+            DRP_AWIDTH    => 32
         )
         port map (
             RESET         => MI_RESET_PHY,
@@ -633,7 +672,7 @@ begin
             PMA_RESET     => mgmt_pma_reset(i), --TODO
             PMA_RETUNE    => open,
             PMA_CONTROL   => open,
-            PMA_STATUS    => (others => '0'),
+            PMA_STATUS    => xcvr_init_status(i),
             PMA_PTRN_EN   => open,
             PMA_TX_DIS    => open,
             PMA_RX_OK     => (others => rx_pcs_ready(i)), --TODO
@@ -732,6 +771,26 @@ begin
                     mi_ia_drdy <= mi_ia_drdy_phy(i);
                     mi_ia_ardy <= mi_ia_ardy_phy(i);
             end case;
+
+            -- XCVR initialization debug - can be removed in the future to save some resources
+            xcvr_init_status(i) <= (others => '0');
+            case mi_ia_sel is
+                when "0010" =>
+                    if (LANES_PER_CHANNEL > 1) then
+                        xcvr_init_status(i) <= init_lane_status(1 + i*LANES_PER_CHANNEL); -- XCVR1
+                    end if;
+                when "0011" =>
+                    if (LANES_PER_CHANNEL > 2) then
+                        xcvr_init_status(i) <= init_lane_status(2 + i*LANES_PER_CHANNEL); -- XCVR2
+                    end if;
+                when "0100" =>
+                    if (LANES_PER_CHANNEL > 3) then
+                        xcvr_init_status(i) <= init_lane_status(3 + i*LANES_PER_CHANNEL); -- XCVR3
+                    end if;
+                when others =>
+                    xcvr_init_status(i) <= init_lane_status(0 + i*LANES_PER_CHANNEL); -- XCVR0
+            end case;
+
         end process;
 
     end generate;
@@ -756,17 +815,46 @@ begin
     -- xcvr --------------------------------------------------------------------
     xcvr_inf_dwr_phy  <= mi_ia_dwr_phy (LANES + ETH_PORT_CHAN-1 downto ETH_PORT_CHAN);
     xcvr_inf_addr_phy <= mi_ia_addr_phy(LANES + ETH_PORT_CHAN-1 downto ETH_PORT_CHAN);
-    xcvr_inf_rd_phy   <= mi_ia_rd_phy  (LANES + ETH_PORT_CHAN-1 downto ETH_PORT_CHAN);
-    xcvr_inf_wr_phy   <= mi_ia_wr_phy  (LANES + ETH_PORT_CHAN-1 downto ETH_PORT_CHAN);
     mi_ia_ardy_phy(LANES + ETH_PORT_CHAN-1 downto ETH_PORT_CHAN) <= not xcvr_inf_ardy_phy_n;
     mi_ia_drd_phy (LANES + ETH_PORT_CHAN-1 downto ETH_PORT_CHAN) <= xcvr_inf_drd_phy;
 
     xcvr_reconfig_inf_res_g: for i in LANES-1 downto 0 generate
+        signal init_busy      : std_logic;
+        signal init_addr      : std_logic_vector(18 downto 0);
+        signal init_read      : std_logic;
+        signal init_write     : std_logic;
+        signal init_writedata : std_logic_vector(31 downto 0);
+
+        constant ETH_CHAN : natural := i / LANES_PER_CHANNEL;
+
+    begin
+
         mi_ia_drdy_phy(i + ETH_PORT_CHAN) <= xcvr_inf_rd_phy(i) and not xcvr_inf_ardy_phy_n(i); -- DRDY not used on the xcvr inf
 
-        xcvr_inf_dwr_phy_res (i) <= xcvr_inf_dwr_phy (i)(8 -1 downto 0);
-        xcvr_inf_addr_phy_res(i) <= xcvr_inf_addr_phy(i)(19-1 downto 0);
-        xcvr_inf_drd_phy(i) <= (8-1 downto 0 => xcvr_inf_drd_phy_res(i), others => '0');
+        xcvr_inf_rd_phy      (i) <= mi_ia_rd_phy(ETH_PORT_CHAN+i)       when init_busy = '0' else init_read;
+        xcvr_inf_wr_phy      (i) <= mi_ia_wr_phy(ETH_PORT_CHAN+i)       when init_busy = '0' else init_write;
+        xcvr_inf_dwr_phy_res (i) <= xcvr_inf_dwr_phy (i)(8 -1 downto 0) when init_busy = '0' else init_writedata(8 -1 downto 0);
+        xcvr_inf_addr_phy_res(i) <= xcvr_inf_addr_phy(i)(19-1 downto 0) when init_busy = '0' else init_addr;
+        xcvr_inf_drd_phy     (i) <= (8-1 downto 0 => xcvr_inf_drd_phy_res(i), others => '0');
+
+        xcvr_init: entity work.etile_xcvr_init
+        port map (
+            RST              => RESET_ETH or mgmt_pma_reset(ETH_CHAN),
+            XCVR_RDY         => ehip_ready(i),
+            CLK              => MI_CLK_PHY,
+            BUSY             => init_busy,
+            DONE             => open,
+            -- AVMM
+            ADDRESS          => init_addr,
+            READ             => init_read,
+            WRITE            => init_write,
+            READDATA         => xcvr_inf_drd_phy(i),
+            WRITEDATA        => init_writedata,
+            WAITREQUEST      => xcvr_inf_ardy_phy_n(i),
+            --
+            STATE            => init_lane_status(i) -- TBD: debug purposes only. Can be left open in the future
+         );
+
     end generate;
 
     xcvr_inf_dwr_phy_res_ser  <= slv_array_ser(xcvr_inf_dwr_phy_res);
@@ -876,7 +964,7 @@ begin
                 o_rsfec_reconfig_waitrequest  => rsfec_inf_ardy_phy_n,
                 o_tx_lanes_stable             => tx_lanes_stable(0),
                 o_rx_pcs_ready                => rx_pcs_ready(0),
-                o_ehip_ready                  => open,
+                o_ehip_ready                  => ehip_ready(0),
                 o_rx_block_lock               => rx_block_lock(0),
                 o_rx_am_lock                  => rx_am_lock(0),
                 o_rx_hi_ber                   => rx_hi_ber(0),
@@ -926,6 +1014,8 @@ begin
                 i_tx_pause                    => '0',
                 o_rx_pause                    => open
             );
+
+            ehip_ready(LANES-1 downto 1) <= (others => ehip_ready(0));
 
             process(etile_clk_out)
             begin
@@ -1102,7 +1192,7 @@ begin
                 o_sl_eth_reconfig_waitrequest    => eth_inf_ardy_phy_n,
                 o_sl_tx_lanes_stable             => open,
                 o_sl_rx_pcs_ready                => rx_pcs_ready,
-                o_sl_ehip_ready                  => open,
+                o_sl_ehip_ready                  => ehip_ready,
                 o_sl_rx_block_lock               => rx_block_lock,
                 o_sl_local_fault_status          => open,
                 o_sl_remote_fault_status         => open,
@@ -1320,7 +1410,7 @@ begin
                 o_sl_eth_reconfig_waitrequest    => eth_inf_ardy_phy_n,
                 o_sl_tx_lanes_stable             => open,
                 o_sl_rx_pcs_ready                => rx_pcs_ready,
-                o_sl_ehip_ready                  => open,
+                o_sl_ehip_ready                  => ehip_ready,
                 o_sl_rx_block_lock               => rx_block_lock,
                 o_sl_local_fault_status          => open,
                 o_sl_remote_fault_status         => open,

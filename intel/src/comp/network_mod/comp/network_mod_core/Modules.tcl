@@ -83,6 +83,7 @@ if { $ARCHGRP == "E_TILE"} {
     #lappend MOD "$DK_1SDX_IP_BASE/etile_eth_4x10g.ip"
 
     # Source files for implemented component
+    lappend MOD "$ENTITY_BASE/etile_init.vhd"
     lappend MOD "$ENTITY_BASE/network_mod_core_etile.vhd"
 }
  
