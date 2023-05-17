@@ -1191,7 +1191,7 @@ begin
                 o_sl_eth_reconfig_readdata_valid => eth_inf_drdy_phy,
                 i_sl_eth_reconfig_writedata      => eth_inf_dwr_phy_ser,
                 o_sl_eth_reconfig_waitrequest    => eth_inf_ardy_phy_n,
-                o_sl_tx_lanes_stable             => open,
+                o_sl_tx_lanes_stable             => tx_lanes_stable,
                 o_sl_rx_pcs_ready                => rx_pcs_ready,
                 o_sl_ehip_ready                  => ehip_ready,
                 o_sl_rx_block_lock               => rx_block_lock,
@@ -1235,7 +1235,7 @@ begin
                         RX_LINK_UP <= (others => '0');
                         TX_LINK_UP <= (others => '0');
                     else
-                        RX_LINK_UP <= rx_pcs_ready and rx_block_lock and rx_am_lock;
+                        RX_LINK_UP <= rx_pcs_ready and rx_block_lock;
                         TX_LINK_UP <= tx_lanes_stable;
                     end if;
                 end if;
@@ -1409,7 +1409,7 @@ begin
                 o_sl_eth_reconfig_readdata_valid => eth_inf_drdy_phy,
                 i_sl_eth_reconfig_writedata      => eth_inf_dwr_phy_ser,
                 o_sl_eth_reconfig_waitrequest    => eth_inf_ardy_phy_n,
-                o_sl_tx_lanes_stable             => open,
+                o_sl_tx_lanes_stable             => tx_lanes_stable,
                 o_sl_rx_pcs_ready                => rx_pcs_ready,
                 o_sl_ehip_ready                  => ehip_ready,
                 o_sl_rx_block_lock               => rx_block_lock,
@@ -1453,7 +1453,7 @@ begin
                         RX_LINK_UP <= (others => '0');
                         TX_LINK_UP <= (others => '0');
                     else
-                        RX_LINK_UP <= rx_pcs_ready and rx_block_lock and rx_am_lock;
+                        RX_LINK_UP <= rx_pcs_ready and rx_block_lock;
                         TX_LINK_UP <= tx_lanes_stable;
                     end if;
                 end if;
