@@ -7,6 +7,7 @@
 library IEEE;
 use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all;
+use IEEE.math_real.all;
 
 use work.math_pack.all;
 use work.type_pack.all;
@@ -16,12 +17,17 @@ use unisim.vcomponents.all;
 
 architecture USP of COMMON_CLK_GEN is
 
+    function ceil_to_0125 (ref_mult : real ) return real is
+    begin
+        return ceil((ref_mult + 0.125 - 0.001)/0.125)*0.125;
+    end function;
+
     -- Period (in ns) of input reference clock
     constant CLK_PERIOD : real := (real(1e3)/real(REFCLK_FREQ));
 
     constant BASE_FREQ   : real    := 1200.0;
     constant REFCLK_DIV  : natural := 2;
-    constant REFCLK_MULT : real    := BASE_FREQ/(real(REFCLK_FREQ)/real(REFCLK_DIV));
+    constant REFCLK_MULT : real    := ceil_to_0125(BASE_FREQ/(real(REFCLK_FREQ)/real(REFCLK_DIV)));
 
     constant CLK0_FREQ : natural := 400;
     constant CLK1_FREQ : natural := 300;
