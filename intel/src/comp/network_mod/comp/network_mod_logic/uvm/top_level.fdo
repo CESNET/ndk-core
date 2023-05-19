@@ -18,7 +18,7 @@ set COMPONENTS [list \
 ]
 
 # Disable Code Coverage
-set SIM_FLAGS(CODE_COVERAGE) "true"
+set SIM_FLAGS(CODE_COVERAGE) "false"
 set SIM_FLAGS(EXTRA_VFLAGS) "+UVM_VERBOSITY=UVM_NONE +UVM_TESTNAME=test::ex_test -uvmcontrol=all +UVM_MAX_QUIT_COUNT=1"
 
 # Global include file for compilation
@@ -30,9 +30,8 @@ source "$SIG_FILE"
 puts "Std Arith Warnings - Disabled"
 set StdArithNoWarnings 1
 set NumericStdNoWarnings 1
-#nb_sim_run
-restart -f
-run -all
+
+nb_sim_run
 
 # Reports
 # Uncomment lines below to generate html coce coverage report
