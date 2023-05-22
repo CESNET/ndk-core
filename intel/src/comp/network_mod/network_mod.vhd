@@ -43,6 +43,7 @@ architecture FULL of NETWORK_MOD is
             case ETH_PORT_SPEED(0) is
                 when 100    => return 8;
                 when 25     => return 1;
+                when 40     => return 4;
                 when 10     => return 1;
                 when others => return 0;
             end case;
