@@ -1113,6 +1113,7 @@ begin
     signal mi_ia_addr   : std_logic_vector(32-1 downto 0);
     signal mi_ia_dwr    : std_logic_vector(MI_DATA_WIDTH_PHY-1 downto 0);
     signal mi_ia_ardy   : std_logic;
+    signal ia_ardy_vld  : std_logic;
     signal ia_rd_sel    : std_logic_vector(mi_ia_sel'range);
     signal ia_rd        : std_logic;
 
@@ -1179,7 +1180,7 @@ begin
             DRPEN         => mi_ia_en,
             DRPWE         => mi_ia_we_phy,
             DRPADDR       => mi_ia_addr,
-            DRPARDY       => mi_ia_ardy,
+            DRPARDY       => (mi_ia_ardy and ia_ardy_vld),
             DRPDI         => mi_ia_dwr,
             DRPSEL        => mi_ia_sel
         );
@@ -1191,6 +1192,8 @@ begin
                 if mi_ia_en = '1' then
                     ia_rd_sel <= mi_ia_sel;
                 end if;
+                -- DRPARDY is valid earliest one clock cycle after DRPEN 
+                ia_ardy_vld <= mi_ia_en;
                 if (mi_ia_drdy = '1') then
                     ia_rd <= '0';
                 elsif (mi_ia_en = '1') and (mi_ia_we_phy = '0') then
