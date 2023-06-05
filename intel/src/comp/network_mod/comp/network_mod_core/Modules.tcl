@@ -15,6 +15,7 @@ set DK_1SDX_IP_BASE     "$CARDS_BASE/dk-dev-1sdx-p/src/ip"
 set DK_AGI_IP_BASE      "$CARDS_BASE/dk-dev-agi027res/src/ip"
 set AGI_FH400G_IP_BASE  "$CARDS_BASE/agi-fh400g/src/ip"
 set CMAC_IP_BASE        "$CARDS_BASE/fb4cgg3/src/ip"
+set 40GE_BASE           "$OFM_PATH/comp/nic/eth_phy/40ge"
 
 # Packages
 lappend PACKAGES "$OFM_PATH/comp/base/pkg/math_pack.vhd"
@@ -87,7 +88,7 @@ if { $ARCHGRP == "E_TILE"} {
     lappend MOD "$ENTITY_BASE/network_mod_core_etile.vhd"
 }
  
-if { $ARCHGRP == "CMAC"} {
+if { $ARCHGRP == "CMAC" } {
     lappend COMPONENTS [list "ASYNC_RESET"     "$ASYNC_BASE/reset"     "FULL"]
     lappend COMPONENTS [list "ASYNC_OPEN_LOOP" "$ASYNC_BASE/open_loop" "FULL"]
     lappend COMPONENTS [list "TX_LBUS_ADAPTER" "$TX_ADAPTER_BASE/lbus" "FULL"]
@@ -99,4 +100,15 @@ if { $ARCHGRP == "CMAC"} {
 
     # Source files for implemented component
     lappend MOD "$ENTITY_BASE/network_mod_core_cmac.vhd"
+
+}
+
+if { $ARCHGRP == "40GE" } {
+    lappend COMPONENTS [list "ASYNC_RESET"     "$ASYNC_BASE/reset"         "FULL"]
+    lappend COMPONENTS [list "ASYNC_OPEN_LOOP" "$ASYNC_BASE/open_loop"     "FULL"]
+    lappend COMPONENTS [list "RX_MII_ADAPTER"  "$RX_ADAPTER_BASE/umii_dec" "FULL"]
+    lappend COMPONENTS [list "TX_MII_ADAPTER"  "$TX_ADAPTER_BASE/umii_enc" "FULL"]
+    lappend COMPONENTS [list "40GE PCS PMA"    "$40GE_BASE"                "FULL"]
+
+    lappend  MOD "$ENTITY_BASE/network_mod_core_40ge.vhd"
 }
