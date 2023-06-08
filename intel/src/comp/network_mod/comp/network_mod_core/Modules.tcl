@@ -70,6 +70,7 @@ if { $ARCHGRP == "F_TILE"} {
     #lappend MOD "$DK_AGI_IP_BASE/ftile_eth_8x10g.ip"
 
     # Source files for implemented component
+    lappend MOD "$ENTITY_BASE/ftile_init.vhd"
     lappend MOD "$ENTITY_BASE/network_mod_core_ftile.vhd"
 }
 
