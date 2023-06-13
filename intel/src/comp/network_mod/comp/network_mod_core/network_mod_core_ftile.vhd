@@ -1116,6 +1116,8 @@ begin
     signal ia_ardy_vld  : std_logic;
     signal ia_rd_sel    : std_logic_vector(mi_ia_sel'range);
     signal ia_rd        : std_logic;
+    signal init_done    : std_logic_vector(LANES_PER_CHANNEL-1 downto 0);
+    signal init_ready   : std_logic_vector(LANES_PER_CHANNEL-1 downto 0);
 
     begin
         mgmt_i : entity work.mgmt
@@ -1206,13 +1208,7 @@ begin
         mi_ia_dwr_phy(i)    <= mi_ia_dwr;
         mi_ia_wr_phy(i)     <= mi_ia_en and     mi_ia_we_phy when mi_ia_sel = "0000" else '0';
         mi_ia_rd_phy(i)     <= mi_ia_en and not mi_ia_we_phy when mi_ia_sel = "0000" else '0';
-        -- Generate WR/RD signals for XCVR blocks
-        gen_xcvr_wr_rd: for xcvr in 0 to LANES_PER_CHANNEL-1 generate
-            mi_ia_wr_phy  (xcvr + i*LANES_PER_CHANNEL + ETH_PORT_CHAN) <= mi_ia_en and     mi_ia_we_phy when mi_ia_sel = std_logic_vector(to_unsigned(xcvr+1,4)) else '0';
-            mi_ia_rd_phy  (xcvr + i*LANES_PER_CHANNEL + ETH_PORT_CHAN) <= mi_ia_en and not mi_ia_we_phy when mi_ia_sel = std_logic_vector(to_unsigned(xcvr+1,4)) else '0';
-            mi_ia_addr_phy(xcvr + i*LANES_PER_CHANNEL + ETH_PORT_CHAN) <= mi_ia_addr(mi_ia_addr_phy(i)'range);
-            mi_ia_dwr_phy (xcvr + i*LANES_PER_CHANNEL + ETH_PORT_CHAN) <= mi_ia_dwr;
-        end generate;
+
         -- Mux read data from Eth/xvcr to mgmt
         drd_mux_p: process(all)
         begin
@@ -1325,6 +1321,65 @@ begin
         end process;
 
         ftile_rx_rst_n(i) <= not rx_link_rst(i);
+
+        xcvr_reconfig_inf_res_g: for xcvr in LANES_PER_CHANNEL-1 downto 0 generate
+
+            constant IA_INDEX : natural := xcvr + i*LANES_PER_CHANNEL + ETH_PORT_CHAN;
+
+            signal init_busy      : std_logic;
+            signal init_addr      : std_logic_vector(17 downto 0);
+            signal init_read      : std_logic;
+            signal init_write     : std_logic;
+            signal init_writedata : std_logic_vector(31 downto 0);
+
+        begin
+            -- Generate AVMM signals for XCVR blocks
+            mi_ia_wr_phy  (IA_INDEX) <=
+                init_write                   when init_busy = '1'                                      else
+                mi_ia_en and  mi_ia_we_phy   when mi_ia_sel = std_logic_vector(to_unsigned(xcvr+1,4))  else
+                '0';
+            mi_ia_rd_phy  (IA_INDEX) <=
+                init_read                     when init_busy = '1'                                     else
+                mi_ia_en and not mi_ia_we_phy when mi_ia_sel = std_logic_vector(to_unsigned(xcvr+1,4)) else
+                '0';
+            mi_ia_addr_phy(IA_INDEX) <=
+                 X"000" & "00" & init_addr    when init_busy = '1'  else
+                 mi_ia_addr(mi_ia_addr_phy(i)'range);
+            mi_ia_dwr_phy (IA_INDEX) <=
+                init_writedata                when init_busy = '1'  else
+                mi_ia_dwr;
+
+            init_done_g: if (xcvr = 0) generate
+                init_ready(0) <= ftile_tx_lanes_stable(i);
+            else generate
+                init_ready(xcvr) <= init_done(xcvr-1);
+            end generate;
+
+            -- Component ftile_xcvr_init perform set_media_mode() operation to bring the link up on optical media types
+            xcvr_init: entity work.ftile_xcvr_init
+            generic map (
+                PHY_LANE => (3 - ((xcvr+(i*LANES_PER_CHANNEL)) mod 4)) -- XCVR 0 maps to -> PHY lane 3, XCVR1 -> 2, XCVR2 -> 1 and XCVR3 -> 0
+            )
+            port map (
+                RST              => RESET_ETH or mgmt_pma_reset(i),
+                XCVR_RDY         => init_ready(xcvr),
+                CLK              => MI_CLK_PHY,
+                ROM_SEL          => "0", -- 0 means optical mode configuration, 1 means CR mode configuration
+                BUSY             => init_busy,
+                DONE             => init_done(xcvr),
+                -- AVMM
+                ADDRESS          => init_addr,
+                READ             => init_read,
+                WRITE            => init_write,
+                READDATA         => mi_ia_drd_phy(IA_INDEX),
+                READDATA_VALID   => mi_ia_drdy_phy(IA_INDEX),
+                WRITEDATA        => init_writedata,
+                WAITREQUEST      => mi_ia_ardy_phy_n(IA_INDEX),
+                --
+                STATE            => open -- debug purposes only. Can be left open in the future
+             );
+        end generate;
+
     end generate;
 
     mi_ia_ardy_conversion_g: for i in IA_OUTPUT_INFS-1 downto 0 generate
