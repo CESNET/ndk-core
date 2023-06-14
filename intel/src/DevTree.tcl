@@ -68,15 +68,6 @@ proc dts_build_netcope {} {
         append ret [dts_dmamod_open $ADDR_DMA_MOD $DMA_TYPE [expr $DMA_RX_CHANNELS / $PCIE_ENDPOINTS] [expr $DMA_TX_CHANNELS / $PCIE_ENDPOINTS] "0" $DMA_RX_FRAME_SIZE_MAX $DMA_TX_FRAME_SIZE_MAX $DMA_RX_FRAME_SIZE_MIN $DMA_TX_FRAME_SIZE_MIN]
     }
 
-    # -----------------------------------------------------------------------------------------
-    # WARNING: DMA TSU is for testing purposes only. Otherwise the corruption of data could
-    # occur.
-    # -----------------------------------------------------------------------------------------
-    global DMA_TSU_ENABLE
-    if {$DMA_TSU_ENABLE && $DMA_TYPE == 4} {
-        append ret "tsu1:" [dts_tsugen [expr $ADDR_DMA_MOD + 0x40000] "tsu1"]
-    }
-
     # Network module
     global NET_MOD_ARCH ETH_PORTS ETH_PORT_SPEED ETH_PORT_CHAN ETH_PORT_LANES ETH_PORT_RX_MTU ETH_PORT_TX_MTU NET_MOD_ARCH QSFP_CAGES QSFP_I2C_ADDR
     if {$NET_MOD_ARCH != "EMPTY"} {
@@ -143,29 +134,43 @@ proc dts_build_netcope {} {
         append ret "resource = \"PCI0,BAR2\";"
         append ret "width = <0x20>;"
 
-        set FIFO_DEPTH          512
-        set MFB_BYTE_WIDTH      32
-        set DMA_HDR_BYTE_WIDTH  8
-        set CHAN_PER_EP         [expr $DMA_TX_CHANNELS / $PCIE_ENDPOINTS]
+        # -------------------------------------------------
+        # These two widths are changeable
+        # -------------------------------------------------
+        global DMA_TX_DATA_PTR_W
+        set DATA_PTR_W   $DMA_TX_DATA_PTR_W
+        set HDR_PTR_W    [expr $DATA_PTR_W - 3]
+
+        # -------------------------------------------------
+        # The following parts should not be changed
+        # -------------------------------------------------
+
+        if {$DATA_PTR_W < $HDR_PTR_W} {
+            error "Header pointer width ($HDR_PTR_W) is greater that the width of the data pointer ($DATA_PTR_W)!
+            This does not make sense since there would be more packets possible than there are bytes available
+            in the data buffer"
+        }
+        set DATA_ADDR_W $DATA_PTR_W
+        set HDR_ADDR_W  [expr $HDR_PTR_W + 3]
+
+        set CHAN_PER_EP [expr $DMA_TX_CHANNELS / $PCIE_ENDPOINTS]
 
         # Calculation of the addres range reserved for single channel
         set TX_DATA_BUFF_BASE       "0x00000000"
-        set TX_DATA_BUFF_SIZE       [expr $FIFO_DEPTH*$MFB_BYTE_WIDTH]
-        set TX_DATA_BUFF_SIZE_HEX   [format "0x%x" $TX_DATA_BUFF_SIZE]
+        set TX_BUFF_SIZE       [expr int(pow(2,max($DATA_ADDR_W, $HDR_ADDR_W))) * 2]
+        set TX_BUFF_SIZE_HEX   [format "0x%x" $TX_BUFF_SIZE]
 
         for {set i 0} {$i < $CHAN_PER_EP} {incr i} {
-            set    var_buff_base [expr $TX_DATA_BUFF_BASE + $i * $TX_DATA_BUFF_SIZE_HEX]
-            append ret [dts_dma_calypte_tx_buffer "data" $i $var_buff_base $TX_DATA_BUFF_SIZE_HEX "0"]
+            set    var_buff_base [expr $TX_DATA_BUFF_BASE + $i * $TX_BUFF_SIZE_HEX]
+            append ret [dts_dma_calypte_tx_buffer "data" $i $var_buff_base $TX_BUFF_SIZE_HEX "0"]
         }
 
-        set TX_HDR_BUFF_BASE        [expr $TX_DATA_BUFF_BASE + $CHAN_PER_EP*$TX_DATA_BUFF_SIZE]
-        set TX_HDR_BUFF_SIZE        [expr $FIFO_DEPTH*$DMA_HDR_BYTE_WIDTH]
-        set TX_HDR_BUFF_SIZE_HEX    [format "0x%x" $TX_HDR_BUFF_SIZE]
+        set TX_HDR_BUFF_BASE   [expr $TX_DATA_BUFF_BASE + $CHAN_PER_EP*$TX_BUFF_SIZE]
+        set TX_BUFF_SIZE_HEX   [format "0x%x" $TX_BUFF_SIZE]
 
         for {set i 0} {$i < $CHAN_PER_EP} {incr i} {
-            # The HDR buffer is not the same size as the data buffer but address-wise it is.
-            set    var_buff_base [expr $TX_HDR_BUFF_BASE + $i * $TX_DATA_BUFF_SIZE_HEX]
-            append ret [dts_dma_calypte_tx_buffer "hdr" $i $var_buff_base $TX_HDR_BUFF_SIZE_HEX "0"]
+            set    var_buff_base [expr $TX_HDR_BUFF_BASE + $i * $TX_BUFF_SIZE_HEX]
+            append ret [dts_dma_calypte_tx_buffer "hdr" $i $var_buff_base $TX_BUFF_SIZE_HEX "0"]
         }
         append ret "};"
     }

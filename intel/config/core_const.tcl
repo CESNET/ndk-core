@@ -44,6 +44,16 @@ if { $DMA_TYPE == 4 } {
         error "Incompatible DMA_TYPE: $DMA_TYPE with chosen PCIE_ENDPOINTS: $PCIE_ENDPOINTS\
                 and PCIE_ENDPOINT_MODE: $PCIE_ENDPOINT_MODE!"
     }
+
+    if { $DMA_TX_FRAME_SIZE_MAX > [expr 2**$DMA_TX_DATA_PTR_W -1] } {
+        error "The maximum allowed length of a packet is too large and cannot fit to data buffer:\
+                DMA_TX_FRAME_SIZE_MAX: $DMA_TX_FRAME_SIZE and DMA_TX_DATA_PTR_W: $DMA_TX_DATA_PTR_W"
+    }
+} elseif { $DMA_TYPE == 3 } {
+    if { $DMA_RX_DATA_PTR_W != 16 || $DMA_RX_HDR_PTR_W != 16 || $DMA_TX_DATA_PTR_W != 16} {
+        error "This pointer configuration has never been tested on DMA Medusa: RX_DATA_PTR_W: $DMA_RX_DATA_PTR_W,\
+                RX_HDR_PTR_W: $DMA_RX_HDR_PTR_W, TX_DATA_PTR_W: $DMA_TX_DATA_PTR_W!"
+    }
 }
 
 VhdlPkgProjectText $PROJECT_NAME
@@ -69,8 +79,10 @@ VhdlPkgInt  DMA_RX_FRAME_SIZE_MAX $DMA_RX_FRAME_SIZE_MAX
 VhdlPkgInt  DMA_TX_FRAME_SIZE_MAX $DMA_TX_FRAME_SIZE_MAX
 #VhdlPkgInt  DMA_RX_FRAME_SIZE_MIN $DMA_RX_FRAME_SIZE_MIN
 #VhdlPkgInt  DMA_TX_FRAME_SIZE_MIN $DMA_TX_FRAME_SIZE_MIN
-VhdlPkgBool DMA_RX_BLOCKING_MODE  $DMA_RX_BLOCKING_MODE
-VhdlPkgBool DMA_TSU_ENABLE        $DMA_TSU_ENABLE
+VhdlPkgBool DMA_RX_BLOCKING_MODE $DMA_RX_BLOCKING_MODE
+VhdlPkgInt  DMA_RX_DATA_PTR_W    $DMA_RX_DATA_PTR_W
+VhdlPkgInt  DMA_RX_HDR_PTR_W     $DMA_RX_HDR_PTR_W
+VhdlPkgInt  DMA_TX_DATA_PTR_W    $DMA_TX_DATA_PTR_W
 
 # Other parameters
 VhdlPkgBool TSU_ENABLE    $TSU_ENABLE

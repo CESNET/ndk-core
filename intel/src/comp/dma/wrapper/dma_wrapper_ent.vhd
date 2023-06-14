@@ -67,7 +67,6 @@ generic(
     TX_CHANNELS          : natural := 8;
     TX_SEL_CHANNELS      : natural := 8;
     TX_DP_WIDTH          : natural := 16;
-    TX_FIFO_DEPTH        : natural := 512;
 
     DSP_CNT_WIDTH        : natural := 64;
 
@@ -79,8 +78,6 @@ generic(
     USR_EQ_DMA           : boolean := false;
     CROX_EQ_DMA          : boolean := false;
     CROX_DOUBLE_DMA      : boolean := true;
-
-    DMA_TSU_ENABLE       : boolean := true;
 
     MI_WIDTH             : natural := 32
 );
@@ -190,7 +187,7 @@ port(
     PCIE_RC_MFB_SOF_POS     : in  slv_array_t     (DMA_ENDPOINTS -1 downto 0)(PCIE_RC_MFB_REGIONS*max(1,log2(PCIE_RC_MFB_REGION_SIZE))                            -1 downto 0);
     PCIE_RC_MFB_EOF_POS     : in  slv_array_t     (DMA_ENDPOINTS -1 downto 0)(PCIE_RC_MFB_REGIONS*max(1,log2(PCIE_RC_MFB_REGION_SIZE*PCIE_RC_MFB_BLOCK_SIZE))        -1 downto 0);
     PCIE_RC_MFB_SRC_RDY     : in  std_logic_vector(DMA_ENDPOINTS -1 downto 0);
-    PCIE_RC_MFB_DST_RDY     : out std_logic_vector(DMA_ENDPOINTS -1 downto 0) := (others => '0');
+    PCIE_RC_MFB_DST_RDY     : out std_logic_vector(DMA_ENDPOINTS -1 downto 0) := (others => '1');
 
     -- CQ MFB interface (receiving data from PCIe endpoint, DMA Calypte only)
     PCIE_CQ_MFB_DATA          : in  slv_array_t     (DMA_ENDPOINTS -1 downto 0)(PCIE_CQ_MFB_REGIONS*PCIE_CQ_MFB_REGION_SIZE*PCIE_CQ_MFB_BLOCK_SIZE*PCIE_CQ_MFB_ITEM_WIDTH -1 downto 0);

@@ -19,14 +19,19 @@ architecture CALYPTE of DMA_WRAPPER is
     --==============================================================================================
     --  MI Async and Splitting
     --==============================================================================================
-    constant MI_SPLIT_PORTS : natural := 3;
+    constant MI_SPLIT_PORTS : natural := 4;
     constant MI_SPLIT_BASES : slv_array_t(MI_SPLIT_PORTS-1 downto 0)(MI_WIDTH-1 downto 0) := (
         0 => X"00000000",               -- DMA Controller
         1 => X"00300000",               -- TSU unit
-        2 => X"00380000");              -- MFB Loopback
-    constant MI_SPLIT_ADDR_MASK : std_logic_vector(MI_WIDTH -1 downto 0) := X"00380000";
+        2 => X"00380000",               -- MFB loopback
+        3 => X"003C0000");              -- TX DMA Debug Core
+    constant MI_SPLIT_ADDR_MASK : std_logic_vector(MI_WIDTH -1 downto 0) := X"003C0000";
 
     constant OUT_PIPE_EN : boolean := TRUE;
+
+    constant TX_DMA_DBG_CORE_EN   : boolean := FALSE;
+    constant DMA_LOOPBACK_EN      : boolean := FALSE;
+    constant ST_SP_DBG_META_WIDTH : natural := 4;
 
     -- MI split for DMA 0 and TSU
     signal mi_dmagen_dwr  : slv_array_2d_t(PCIE_ENDPOINTS -1 downto 0)(MI_SPLIT_PORTS -1 downto 0)(32-1 downto 0);
@@ -114,13 +119,26 @@ architecture CALYPTE of DMA_WRAPPER is
     signal rx_usr_mfb_dst_rdy_lbk   : std_logic_vector(DMA_STREAMS-1 downto 0);
 
     --==============================================================================================
-    --  DMA Module --->  Loopback interface
+    --  DMA Module --->  Debug Core interface
     --==============================================================================================
-    signal tx_usr_mfb_meta_len       : slv_array_t(DMA_STREAMS-1 downto 0)(log2(USR_TX_PKT_SIZE_MAX+1)-1 downto 0);
-    signal tx_usr_mfb_meta_hdr_meta  : slv_array_t(DMA_STREAMS-1 downto 0)(HDR_META_WIDTH             -1 downto 0);
-    signal tx_usr_mfb_meta_channel   : slv_array_t(DMA_STREAMS-1 downto 0)(log2(TX_CHANNELS)          -1 downto 0);
+    signal force_reset_dbg              : std_logic_vector(DMA_STREAMS-1 downto 0);
+    signal tx_usr_mfb_meta_len_dbg      : slv_array_t(DMA_STREAMS-1 downto 0)(log2(USR_TX_PKT_SIZE_MAX+1)-1 downto 0);
+    signal tx_usr_mfb_meta_hdr_meta_dbg : slv_array_t(DMA_STREAMS-1 downto 0)(HDR_META_WIDTH             -1 downto 0);
+    signal tx_usr_mfb_meta_channel_dbg  : slv_array_t(DMA_STREAMS-1 downto 0)(log2(TX_CHANNELS)          -1 downto 0);
 
+    signal tx_usr_mfb_data_dbg          : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS*USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE*USR_MFB_ITEM_WIDTH-1 downto 0);
+    signal tx_usr_mfb_sof_dbg           : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS                                                          -1 downto 0);
+    signal tx_usr_mfb_eof_dbg           : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS                                                          -1 downto 0);
+    signal tx_usr_mfb_sof_pos_dbg       : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE))                         -1 downto 0);
+    signal tx_usr_mfb_eof_pos_dbg       : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE))      -1 downto 0);
+    signal tx_usr_mfb_src_rdy_dbg       : std_logic_vector(DMA_STREAMS-1 downto 0);
+    signal tx_usr_mfb_dst_rdy_dbg       : std_logic_vector(DMA_STREAMS-1 downto 0);
+
+    --==============================================================================================
+    --  Debug Core --->  Loopback interface
+    --==============================================================================================
     signal tx_usr_mfb_data_lbk      : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS*USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE*USR_MFB_ITEM_WIDTH-1 downto 0);
+    signal tx_usr_mfb_meta_lbk      : slv_array_t(DMA_STREAMS-1 downto 0)(log2(USR_TX_PKT_SIZE_MAX+1)+HDR_META_WIDTH+log2(TX_CHANNELS)             -1 downto 0);
     signal tx_usr_mfb_sof_lbk       : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS                                                          -1 downto 0);
     signal tx_usr_mfb_eof_lbk       : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS                                                          -1 downto 0);
     signal tx_usr_mfb_sof_pos_lbk   : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE))                         -1 downto 0);
@@ -164,8 +182,12 @@ architecture CALYPTE of DMA_WRAPPER is
     -- concatenated metadata on the output of the metadata extractor to be split into output
     -- TX_USR_MVB_* signals
     signal tx_usr_mvb_data_all  : slv_array_t(DMA_STREAMS-1 downto 0)(log2(USR_TX_PKT_SIZE_MAX +1)+log2(TX_CHANNELS)+HDR_META_WIDTH -1 downto 0);
-    -- RX user data with realigned timestamp
-    signal rx_usr_mfb_data_tims : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS*USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE*USR_MFB_ITEM_WIDTH -1 downto 0);
+
+    -- =============================================================================================
+    -- Debugging signals
+    -- =============================================================================================
+    signal st_sp_dbg_chan : slv_array_t(DMA_STREAMS -1 downto 0)(log2(TX_CHANNELS) -1 downto 0);
+    signal st_sp_dbg_meta : slv_array_t(DMA_STREAMS -1 downto 0)(ST_SP_DBG_META_WIDTH -1 downto 0);
 
 begin
 
@@ -423,83 +445,6 @@ begin
                 TX_DST_RDY => tx_usr_mfb_dst_rdy_async(i),
                 TX_AEMPTY  => open,
                 TX_STATUS  => open);
-
-        --==========================================================================================
-        -- Timestamping logic
-        --==========================================================================================
-        -- This unit is for each DMA module
-        dma_tsu_g: if (DMA_TSU_ENABLE) generate
-
-            constant MAX_MFB_SOF_POS_VAL : unsigned(RX_USR_MFB_SOF_POS(i)'range) := (others => '1');
-
-            signal tsu_ts_ns : std_logic_vector(63 downto 0);
-            signal tsu_ts_dv : std_logic;
-
-        begin
-
-            assert (USR_MFB_BLOCK_SIZE = 8 and USR_MFB_ITEM_WIDTH = 8)
-                report "dma_calypte_wrapper_arch: The Timestamp insertion logic expects the size of the block to be at 8 bytes, when you do not need the TSU, disable it."
-                severity FAILURE;
-
-            dma_tsu_i : entity work.TSU_GEN
-                generic map (
-                    TS_MULT_SMART_DSP => (DEVICE="ULTRASCALE"),
-                    TS_MULT_USE_DSP   => (DEVICE="ULTRASCALE"),
-                    PPS_SEL_WIDTH     => 0,
-                    CLK_SEL_WIDTH     => 0,
-                    DEVICE            => DEVICE)
-                port map (
-                    MI_CLK   => MI_CLK,
-                    MI_RESET => MI_RESET,
-
-                    MI_DWR   => mi_dmagen_dwr(i)(1),
-                    MI_ADDR  => mi_dmagen_addr(i)(1),
-                    MI_RD    => mi_dmagen_rd(i)(1),
-                    MI_WR    => mi_dmagen_wr(i)(1),
-                    MI_BE    => mi_dmagen_be(i)(1),
-                    MI_DRD   => mi_dmagen_drd(i)(1),
-                    MI_ARDY  => mi_dmagen_ardy(i)(1),
-                    MI_DRDY  => mi_dmagen_drdy(i)(1),
-
-                    PPS_N    => '0',
-                    PPS_SRC  => (others => '0'),
-                    PPS_SEL  => open,
-
-                    CLK      => PCIE_USR_CLK(i),
-                    RESET    => PCIE_USR_RESET(i),
-
-                    CLK_FREQ => std_logic_vector(to_unsigned(250000000-1,32)),
-                    CLK_SRC  => x"0001",
-                    CLK_SEL  => open,
-
-                    TS       => open,
-                    TS_NS    => tsu_ts_ns,
-                    TS_DV    => tsu_ts_dv);
-
-            ts_ins_reg_p: process (all) is
-                variable sof_pos_un : unsigned(RX_USR_MFB_SOF_POS(i)'range);
-            begin
-                rx_usr_mfb_data_tims(i)     <= rx_usr_mfb_data_sync(i);
-
-                if (rx_usr_mfb_sof_sync(i) = "1" and rx_usr_mfb_src_rdy_sync(i) = '1') then
-
-                    sof_pos_un := unsigned(rx_usr_mfb_sof_pos_sync(i));
-
-                    for j in 0 to to_integer(MAX_MFB_SOF_POS_VAL) loop
-                        if (j = sof_pos_un) then
-                            rx_usr_mfb_data_tims(i)(j*64 + 63 downto j*64) <= tsu_ts_ns;
-                        end if;
-                    end loop;
-
-                end if;
-            end process;
-        else generate
-
-            rx_usr_mfb_data_tims(i) <= rx_usr_mfb_data_sync(i);
-            mi_dmagen_drd(i)(1)     <= (others => '0');
-            mi_dmagen_drdy(i)(1)    <= '0';
-            mi_dmagen_ardy(i)(1)    <= '1';
-        end generate;
     end generate;
 
     --==============================================================================================
@@ -539,20 +484,20 @@ begin
                 USR_RX_PKT_SIZE_MAX => USR_RX_PKT_SIZE_MAX,
 
                 TX_CHANNELS         => TX_CHANNELS,
-                TX_FIFO_DEPTH       => TX_FIFO_DEPTH,
+                TX_PTR_WIDTH        => TX_DP_WIDTH,
                 USR_TX_PKT_SIZE_MAX => USR_TX_PKT_SIZE_MAX,
-                CHANNEL_ARBITER_EN  => TRUE,
 
                 DSP_CNT_WIDTH => DSP_CNT_WIDTH,
 
                 RX_GEN_EN     => RX_GEN_EN,
                 TX_GEN_EN     => TX_GEN_EN,
 
+                ST_SP_DBG_SIGNAL_W => ST_SP_DBG_META_WIDTH,
                 MI_WIDTH      => MI_WIDTH
                 )
             port map(
                 CLK   => PCIE_USR_CLK(i),
-                RESET => PCIE_USR_RESET(i),
+                RESET => PCIE_USR_RESET(i) or force_reset_dbg(i),
 
                 USR_RX_MFB_META_PKT_SIZE => rx_usr_mfb_meta_len(i),
                 USR_RX_MFB_META_HDR_META => rx_usr_mfb_meta_hdr_meta(i),
@@ -566,17 +511,20 @@ begin
                 USR_RX_MFB_SRC_RDY => rx_usr_mfb_src_rdy_lbk(i),
                 USR_RX_MFB_DST_RDY => rx_usr_mfb_dst_rdy_lbk(i),
 
-                USR_TX_MFB_META_PKT_SIZE => tx_usr_mfb_meta_len(i),
-                USR_TX_MFB_META_HDR_META => tx_usr_mfb_meta_hdr_meta(i),
-                USR_TX_MFB_META_CHAN     => tx_usr_mfb_meta_channel(i),
+                USR_TX_MFB_META_PKT_SIZE => tx_usr_mfb_meta_len_dbg(i),
+                USR_TX_MFB_META_HDR_META => tx_usr_mfb_meta_hdr_meta_dbg(i),
+                USR_TX_MFB_META_CHAN     => tx_usr_mfb_meta_channel_dbg(i),
 
-                USR_TX_MFB_DATA    => tx_usr_mfb_data_lbk(i),
-                USR_TX_MFB_SOF     => tx_usr_mfb_sof_lbk(i),
-                USR_TX_MFB_EOF     => tx_usr_mfb_eof_lbk(i),
-                USR_TX_MFB_SOF_POS => tx_usr_mfb_sof_pos_lbk(i),
-                USR_TX_MFB_EOF_POS => tx_usr_mfb_eof_pos_lbk(i),
-                USR_TX_MFB_SRC_RDY => tx_usr_mfb_src_rdy_lbk(i),
-                USR_TX_MFB_DST_RDY => tx_usr_mfb_dst_rdy_lbk(i),
+                USR_TX_MFB_DATA    => tx_usr_mfb_data_dbg(i),
+                USR_TX_MFB_SOF     => tx_usr_mfb_sof_dbg(i),
+                USR_TX_MFB_EOF     => tx_usr_mfb_eof_dbg(i),
+                USR_TX_MFB_SOF_POS => tx_usr_mfb_sof_pos_dbg(i),
+                USR_TX_MFB_EOF_POS => tx_usr_mfb_eof_pos_dbg(i),
+                USR_TX_MFB_SRC_RDY => tx_usr_mfb_src_rdy_dbg(i),
+                USR_TX_MFB_DST_RDY => tx_usr_mfb_dst_rdy_dbg(i),
+
+                ST_SP_DBG_CHAN => st_sp_dbg_chan(i),
+                ST_SP_DBG_META => st_sp_dbg_meta(i),
 
                 PCIE_RQ_MFB_DATA    => pcie_rq_mfb_data_piped(i),
                 PCIE_RQ_MFB_META    => pcie_rq_mfb_meta_piped(i),
@@ -614,6 +562,88 @@ begin
                 MI_ARDY => mi_sync_ardy(i),
                 MI_DRDY => mi_sync_drdy(i));
 
+        rx_usr_mfb_meta_len(i)      <= rx_usr_mfb_meta_lbk(i)(log2(USR_RX_PKT_SIZE_MAX + 1) + log2(RX_CHANNELS) + HDR_META_WIDTH -1 downto log2(RX_CHANNELS) + HDR_META_WIDTH);
+        rx_usr_mfb_meta_hdr_meta(i) <= rx_usr_mfb_meta_lbk(i)(HDR_META_WIDTH + log2(RX_CHANNELS) -1 downto log2(RX_CHANNELS));
+        rx_usr_mfb_meta_channel(i)  <= rx_usr_mfb_meta_lbk(i)(log2(RX_CHANNELS) -1 downto 0);
+
+        debug_core_g: if (TX_DMA_DBG_CORE_EN) generate
+            tx_dma_debug_core_i: entity work.TX_DMA_DEBUG_CORE
+                generic map (
+                    DEVICE          => DEVICE,
+
+                    MFB_REGIONS     => USR_MFB_REGIONS,
+                    MFB_REGION_SIZE => USR_MFB_REGION_SIZE,
+                    MFB_BLOCK_SIZE  => USR_MFB_BLOCK_SIZE,
+                    MFB_ITEM_WIDTH  => USR_MFB_ITEM_WIDTH,
+
+                    DMA_META_WIDTH  => HDR_META_WIDTH,
+                    PKT_SIZE_MAX    => USR_TX_PKT_SIZE_MAX,
+                    CHANNELS        => TX_CHANNELS,
+
+                    DBG_CNTRS_WIDTH => 64,
+                    ST_SP_DBG_SIGNAL_W => ST_SP_DBG_META_WIDTH,
+
+                    MI_WIDTH        => MI_WIDTH)
+                port map (
+                    CLK                  => PCIE_USR_CLK(i),
+                    RESET                => PCIE_USR_RESET(i),
+
+                    FORCE_RESET          => force_reset_dbg(i),
+                    ST_SP_DBG_CHAN       => st_sp_dbg_chan(i),
+                    ST_SP_DBG_META       => st_sp_dbg_meta(i),
+
+                    RX_MFB_META_PKT_SIZE => tx_usr_mfb_meta_len_dbg(i),
+                    RX_MFB_META_CHAN     => tx_usr_mfb_meta_channel_dbg(i),
+                    RX_MFB_META_HDR_META => tx_usr_mfb_meta_hdr_meta_dbg(i),
+
+                    RX_MFB_DATA          => tx_usr_mfb_data_dbg(i),
+                    RX_MFB_SOF_POS       => tx_usr_mfb_sof_pos_dbg(i),
+                    RX_MFB_EOF_POS       => tx_usr_mfb_eof_pos_dbg(i),
+                    RX_MFB_SOF           => tx_usr_mfb_sof_dbg(i),
+                    RX_MFB_EOF           => tx_usr_mfb_eof_dbg(i),
+                    RX_MFB_SRC_RDY       => tx_usr_mfb_src_rdy_dbg(i),
+                    RX_MFB_DST_RDY       => tx_usr_mfb_dst_rdy_dbg(i),
+
+                    TX_MFB_DATA          => tx_usr_mfb_data_lbk(i),
+                    TX_MFB_META          => tx_usr_mfb_meta_lbk(i),
+                    TX_MFB_SOF_POS       => tx_usr_mfb_sof_pos_lbk(i),
+                    TX_MFB_EOF_POS       => tx_usr_mfb_eof_pos_lbk(i),
+                    TX_MFB_SOF           => tx_usr_mfb_sof_lbk(i),
+                    TX_MFB_EOF           => tx_usr_mfb_eof_lbk(i),
+                    TX_MFB_SRC_RDY       => tx_usr_mfb_src_rdy_lbk(i),
+                    TX_MFB_DST_RDY       => tx_usr_mfb_dst_rdy_lbk(i),
+
+                    MI_CLK               => MI_CLK,
+                    MI_RESET             => MI_RESET,
+
+                    MI_ADDR              => mi_dmagen_addr(i)(3),
+                    MI_DWR               => mi_dmagen_dwr(i)(3),
+                    MI_BE                => mi_dmagen_be(i)(3),
+                    MI_RD                => mi_dmagen_rd(i)(3),
+                    MI_WR                => mi_dmagen_wr(i)(3),
+                    MI_DRD               => mi_dmagen_drd(i)(3),
+                    MI_ARDY              => mi_dmagen_ardy(i)(3),
+                    MI_DRDY              => mi_dmagen_drdy(i)(3));
+        else generate
+            tx_usr_mfb_meta_lbk(i)(log2(TX_CHANNELS) -1 downto 0)                                  <= tx_usr_mfb_meta_channel_dbg(i);
+            tx_usr_mfb_meta_lbk(i)(HDR_META_WIDTH + log2(TX_CHANNELS) -1 downto log2(TX_CHANNELS)) <= tx_usr_mfb_meta_hdr_meta_dbg(i);
+            tx_usr_mfb_meta_lbk(i)(log2(USR_TX_PKT_SIZE_MAX+1) + HDR_META_WIDTH + log2(TX_CHANNELS) -1 downto HDR_META_WIDTH + log2(TX_CHANNELS)) <= tx_usr_mfb_meta_len_dbg(i);
+
+            tx_usr_mfb_data_lbk(i)    <= tx_usr_mfb_data_dbg(i);
+            tx_usr_mfb_sof_pos_lbk(i) <= tx_usr_mfb_sof_pos_dbg(i);
+            tx_usr_mfb_eof_pos_lbk(i) <= tx_usr_mfb_eof_pos_dbg(i);
+            tx_usr_mfb_sof_lbk(i)     <= tx_usr_mfb_sof_dbg(i);
+            tx_usr_mfb_eof_lbk(i)     <= tx_usr_mfb_eof_dbg(i);
+            tx_usr_mfb_src_rdy_lbk(i) <= tx_usr_mfb_src_rdy_dbg(i);
+            tx_usr_mfb_dst_rdy_dbg(i) <= tx_usr_mfb_dst_rdy_lbk(i);
+
+            force_reset_dbg(i) <= '0';
+
+            mi_dmagen_ardy(i)(3) <= mi_dmagen_rd(i)(3) or mi_dmagen_wr(i)(3);
+            mi_dmagen_drd(i)(3)  <= (others => '0');
+            mi_dmagen_drdy(i)(3) <= mi_dmagen_rd(i)(3);
+        end generate;
+
         mfb_loopback_i : entity work.MFB_LOOPBACK
             generic map (
                 REGIONS       => USR_MFB_REGIONS,
@@ -622,7 +652,7 @@ begin
                 ITEM_WIDTH    => USR_MFB_ITEM_WIDTH,
                 META_WIDTH    => log2(maximum(TX_CHANNELS,RX_CHANNELS)) + log2(maximum(USR_RX_PKT_SIZE_MAX,USR_TX_PKT_SIZE_MAX)+1) + HDR_META_WIDTH,
 
-                FAKE_LOOPBACK => FALSE,
+                FAKE_LOOPBACK => not DMA_LOOPBACK_EN,
                 SAME_CLK      => FALSE)
             port map (
                 MI_CLK             => MI_CLK,
@@ -639,7 +669,7 @@ begin
                 CLK                => PCIE_USR_CLK(i),
                 RESET              => PCIE_USR_RESET(i),
 
-                RX_MFB_DATA_IN     => rx_usr_mfb_data_tims(i),
+                RX_MFB_DATA_IN     => rx_usr_mfb_data_sync(i),
                 RX_MFB_META_IN     => rx_usr_mfb_meta_sync(i),
                 RX_MFB_SOF_IN      => rx_usr_mfb_sof_sync(i),
                 RX_MFB_EOF_IN      => rx_usr_mfb_eof_sync(i),
@@ -667,7 +697,7 @@ begin
                 TX_MFB_DST_RDY_OUT => tx_usr_mfb_dst_rdy_sync(i),
 
                 TX_MFB_DATA_IN     => tx_usr_mfb_data_lbk(i),
-                TX_MFB_META_IN     => tx_usr_mfb_meta_len(i) & tx_usr_mfb_meta_hdr_meta(i) & tx_usr_mfb_meta_channel(i),
+                TX_MFB_META_IN     => tx_usr_mfb_meta_lbk(i),
                 TX_MFB_SOF_IN      => tx_usr_mfb_sof_lbk(i),
                 TX_MFB_EOF_IN      => tx_usr_mfb_eof_lbk(i),
                 TX_MFB_SOF_POS_IN  => tx_usr_mfb_sof_pos_lbk(i),
@@ -675,9 +705,6 @@ begin
                 TX_MFB_SRC_RDY_IN  => tx_usr_mfb_src_rdy_lbk(i),
                 TX_MFB_DST_RDY_IN  => tx_usr_mfb_dst_rdy_lbk(i));
 
-        rx_usr_mfb_meta_len(i)      <= rx_usr_mfb_meta_lbk(i)(log2(USR_RX_PKT_SIZE_MAX + 1) + log2(RX_CHANNELS) + HDR_META_WIDTH -1 downto log2(RX_CHANNELS) + HDR_META_WIDTH);
-        rx_usr_mfb_meta_hdr_meta(i) <= rx_usr_mfb_meta_lbk(i)(HDR_META_WIDTH + log2(RX_CHANNELS) -1 downto log2(RX_CHANNELS));
-        rx_usr_mfb_meta_channel(i)  <= rx_usr_mfb_meta_lbk(i)(log2(RX_CHANNELS) -1 downto 0);
     end generate;
 
     -- =============================================================================================

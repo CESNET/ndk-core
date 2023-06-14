@@ -175,7 +175,6 @@ begin
             TX_CHANNELS     => TX_CHANNELS,
             TX_SEL_CHANNELS => TX_SEL_CHANNELS,
             TX_DP_WIDTH     => TX_DP_WIDTH,
-            TX_FIFO_DEPTH   => TX_FIFO_DEPTH,
 
             DSP_CNT_WIDTH => 48,
 
@@ -187,8 +186,6 @@ begin
             USR_EQ_DMA      => USR_EQ_DMA,
             CROX_EQ_DMA     => CROX_EQ_DMA,
             CROX_DOUBLE_DMA => CROX_DOUBLE_DMA,
-
-            DMA_TSU_ENABLE => DMA_TSU_ENABLE,
 
             MI_WIDTH => 32
             )
