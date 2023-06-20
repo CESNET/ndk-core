@@ -24,7 +24,7 @@ class scoreboard_mfb #(MFB_BLOCK_SIZE, type CLASS_TYPE) extends uvm_common::comp
         if (dut_len >= model_len && dut_len <= (model_len + model_align)) begin
             ret = 1;
             for (int unsigned it = 0; it < model_len; it++) begin
-                if (tr_model[it] != tr_dut[it]) begin
+                if (tr_model.data[it] != tr_dut.data[it]) begin
                     ret = 0;
                 end
             end

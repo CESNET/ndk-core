@@ -13,7 +13,7 @@ class env #(CQ_MFB_REGIONS, CC_MFB_REGIONS, RQ_MFB_REGIONS, RC_MFB_REGIONS, CQ_M
     localparam RQ_AXI_STRADDLING = (AXI_RQUSER_WIDTH == 137) ? 1 : 0;
     // Not yet supported
     localparam CC_AXI_STRADDLING = 0;
-    localparam CQ_AXI_STRADDLING = (AXI_RQUSER_WIDTH == 183) ? 1 : 0;
+    localparam CQ_AXI_STRADDLING = (AXI_CQUSER_WIDTH == 183 && AXI_STRADDLING) ? 1 : 0;
 
     generator #(CQ_MFB_ITEM_WIDTH, AVST_DOWN_META_W, "DOWN", ENDPOINT_TYPE, "DOWN") m_avst_down_generator;
     generator #(CC_MFB_ITEM_WIDTH, CC_MFB_META_W, "UP", ENDPOINT_TYPE, "CC")      m_cc_generator;
