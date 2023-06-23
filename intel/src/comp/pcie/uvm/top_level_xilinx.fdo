@@ -15,7 +15,7 @@ set SIG_FILE              "./signals_sig.fdo"
 
 set PCIE_ARCH "USP"
 
-lappend PACKAGES   "$OFM_PATH/comp/base/pkg/dtb_pack.vhd"
+lappend PACKAGES   "./dtb_pack.vhd"
 
 lappend COMPONENTS \
     [list "DUT"      $DUT_BASE       $PCIE_ARCH]\
