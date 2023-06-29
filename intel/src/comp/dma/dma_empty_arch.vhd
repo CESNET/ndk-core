@@ -169,21 +169,20 @@ begin
     --  DMA Loopback
     -- =====================================================================
 
-    dma_rx_usr_mvb_len      <= dma_tx_usr_mvb_len;
-    dma_rx_usr_mvb_hdr_meta <= dma_tx_usr_mvb_hdr_meta;
-    dma_rx_usr_mvb_channel  <= dma_tx_usr_mvb_channel;
-    dma_rx_usr_mvb_discard  <= (others => (others => '0'));
-    dma_rx_usr_mvb_vld      <= dma_tx_usr_mvb_vld;
-    dma_rx_usr_mvb_src_rdy  <= dma_tx_usr_mvb_src_rdy;
-    dma_tx_usr_mvb_dst_rdy  <= dma_rx_usr_mvb_dst_rdy;
+    dma_tx_usr_mvb_len      <= dma_rx_usr_mvb_len;
+    dma_tx_usr_mvb_hdr_meta <= dma_rx_usr_mvb_hdr_meta;
+    dma_tx_usr_mvb_channel  <= dma_rx_usr_mvb_channel;
+    dma_tx_usr_mvb_vld      <= dma_rx_usr_mvb_vld;
+    dma_tx_usr_mvb_src_rdy  <= dma_rx_usr_mvb_src_rdy;
+    dma_rx_usr_mvb_dst_rdy  <= dma_tx_usr_mvb_dst_rdy;
 
-    dma_rx_usr_mfb_data    <= dma_tx_usr_mfb_data;
-    dma_rx_usr_mfb_sof     <= dma_tx_usr_mfb_sof;
-    dma_rx_usr_mfb_eof     <= dma_tx_usr_mfb_eof;
-    dma_rx_usr_mfb_sof_pos <= dma_tx_usr_mfb_sof_pos;
-    dma_rx_usr_mfb_eof_pos <= dma_tx_usr_mfb_eof_pos;
-    dma_rx_usr_mfb_src_rdy <= dma_tx_usr_mfb_src_rdy;
-    dma_tx_usr_mfb_dst_rdy <= dma_rx_usr_mfb_dst_rdy;
+    dma_tx_usr_mfb_data    <= dma_rx_usr_mfb_data;
+    dma_tx_usr_mfb_sof     <= dma_rx_usr_mfb_sof;
+    dma_tx_usr_mfb_eof     <= dma_rx_usr_mfb_eof;
+    dma_tx_usr_mfb_sof_pos <= dma_rx_usr_mfb_sof_pos;
+    dma_tx_usr_mfb_eof_pos <= dma_rx_usr_mfb_eof_pos;
+    dma_tx_usr_mfb_src_rdy <= dma_rx_usr_mfb_src_rdy;
+    dma_rx_usr_mfb_dst_rdy <= dma_tx_usr_mfb_dst_rdy;
 
     -- =====================================================================
     --  GLS Module
