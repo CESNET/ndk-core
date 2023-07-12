@@ -118,8 +118,8 @@ class logic_vector_sequence_lib_eth #(ITEM_WIDTH, HDR_WIDTH) extends uvm_sequenc
     endfunction
 endclass
 
-class logic_vector_sequence_simple #(ITEM_WIDTH, HDR_WIDTH) extends uvm_sequence #(uvm_logic_vector::sequence_item #(HDR_WIDTH));
-    `uvm_object_param_utils(uvm_app_core_top_agent::logic_vector_sequence_simple #(ITEM_WIDTH, HDR_WIDTH))
+class logic_vector_sequence_simple #(ITEM_WIDTH, HDR_WIDTH, PKT_MTU) extends uvm_sequence #(uvm_logic_vector::sequence_item #(HDR_WIDTH));
+    `uvm_object_param_utils(uvm_app_core_top_agent::logic_vector_sequence_simple #(ITEM_WIDTH, HDR_WIDTH, PKT_MTU))
     `uvm_declare_p_sequencer(uvm_logic_vector::sequencer#(HDR_WIDTH));
 
     mailbox#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)) header_export;
@@ -158,15 +158,15 @@ class logic_vector_sequence_simple #(ITEM_WIDTH, HDR_WIDTH) extends uvm_sequence
             if (!req.randomize()) begin
                 `uvm_fatal(p_sequencer.get_full_name(), "\n\tSequence faile to randomize transaction.")
             end
-            req.data[16-1:0] = tmp_packet.size();
+            req.data[PKT_MTU-1:0] = tmp_packet.size();
             finish_item(req);
         end
     endtask
 endclass
 
-class logic_vector_sequence_lib#(ITEM_WIDTH, HDR_WIDTH) extends uvm_sequence_library#(uvm_logic_vector::sequence_item#(HDR_WIDTH));
-  `uvm_object_param_utils(uvm_app_core_top_agent::logic_vector_sequence_lib#(ITEM_WIDTH, HDR_WIDTH))
-  `uvm_sequence_library_utils(uvm_app_core_top_agent::logic_vector_sequence_lib#(ITEM_WIDTH, HDR_WIDTH))
+class logic_vector_sequence_lib#(ITEM_WIDTH, HDR_WIDTH, PKT_MTU) extends uvm_sequence_library#(uvm_logic_vector::sequence_item#(HDR_WIDTH));
+  `uvm_object_param_utils(uvm_app_core_top_agent::logic_vector_sequence_lib#(ITEM_WIDTH, HDR_WIDTH, PKT_MTU))
+  `uvm_sequence_library_utils(uvm_app_core_top_agent::logic_vector_sequence_lib#(ITEM_WIDTH, HDR_WIDTH, PKT_MTU))
 
     function new(string name = "");
         super.new(name);
@@ -176,7 +176,7 @@ class logic_vector_sequence_lib#(ITEM_WIDTH, HDR_WIDTH) extends uvm_sequence_lib
     // subclass can redefine and change run sequences
     // can be useful in specific tests
     virtual function void init_sequence();
-        this.add_sequence(logic_vector_sequence_simple #(ITEM_WIDTH, HDR_WIDTH)::get_type());
+        this.add_sequence(logic_vector_sequence_simple #(ITEM_WIDTH, HDR_WIDTH, PKT_MTU)::get_type());
     endfunction
 endclass
 
