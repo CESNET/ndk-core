@@ -16,6 +16,3 @@ all PCIE /testbench/DUT_U/VHDL_DUT_U
 all PCIE_CORE testbench/DUT_U/VHDL_DUT_U/pcie_core_i
 all PCIE_ADAPTER testbench/DUT_U/VHDL_DUT_U/pcie_core_i/pcie_adapter_g(0)/pcie_adapter_i
 all PTC testbench/DUT_U//VHDL_DUT_U/pcie_ctrl_g(0)/pcie_ctrl_i/ptc_g/ptc_i
-add wave -position insertpoint sim:/testbench/DUT_U/VHDL_DUT_U/pcie_ctrl_g(0)/pcie_ctrl_i/ptc_g/ptc_i/dma2pcie_hdr_trans_i/*
-add wave -position insertpoint sim:/testbench/DUT_U/VHDL_DUT_U/pcie_ctrl_g(0)/pcie_ctrl_i/ptc_g/ptc_i/dma2pcie_hdr_trans_i/tx_mvb_gen(0)/pcie_rq_hdr_gen_i/*
-add wave -position insertpoint sim:/testbench/DUT_U/VHDL_DUT_U/pcie_ctrl_g(0)/pcie_ctrl_i/ptc_g/ptc_i/dma2pcie_hdr_trans_i/tx_mvb_gen(1)/pcie_rq_hdr_gen_i/*

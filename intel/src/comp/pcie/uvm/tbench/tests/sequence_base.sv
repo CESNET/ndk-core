@@ -176,7 +176,7 @@ class sequence_base#(RC_MFB_REGIONS, RC_MFB_REGION_SIZE, RC_MFB_BLOCK_SIZE, RC_M
             run_reset(m_pcie_sysrst_n, p_sequencer.m_pcie_sysrst_n);
         join_none
 
-        #(100ns);
+        #(1000ns);
 
         for (int dma = 0; dma < DMA_PORTS; dma++) begin
             fork

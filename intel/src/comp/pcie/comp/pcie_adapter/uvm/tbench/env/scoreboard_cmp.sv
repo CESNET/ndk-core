@@ -11,20 +11,20 @@ class scoreboard_mfb #(MFB_BLOCK_SIZE, type CLASS_TYPE) extends uvm_common::comp
         super.new(name, parent);
     endfunction
 
-    virtual function int unsigned compare(MODEL_ITEM tr_model, DUT_ITEM tr_dut);
+    virtual function int unsigned compare(uvm_common::model_item #(MODEL_ITEM) tr_model, uvm_common::dut_item #(DUT_ITEM) tr_dut);
         int unsigned model_len   = 0;
         int unsigned model_align = 0;
         int unsigned dut_len     = 0;
         int unsigned ret         = 0;
 
-        model_len = tr_model.size();
-        dut_len   = tr_dut.size();
+        model_len = tr_model.item.size();
+        dut_len   = tr_dut.in_item.size();
         model_align = ((model_len % MFB_BLOCK_SIZE) != 0) ? (MFB_BLOCK_SIZE - model_len % MFB_BLOCK_SIZE) : 0;
 
         if (dut_len >= model_len && dut_len <= (model_len + model_align)) begin
             ret = 1;
             for (int unsigned it = 0; it < model_len; it++) begin
-                if (tr_model.data[it] != tr_dut.data[it]) begin
+                if (tr_model.item.data[it] != tr_dut.in_item.data[it]) begin
                     ret = 0;
                 end
             end
@@ -32,7 +32,7 @@ class scoreboard_mfb #(MFB_BLOCK_SIZE, type CLASS_TYPE) extends uvm_common::comp
         return ret;
     endfunction
 
-    virtual function string message(MODEL_ITEM tr_model, DUT_ITEM tr_dut);
+    virtual function string message(uvm_common::model_item #(MODEL_ITEM) tr_model, uvm_common::dut_item #(DUT_ITEM) tr_dut);
         string msg = "";
         $swrite(msg, "%s\n\tDUT PACKET %s\n\n",   msg, tr_dut.convert2string());
         $swrite(msg, "%s\n\tMODEL PACKET%s\n\n",  msg, tr_model.convert2string());

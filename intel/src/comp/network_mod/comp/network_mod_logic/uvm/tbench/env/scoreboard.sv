@@ -72,15 +72,15 @@ class comparer_meta #(ITEM_WIDTH, META_WIDTH) extends uvm_common::comparer_base_
         super.new(name, parent);
     endfunction
 
-    virtual function int unsigned compare(MODEL_ITEM tr_model, DUT_ITEM tr_dut);
+    virtual function int unsigned compare(uvm_common::model_item #(MODEL_ITEM) tr_model, uvm_common::dut_item #(DUT_ITEM) tr_dut);
         //return tr_model.meta.compare(tr_dut);
-        return (tr_dut.data[24-1:0] == tr_model.meta.data[24-1:0]);
+        return (tr_dut.in_item.data[24-1:0] == tr_model.item.meta.data[24-1:0]);
     endfunction
 
-    virtual function string message(MODEL_ITEM tr_model, DUT_ITEM tr_dut);
+    virtual function string message(uvm_common::model_item #(MODEL_ITEM) tr_model, uvm_common::dut_item #(DUT_ITEM) tr_dut);
         string msg = "";
         $swrite(msg, "%s\n\tDUT PACKET %s\n\n",   msg, tr_dut.convert2string());
-        $swrite(msg, "%s\n\tMODEL PACKET%s\n\n",  msg, tr_model.meta.convert2string());
+        $swrite(msg, "%s\n\tMODEL PACKET%s\n\n",  msg, tr_model.item.meta.convert2string());
         return msg;
     endfunction
 endclass
@@ -92,14 +92,14 @@ class comparer_data #(ITEM_WIDTH, META_WIDTH) extends uvm_common::comparer_base_
         super.new(name, parent);
     endfunction
 
-    virtual function int unsigned compare(MODEL_ITEM tr_model, DUT_ITEM tr_dut);
-        return tr_model.data.compare(tr_dut);
+    virtual function int unsigned compare(uvm_common::model_item #(MODEL_ITEM) tr_model, uvm_common::dut_item #(DUT_ITEM) tr_dut);
+        return tr_model.item.data.compare(tr_dut.in_item);
     endfunction
 
-    virtual function string message(MODEL_ITEM tr_model, DUT_ITEM tr_dut);
+    virtual function string message(uvm_common::model_item #(MODEL_ITEM) tr_model, uvm_common::dut_item #(DUT_ITEM) tr_dut);
         string msg = "";
         $swrite(msg, "%s\n\tDUT PACKET %s\n\n",   msg, tr_dut.convert2string());
-        $swrite(msg, "%s\n\tMODEL PACKET%s\n\n",  msg, tr_model.data.convert2string());
+        $swrite(msg, "%s\n\tMODEL PACKET%s\n\n",  msg, tr_model.item.data.convert2string());
         return msg;
     endfunction
 endclass

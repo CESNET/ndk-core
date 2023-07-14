@@ -32,8 +32,20 @@ SETTINGS = {
 
         "DEVICE"               : "\\\"STRATIX10\\\"" ,
         "PCIE_ENDPOINT_TYPE"   : "\\\"P_TILE\\\""    ,
+        "__archgrp__"          : {"DUT" : "P_TILE"}  ,
+    },
+    "ultrascale" : {
+        "RC_MFB_REGIONS"       : "4"                 ,
+        "RC_MFB_REGION_SIZE"   : "1"                 ,
+        "RC_MFB_BLOCK_SIZE"    : "4"                 ,
+        "RC_MFB_ITEM_WIDTH"    : "32"                ,
+
+        "DEVICE"               : "\\\"ULTRASCALE\\\"",
+        "PCIE_ENDPOINT_TYPE"   : "\\\"DUMMY\\\""     ,
+        "__archgrp__"          : {"DUT" : "USP"}     ,
     },
     "_combinations_" : (  
     (), # Works the same as '("default",),' as the "default" is applied in every combination
+    ("ultrascale",),
     ),
 }
