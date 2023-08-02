@@ -87,7 +87,7 @@ if { $ARCHGRP == "E_TILE"} {
 
     # Source files for implemented component
     lappend MOD "$ENTITY_BASE/etile_init.vhd"
-    lappend MOD "$ENTITY_BASE/avst_frame_fwd.vhd"
+    lappend MOD "$ENTITY_BASE/avst_loop.vhd"
     lappend MOD "$ENTITY_BASE/network_mod_core_etile.vhd"
 }
  
