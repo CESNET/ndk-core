@@ -26,10 +26,7 @@ class packet_config:
         self.vlan  = 4
         self.mpls  = 4
 
-        self.constraints = None
-  
-        #configure
-        self.constraints
+        self.constraints = constraints
 
         mpls_stack = self.object_get(["mpls", "stack"]);
         if (mpls_stack != None):
@@ -40,11 +37,10 @@ class packet_config:
             self.vlan = int(vlan_stack.get("max"));
 
     def copy(self):
-        ret = packet_config()
+        ret = packet_config(self.constraints)
         ret.trill = self.trill
         ret.vlan = self.vlan
         ret.mpls = self.mpls
-        ret.constraints = self.constraints
         return ret;
 
     def object_get(self, path):
