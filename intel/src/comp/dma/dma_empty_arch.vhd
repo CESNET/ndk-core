@@ -343,9 +343,9 @@ begin
             tx_usr_arr_mfb_src_rdy(i)  <= dma_tx_usr_mfb_src_rdy(i) ;
             dma_tx_usr_mfb_dst_rdy(i)  <= tx_usr_arr_mfb_dst_rdy(i) ;
 
-            gls_mi_ardy(i) <= '1';
+            gls_mi_ardy(i) <= gls_mi_rd(i) or gls_mi_wr(i);
             gls_mi_drd(i)  <= (others => '0');
-            gls_mi_drdy(i) <= '0';
+            gls_mi_drdy(i) <= gls_mi_rd(i);
         end generate;
     end generate;
 

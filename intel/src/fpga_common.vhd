@@ -1,6 +1,7 @@
 -- fpga_common.vhd: Common top level architecture
--- Copyright (C) 2019 CESNET z. s. p. o.
+-- Copyright (C) 2023 CESNET z. s. p. o.
 -- Author(s): Jakub Cabal <cabal@cesnet.cz>
+--            Vladislav Valek <valekv@cesnet.cz>
 --
 -- SPDX-License-Identifier: BSD-3-Clause
 
@@ -1097,7 +1098,7 @@ begin
         ETH_STREAMS           => ETH_STREAMS,
         ETH_CHANNELS          => ETH_CHANNELS,
         PCIE_ENDPOINTS        => PCIE_ENDPOINTS,
-        DMA_STREAMS           => DMA_STREAMS,
+        DMA_STREAMS           => tsel(DMA_TYPE = 0, 0, DMA_STREAMS),
         DMA_RX_CHANNELS       => DMA_RX_CHANNELS,
         DMA_TX_CHANNELS       => DMA_TX_CHANNELS,
         DMA_HDR_META_WIDTH    => HDR_META_WIDTH,

@@ -25,12 +25,16 @@ if {$DMA_TYPE == 4} {
     }
 }
 
+if {$ETH_PORTS == 0} {
+    set NET_MOD_ARCH "EMPTY"
+}
+
 # ------------------------------------------------------------------------------
 # Checking of parameter compatibility
 # ------------------------------------------------------------------------------
 
 if {$ETH_PORTS <= $PCIE_ENDPOINTS} {
-    if {$DMA_MODULES != $ETH_PORTS} {
+    if {$DMA_MODULES != $ETH_PORTS && $ETH_PORTS != 0 && $DMA_MODULES != 0} {
         error "Incompatible value of DMA_MODULES: $DMA_MODULES! Must be equal to ETH_PORTS."
     }
 } else {
@@ -61,11 +65,21 @@ VhdlPkgProjectText $PROJECT_NAME
 VhdlPkgStr PCIE_MOD_ARCH $PCIE_MOD_ARCH
 VhdlPkgStr NET_MOD_ARCH  $NET_MOD_ARCH
 
-VhdlPkgInt    ETH_PORTS       $ETH_PORTS
-VhdlPkgIntArr ETH_PORT_SPEED  $ETH_PORTS
-VhdlPkgIntArr ETH_PORT_CHAN   $ETH_PORTS
-VhdlPkgIntArr ETH_PORT_RX_MTU $ETH_PORTS
-VhdlPkgIntArr ETH_PORT_TX_MTU $ETH_PORTS
+# This is only to ensure the correct package generation.
+if {$ETH_PORTS == 0} {
+    VhdlPkgInt    ETH_PORTS       1
+    VhdlPkgIntArr ETH_PORT_SPEED  1
+    VhdlPkgIntArr ETH_PORT_CHAN   1
+    VhdlPkgIntArr ETH_PORT_RX_MTU 1
+    VhdlPkgIntArr ETH_PORT_TX_MTU 1
+} else {
+    VhdlPkgInt    ETH_PORTS       $ETH_PORTS
+    VhdlPkgIntArr ETH_PORT_SPEED  $ETH_PORTS
+    VhdlPkgIntArr ETH_PORT_CHAN   $ETH_PORTS
+    VhdlPkgIntArr ETH_PORT_RX_MTU $ETH_PORTS
+    VhdlPkgIntArr ETH_PORT_TX_MTU $ETH_PORTS
+}
+
 
 VhdlPkgInt  PCIE_LANES         $PCIE_LANES
 VhdlPkgInt  PCIE_GEN           $PCIE_GEN

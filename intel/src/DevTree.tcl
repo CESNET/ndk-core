@@ -94,9 +94,12 @@ proc dts_build_netcope {} {
     }
 
     # Populate application, if exists
-    if { [llength [info procs dts_application]] > 0 } {
-        global MEM_PORTS
-        append ret "app:" [dts_application $ADDR_USERAPP $ETH_PORTS $MEM_PORTS]
+    global APP_CORE_ENABLE
+    if {$APP_CORE_ENABLE} {
+        if { [llength [info procs dts_application]] > 0 } {
+            global MEM_PORTS
+            append ret "app:" [dts_application $ADDR_USERAPP $ETH_PORTS $MEM_PORTS]
+        }
     }
 
     # Gen Loop Switch debug modules for each DMA stream/module
