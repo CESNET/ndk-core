@@ -15,6 +15,7 @@ class sequence_pcap#(ITEM_WIDTH) extends uvm_common::sequence_base#(uvm_logic_ve
     `uvm_declare_p_sequencer(uvm_logic_vector_array::sequencer#(ITEM_WIDTH));
 
     int unsigned pkt_size_min = 60;
+    int unsigned pkt_size_max = 0;
     string config_json = "./filter.json";
     string rule_ipv6   = ""; 
     string rule_ipv4   = "";
@@ -179,6 +180,9 @@ class sequence_pcap#(ITEM_WIDTH) extends uvm_common::sequence_base#(uvm_logic_ve
             start_item(req);
             if (data.size() < pkt_size_min) begin
                 data = new[pkt_size_min](data);
+            end
+            if (pkt_size_max > 0 && data.size() > pkt_size_max) begin
+                data = new[pkt_size_max](data);
             end
             req.data = {>>{data}};
             finish_item(req);
