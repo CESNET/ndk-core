@@ -221,7 +221,7 @@ class PPP(base_node):
         super().__init__("PPP");
 
     def protocol_add(self, config):
-        return scapy.all.PPP()
+        return scapy.all.PPPoE()/scapy.all.PPP()
 
     def protocol_next(self, config):
         proto = {"IPv4" : 1, "IPv6" : 1, "MPLS" : 1, "Empty" : 1}
