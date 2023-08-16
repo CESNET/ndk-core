@@ -28,7 +28,8 @@ class sequence_pcap#(ITEM_WIDTH) extends uvm_common::sequence_base#(uvm_logic_ve
     rand int unsigned vlan_next_prot[6];
     rand int unsigned ppp_next_prot[4];
     rand int unsigned mpls_next_prot[4];
-    rand int unsigned ip_next_prot[5];
+    rand int unsigned ipv4_next_prot[5];
+    rand int unsigned ipv6_next_prot[6];
     rand int unsigned proto_next_prot[2]; //empty/payload
     rand int unsigned algorithm; // 0 -> rand; 1 -> dfs
 
@@ -74,12 +75,20 @@ class sequence_pcap#(ITEM_WIDTH) extends uvm_common::sequence_base#(uvm_logic_ve
         mpls_next_prot.sum() > 0;
     };
 
-    constraint c_ip{
-        foreach(ip_next_prot[it]) { 
-            ip_next_prot[it] >= 0;
-            ip_next_prot[it]  < 10;
+    constraint c_ipv4{
+        foreach(ipv4_next_prot[it]) { 
+            ipv4_next_prot[it] >= 0;
+            ipv4_next_prot[it]  < 10;
         }
-        ip_next_prot.sum() > 0;
+        ipv4_next_prot.sum() > 0;
+    };
+
+    constraint c_ipv6{
+        foreach(ipv6_next_prot[it]) { 
+            ipv6_next_prot[it] >= 0;
+            ipv6_next_prot[it]  < 10;
+        }
+        ipv6_next_prot.sum() > 0;
     };
 
     constraint c_proto{
@@ -136,11 +145,13 @@ class sequence_pcap#(ITEM_WIDTH) extends uvm_common::sequence_base#(uvm_logic_ve
 
         $fwrite(file, "\"IPv4\" : { \"values\" : {");
         $fwrite(file, {"\n\t\"src\" : ", "[\n", rule_ipv4, "],", "\n\t\"dst\" : ", "[\n", rule_ipv4, "]"});
-        $fwrite(file, "\n\t},\n\t\"weight\" : %s},\n", proto_dist_gen(ip_next_prot, {"Payload", "Empty", "ICMPv4", "UDP", "TCP"}));
+        $fwrite(file, "\n\t},\n\t\"weight\" : %s},\n", proto_dist_gen(ipv4_next_prot, {"Payload", "Empty", "ICMPv4", "UDP", "TCP"}));
 
         $fwrite(file, "\"IPv6\" : { \"values\" : {");
         $fwrite(file, {"\n\t\"src\" : ", "[\n", rule_ipv6, "],", "\n\t\"dst\" : ", "[\n", rule_ipv6, "]"});
-        $fwrite(file, "\n\t},\n\t\"weight\" : %s}\n", proto_dist_gen(ip_next_prot, {"Payload", "Empty", "ICMPv4", "UDP", "TCP"}));
+        $fwrite(file, "\n\t},\n\t\"weight\" : %s},\n", proto_dist_gen(ipv6_next_prot, {"Payload", "Empty", "ICMPv4", "UDP", "TCP", "IPv6Ext"}));
+
+        $fwrite(file, "\"IPv6Ext\" : { \"weight\" : %s}\n", proto_dist_gen(ipv6_next_prot, {"Payload", "Empty", "ICMPv4", "UDP", "TCP", "IPv6Ext"}));
 
         $fwrite(file, "\n\t}\n");
         $fclose(file);
