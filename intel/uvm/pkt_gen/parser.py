@@ -238,7 +238,8 @@ class VLAN(base_node):
         super().__init__("VLAN");
 
     def protocol_add(self, config):
-        return scapy.all.Dot1Q()
+        possible_protocols = [ scapy.all.Dot1Q(), scapy.all.Dot1AD() ]
+        return random.choice(possible_protocols)
 
     def protocol_next(self, config):
         proto   = {"IPv4" : 1, "IPv6" : 1, "VLAN" : 1 , "TRILL" : 1, "MPLS" : 1, "Empty" : 1, "PPP" : 1}
