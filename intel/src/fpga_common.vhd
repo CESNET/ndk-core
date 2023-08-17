@@ -1098,7 +1098,7 @@ begin
         ETH_STREAMS           => ETH_STREAMS,
         ETH_CHANNELS          => ETH_CHANNELS,
         PCIE_ENDPOINTS        => PCIE_ENDPOINTS,
-        DMA_STREAMS           => tsel(DMA_TYPE = 0, 0, DMA_STREAMS),
+        DMA_STREAMS           => DMA_STREAMS,
         DMA_RX_CHANNELS       => DMA_RX_CHANNELS,
         DMA_TX_CHANNELS       => DMA_TX_CHANNELS,
         DMA_HDR_META_WIDTH    => HDR_META_WIDTH,
