@@ -1,6 +1,7 @@
 -- network_mod_empty.vhd: Ethernet MAC and PHY + QSFP control wrapper
--- Copyright (C) 2021 CESNET z. s. p. o.
+-- Copyright (C) 2023 CESNET z. s. p. o.
 -- Author(s): Jakub Cabal <cabal@cesnet.cz>
+--            Vladislav Valek <valekv@cesnet.cz>
 --
 -- SPDX-License-Identifier: BSD-3-Clause
 
@@ -12,14 +13,22 @@ architecture EMPTY of NETWORK_MOD is
 
 begin
 
-    CLK_ETH <= (others => '0');
+    CLK_ETH <= (others => CLK_USER);
+    TSU_CLK <= CLK_USER;
 
-    ETH_TX_P <= (others => '0');
+    TSU_RST <= '0';
+
+    ETH_TX_P <= (others => '1');
     ETH_TX_N <= (others => '0');
 
-    QSFP_MODSEL_N <= (others => '0');
-    QSFP_LPMODE   <= (others => '0');
-    QSFP_RESET_N  <= (others => '0');
+    QSFP_I2C_SCL_O  <= (others => '0');
+    QSFP_I2C_SCL_OE <= (others => '0');
+    QSFP_I2C_SDA_O  <= (others => '0');
+    QSFP_I2C_SDA_OE <= (others => '0');
+    QSFP_I2C_DIR    <= (others => '0');
+    QSFP_MODSEL_N   <= (others => '0');
+    QSFP_LPMODE     <= (others => '0');
+    QSFP_RESET_N    <= (others => '0');
 
     -- PORT_ENABLED <= (others => '0');
     ACTIVITY_RX <= (others => '0');
@@ -27,7 +36,7 @@ begin
     RX_LINK_UP  <= (others => '0');
     TX_LINK_UP  <= (others => '0');
 
-    RX_MFB_DST_RDY <= (others => '0');
+    RX_MFB_DST_RDY <= (others => '1');
 
     TX_MFB_DATA    <= (others => '0');
     TX_MFB_SOF_POS <= (others => '0');
@@ -47,5 +56,9 @@ begin
     MI_ARDY_PHY <= MI_WR_PHY or MI_RD_PHY;
     MI_DRDY_PHY <= MI_RD_PHY;
     MI_DRD_PHY  <= (others => '0');
+
+    MI_ARDY_PMD <= MI_WR_PMD or MI_RD_PMD;
+    MI_DRDY_PMD <= MI_RD_PMD;
+    MI_DRD_PMD  <= (others => '0');
 
 end architecture;

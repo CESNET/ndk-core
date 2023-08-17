@@ -426,6 +426,13 @@ architecture USP of PCIE_CORE is
     -- attribute mark_debug of pcie_cc_axi_ready : signal is "true";
     -- attribute mark_debug of pcie_cc_axi_valid : signal is "true";
 
+    -- attribute mark_debug of pcie_rc_axi_data  : signal is "true";
+    -- attribute mark_debug of pcie_rc_axi_user  : signal is "true";
+    -- attribute mark_debug of pcie_rc_axi_keep  : signal is "true";
+    -- attribute mark_debug of pcie_rc_axi_last  : signal is "true";
+    -- attribute mark_debug of pcie_rc_axi_ready : signal is "true";
+    -- attribute mark_debug of pcie_rc_axi_valid : signal is "true";
+
     -- attribute mark_debug of cfg_phy_link_down        : signal is "true";
     -- attribute mark_debug of cfg_phy_link_status      : signal is "true";
     -- attribute mark_debug of pcie_phy_rdy_out         : signal is "true";

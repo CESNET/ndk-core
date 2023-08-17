@@ -59,6 +59,11 @@ set QSFP_I2C_ADDR(2)   "0xA0"
 set QSFP_I2C_ADDR(3)   "0xA0"
 
 # ------------------------------------------------------------------------------
+# Application core parameters:
+# ------------------------------------------------------------------------------
+set APP_CORE_ENABLE true
+
+# ------------------------------------------------------------------------------
 # PCIe parameters (not all combinations work):
 # ------------------------------------------------------------------------------
 # PCIe Generation (possible values: 3, 4, 5):
@@ -94,10 +99,10 @@ set DMA_TX_FRAME_SIZE_MAX 16383
 # In blocking mode, packets are dropped only when the RX DMA channel is off.
 # In non-blocking mode, packets are dropped whenever they cannot be sent.
 set DMA_RX_BLOCKING_MODE true
-
-# WARNING: Only for testing purposes. Otherwise corruption of data can occur.
-# (DMA Calypte only) Enabling of timestamping unit located before RX controller
-set DMA_TSU_ENABLE false
+# Widths of pointers for data/headers
+set DMA_RX_DATA_PTR_W 16
+set DMA_RX_HDR_PTR_W  16
+set DMA_TX_DATA_PTR_W 16
 
 # ------------------------------------------------------------------------------
 # Other parameters:

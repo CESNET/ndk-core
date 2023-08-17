@@ -25,12 +25,16 @@ if {$DMA_TYPE == 4} {
     }
 }
 
+if {$ETH_PORTS == 0} {
+    set NET_MOD_ARCH "EMPTY"
+}
+
 # ------------------------------------------------------------------------------
 # Checking of parameter compatibility
 # ------------------------------------------------------------------------------
 
 if {$ETH_PORTS <= $PCIE_ENDPOINTS} {
-    if {$DMA_MODULES != $ETH_PORTS} {
+    if {$DMA_MODULES != $ETH_PORTS && $ETH_PORTS != 0 && $DMA_MODULES != 0} {
         error "Incompatible value of DMA_MODULES: $DMA_MODULES! Must be equal to ETH_PORTS."
     }
 } else {
@@ -44,6 +48,16 @@ if { $DMA_TYPE == 4 } {
         error "Incompatible DMA_TYPE: $DMA_TYPE with chosen PCIE_ENDPOINTS: $PCIE_ENDPOINTS\
                 and PCIE_ENDPOINT_MODE: $PCIE_ENDPOINT_MODE!"
     }
+
+    if { $DMA_TX_FRAME_SIZE_MAX > [expr 2**$DMA_TX_DATA_PTR_W -1] } {
+        error "The maximum allowed length of a packet is too large and cannot fit to data buffer:\
+                DMA_TX_FRAME_SIZE_MAX: $DMA_TX_FRAME_SIZE and DMA_TX_DATA_PTR_W: $DMA_TX_DATA_PTR_W"
+    }
+} elseif { $DMA_TYPE == 3 } {
+    if { $DMA_RX_DATA_PTR_W != 16 || $DMA_RX_HDR_PTR_W != 16 || $DMA_TX_DATA_PTR_W != 16} {
+        error "This pointer configuration has never been tested on DMA Medusa: RX_DATA_PTR_W: $DMA_RX_DATA_PTR_W,\
+                RX_HDR_PTR_W: $DMA_RX_HDR_PTR_W, TX_DATA_PTR_W: $DMA_TX_DATA_PTR_W!"
+    }
 }
 
 VhdlPkgProjectText $PROJECT_NAME
@@ -51,11 +65,21 @@ VhdlPkgProjectText $PROJECT_NAME
 VhdlPkgStr PCIE_MOD_ARCH $PCIE_MOD_ARCH
 VhdlPkgStr NET_MOD_ARCH  $NET_MOD_ARCH
 
-VhdlPkgInt    ETH_PORTS       $ETH_PORTS
-VhdlPkgIntArr ETH_PORT_SPEED  $ETH_PORTS
-VhdlPkgIntArr ETH_PORT_CHAN   $ETH_PORTS
-VhdlPkgIntArr ETH_PORT_RX_MTU $ETH_PORTS
-VhdlPkgIntArr ETH_PORT_TX_MTU $ETH_PORTS
+# This is only to ensure the correct package generation.
+if {$ETH_PORTS == 0} {
+    VhdlPkgInt    ETH_PORTS       1
+    VhdlPkgIntArr ETH_PORT_SPEED  1
+    VhdlPkgIntArr ETH_PORT_CHAN   1
+    VhdlPkgIntArr ETH_PORT_RX_MTU 1
+    VhdlPkgIntArr ETH_PORT_TX_MTU 1
+} else {
+    VhdlPkgInt    ETH_PORTS       $ETH_PORTS
+    VhdlPkgIntArr ETH_PORT_SPEED  $ETH_PORTS
+    VhdlPkgIntArr ETH_PORT_CHAN   $ETH_PORTS
+    VhdlPkgIntArr ETH_PORT_RX_MTU $ETH_PORTS
+    VhdlPkgIntArr ETH_PORT_TX_MTU $ETH_PORTS
+}
+
 
 VhdlPkgInt  PCIE_LANES         $PCIE_LANES
 VhdlPkgInt  PCIE_GEN           $PCIE_GEN
@@ -69,8 +93,10 @@ VhdlPkgInt  DMA_RX_FRAME_SIZE_MAX $DMA_RX_FRAME_SIZE_MAX
 VhdlPkgInt  DMA_TX_FRAME_SIZE_MAX $DMA_TX_FRAME_SIZE_MAX
 #VhdlPkgInt  DMA_RX_FRAME_SIZE_MIN $DMA_RX_FRAME_SIZE_MIN
 #VhdlPkgInt  DMA_TX_FRAME_SIZE_MIN $DMA_TX_FRAME_SIZE_MIN
-VhdlPkgBool DMA_RX_BLOCKING_MODE  $DMA_RX_BLOCKING_MODE
-VhdlPkgBool DMA_TSU_ENABLE        $DMA_TSU_ENABLE
+VhdlPkgBool DMA_RX_BLOCKING_MODE $DMA_RX_BLOCKING_MODE
+VhdlPkgInt  DMA_RX_DATA_PTR_W    $DMA_RX_DATA_PTR_W
+VhdlPkgInt  DMA_RX_HDR_PTR_W     $DMA_RX_HDR_PTR_W
+VhdlPkgInt  DMA_TX_DATA_PTR_W    $DMA_TX_DATA_PTR_W
 
 # Other parameters
 VhdlPkgBool TSU_ENABLE    $TSU_ENABLE

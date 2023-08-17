@@ -270,6 +270,15 @@ architecture FULL of PCIE_CTRL is
     signal mtc_cq_mfb_src_rdy     : std_logic;
     signal mtc_cq_mfb_dst_rdy     : std_logic;
 
+    signal mtc_fifo_mfb_data        : std_logic_vector(CQ_MFB_REGIONS*CQ_MFB_REGION_SIZE*CQ_MFB_BLOCK_SIZE*CQ_MFB_ITEM_WIDTH-1 downto 0);
+    signal mtc_fifo_mfb_meta        : std_logic_vector(CQ_MFB_REGIONS*PCIE_CQ_META_WIDTH-1 downto 0);
+    signal mtc_fifo_mfb_sof         : std_logic_vector(CQ_MFB_REGIONS-1 downto 0);
+    signal mtc_fifo_mfb_eof         : std_logic_vector(CQ_MFB_REGIONS-1 downto 0);
+    signal mtc_fifo_mfb_sof_pos     : std_logic_vector(CQ_MFB_REGIONS*max(1,log2(CQ_MFB_REGION_SIZE))-1 downto 0);
+    signal mtc_fifo_mfb_eof_pos     : std_logic_vector(CQ_MFB_REGIONS*max(1,log2(CQ_MFB_REGION_SIZE*CQ_MFB_BLOCK_SIZE))-1 downto 0);
+    signal mtc_fifo_mfb_src_rdy     : std_logic;
+    signal mtc_fifo_mfb_dst_rdy     : std_logic;
+
     signal mtc_cc_mfb_data        : std_logic_vector(CC_MFB_REGIONS*CC_MFB_REGION_SIZE*CC_MFB_BLOCK_SIZE*CC_MFB_ITEM_WIDTH-1 downto 0);
     signal mtc_cc_mfb_meta        : std_logic_vector(CC_MFB_REGIONS*PCIE_CC_META_WIDTH-1 downto 0);
     signal mtc_cc_mfb_sof         : std_logic_vector(CC_MFB_REGIONS-1 downto 0);
@@ -502,14 +511,14 @@ begin
             RX_MFB_SRC_RDY  => PCIE_CQ_MFB_SRC_RDY,
             RX_MFB_DST_RDY  => PCIE_CQ_MFB_DST_RDY,
     
-            TX0_MFB_DATA    => mtc_cq_mfb_data,
-            TX0_MFB_META    => mtc_cq_mfb_meta,
-            TX0_MFB_SOF     => mtc_cq_mfb_sof,
-            TX0_MFB_EOF     => mtc_cq_mfb_eof,
-            TX0_MFB_SOF_POS => mtc_cq_mfb_sof_pos,
-            TX0_MFB_EOF_POS => mtc_cq_mfb_eof_pos,
-            TX0_MFB_SRC_RDY => mtc_cq_mfb_src_rdy,
-            TX0_MFB_DST_RDY => mtc_cq_mfb_dst_rdy,
+            TX0_MFB_DATA    => mtc_fifo_mfb_data,
+            TX0_MFB_META    => mtc_fifo_mfb_meta,
+            TX0_MFB_SOF     => mtc_fifo_mfb_sof,
+            TX0_MFB_EOF     => mtc_fifo_mfb_eof,
+            TX0_MFB_SOF_POS => mtc_fifo_mfb_sof_pos,
+            TX0_MFB_EOF_POS => mtc_fifo_mfb_eof_pos,
+            TX0_MFB_SRC_RDY => mtc_fifo_mfb_src_rdy,
+            TX0_MFB_DST_RDY => mtc_fifo_mfb_dst_rdy,
      
             TX1_MFB_DATA    => DMA_CQ_MFB_DATA(0),
             TX1_MFB_META    => DMA_CQ_MFB_META(0),
@@ -572,14 +581,14 @@ begin
         DMA_CQ_MFB_SRC_RDY <= (others => '0');
         DMA_CC_MFB_DST_RDY <= (others => '0');
 
-        mtc_cq_mfb_data     <= PCIE_CQ_MFB_DATA;
-        mtc_cq_mfb_meta     <= PCIE_CQ_MFB_META;
-        mtc_cq_mfb_sof      <= PCIE_CQ_MFB_SOF;
-        mtc_cq_mfb_eof      <= PCIE_CQ_MFB_EOF;
-        mtc_cq_mfb_sof_pos  <= PCIE_CQ_MFB_SOF_POS;
-        mtc_cq_mfb_eof_pos  <= PCIE_CQ_MFB_EOF_POS;
-        mtc_cq_mfb_src_rdy  <= PCIE_CQ_MFB_SRC_RDY;
-        PCIE_CQ_MFB_DST_RDY <= mtc_cq_mfb_dst_rdy;
+        mtc_fifo_mfb_data     <= PCIE_CQ_MFB_DATA;
+        mtc_fifo_mfb_meta     <= PCIE_CQ_MFB_META;
+        mtc_fifo_mfb_sof      <= PCIE_CQ_MFB_SOF;
+        mtc_fifo_mfb_eof      <= PCIE_CQ_MFB_EOF;
+        mtc_fifo_mfb_sof_pos  <= PCIE_CQ_MFB_SOF_POS;
+        mtc_fifo_mfb_eof_pos  <= PCIE_CQ_MFB_EOF_POS;
+        mtc_fifo_mfb_src_rdy  <= PCIE_CQ_MFB_SRC_RDY;
+        PCIE_CQ_MFB_DST_RDY   <= mtc_fifo_mfb_dst_rdy;
 
         PCIE_CC_MFB_DATA    <= mtc_cc_mfb_data;
         PCIE_CC_MFB_META    <= mtc_cc_mfb_meta;
@@ -654,6 +663,45 @@ begin
         MI_ARDY              => mtc_mi_ardy,
         MI_DRDY              => mtc_mi_drdy
     );
+
+    mtc_fifo_i : entity work.MFB_FIFOX
+        generic map (
+            REGIONS             => CQ_MFB_REGIONS,
+            REGION_SIZE         => CQ_MFB_REGION_SIZE,
+            BLOCK_SIZE          => CQ_MFB_BLOCK_SIZE,
+            ITEM_WIDTH          => CQ_MFB_ITEM_WIDTH,
+
+            META_WIDTH          => PCIE_CQ_META_WIDTH,
+            FIFO_DEPTH          => 512,
+            RAM_TYPE            => "AUTO",
+            DEVICE              => DEVICE,
+            ALMOST_FULL_OFFSET  => 2,
+            ALMOST_EMPTY_OFFSET => 2)
+        port map (
+            CLK         => PCIE_CLK,
+            RST         => PCIE_RESET(1),
+
+            RX_DATA     => mtc_fifo_mfb_data,
+            RX_META     => mtc_fifo_mfb_meta,
+            RX_SOF_POS  => mtc_fifo_mfb_sof_pos,
+            RX_EOF_POS  => mtc_fifo_mfb_eof_pos,
+            RX_SOF      => mtc_fifo_mfb_sof,
+            RX_EOF      => mtc_fifo_mfb_eof,
+            RX_SRC_RDY  => mtc_fifo_mfb_src_rdy,
+            RX_DST_RDY  => mtc_fifo_mfb_dst_rdy,
+
+            TX_DATA     => mtc_cq_mfb_data,
+            TX_META     => mtc_cq_mfb_meta,
+            TX_SOF_POS  => mtc_cq_mfb_sof_pos,
+            TX_EOF_POS  => mtc_cq_mfb_eof_pos,
+            TX_SOF      => mtc_cq_mfb_sof,
+            TX_EOF      => mtc_cq_mfb_eof,
+            TX_SRC_RDY  => mtc_cq_mfb_src_rdy,
+            TX_DST_RDY  => mtc_cq_mfb_dst_rdy,
+
+            FIFO_STATUS => open,
+            FIFO_AFULL  => open,
+            FIFO_AEMPTY => open);
 
     mi_async_i : entity work.MI_ASYNC
     generic map(
