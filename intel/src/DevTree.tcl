@@ -105,7 +105,7 @@ proc dts_build_netcope {} {
     # Gen Loop Switch debug modules for each DMA stream/module
     global DMA_MODULES
     for {set i 0} {$i < $DMA_MODULES} {incr i} {
-        set    gls_offset [expr $i * 0x100]
+        set    gls_offset [expr $i * 0x200]
         append ret [dts_gen_loop_switch [expr $ADDR_GEN_LOOP + $gls_offset] "dbg_gls$i"]
     }
 
