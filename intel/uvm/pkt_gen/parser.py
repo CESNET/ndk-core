@@ -13,6 +13,7 @@ from config import *
 from layers import trill
 import scapy.all
 import scapy.utils
+import scapy.volatile
 import scapy.contrib.mpls
 import random
 import string
@@ -165,7 +166,7 @@ class IPv6Ext(base_node):
         super().__init__("IPv6Ext");
 
     def protocol_add(self, config):
-        possible_protocols = [ scapy.all.IPv6ExtHdrDestOpt(), scapy.all.IPv6ExtHdrFragment(), scapy.all.IPv6ExtHdrHopByHop(), scapy.all.IPv6ExtHdrRouting() ]
+        possible_protocols = [ scapy.all.IPv6ExtHdrDestOpt(), scapy.all.IPv6ExtHdrFragment(id=random.randint(0, 2**32-1)), scapy.all.IPv6ExtHdrHopByHop(), scapy.all.IPv6ExtHdrRouting() ]
         return random.choice(possible_protocols)
 
     def protocol_next(self, config):
@@ -282,7 +283,7 @@ class ETH(base_node):
         super().__init__("ETH");
 
     def protocol_add(self, config):
-        return scapy.all.Ether()
+        return scapy.all.Ether(src=scapy.volatile.RandMAC(), dst=scapy.volatile.RandMAC())
 
     def protocol_next(self, config):
         proto = {"IPv4" : 1, "IPv6" : 1, "VLAN" : 1, "TRILL" : 1, "MPLS" : 1, "Empty" : 1, "PPP" : 1}
