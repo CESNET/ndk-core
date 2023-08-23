@@ -30,8 +30,11 @@ generic(
     -- Options: F_TILE core: 1, 2, 4, 8;
     --          E_TILE core: 1, 4;
     --          CMAC   core: 1.
+
     ETH_PORT_CHAN     : integer_vector(ETH_PORTS-1 downto 0) := (others => 4);
     -- Maximum allowed size of RX frame in bytes per Ethernet port.
+    EHIP_PORT_TYPE    : integer_vector(ETH_PORTS-1 downto 0) := (others => 0);
+    -- Type of used IP core default is F_Tile.
     ETH_PORT_RX_MTU   : integer_vector(ETH_PORTS-1 downto 0) := (others => 16383);
     -- Maximum allowed size of TX frame in bytes per Ethernet port.
     ETH_PORT_TX_MTU   : integer_vector(ETH_PORTS-1 downto 0) := (others => 16383);

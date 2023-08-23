@@ -76,6 +76,7 @@ if {$ETH_PORTS == 0} {
     VhdlPkgInt    ETH_PORTS       $ETH_PORTS
     VhdlPkgIntArr ETH_PORT_SPEED  $ETH_PORTS
     VhdlPkgIntArr ETH_PORT_CHAN   $ETH_PORTS
+    VhdlPkgIntArr EHIP_PORT_TYPE  $ETH_PORTS
     VhdlPkgIntArr ETH_PORT_RX_MTU $ETH_PORTS
     VhdlPkgIntArr ETH_PORT_TX_MTU $ETH_PORTS
 }

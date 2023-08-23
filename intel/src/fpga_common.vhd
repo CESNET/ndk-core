@@ -1272,7 +1272,9 @@ begin
         LANE_TX_POLARITY  => ETH_LANE_TXPOLARITY,
         RESET_WIDTH       => 1              ,
         DEVICE            => DEVICE         ,
-        BOARD             => BOARD
+        BOARD             => BOARD          ,
+
+        EHIP_PORT_TYPE    => EHIP_PORT_TYPE
     )
     port map (
         CLK_USER        => clk_app,
