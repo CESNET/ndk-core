@@ -24,6 +24,16 @@ set ETH_PORT_SPEED(0)  100
 set ETH_PORT_SPEED(1)  100
 set ETH_PORT_SPEED(2)  100
 set ETH_PORT_SPEED(3)  100
+# Type of used IP core for each one of the ETH_PORTS
+# FTILE_TYPE is an array where each index represents a given ETH_PORT and
+# is associated with a required type of used IP core for this port.
+# NOTE: at this moment, all ports must have the same type of used IP core!
+# Options are: 0 which is used for F-tile IP core
+#              1 which is used for F-tile Multirate IP core
+set EHIP_PORT_TYPE(0)  0
+set EHIP_PORT_TYPE(1)  0
+set EHIP_PORT_TYPE(2)  0
+set EHIP_PORT_TYPE(3)  0
 # Number of channels for each one of the ETH_PORTS
 # ETH_PORT_CHAN is an array where each index represents given ETH_PORT and
 # each index has associated a required number of channels this port has.

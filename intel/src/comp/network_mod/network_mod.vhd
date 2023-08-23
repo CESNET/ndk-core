@@ -55,6 +55,7 @@ architecture FULL of NETWORK_MOD is
     -- =========================================================================
     --                               CONSTANTS
     -- =========================================================================
+    constant EHIP_TYPE         : natural := EHIP_PORT_TYPE(0); -- Define type of used IP core 
 
     constant REGIONS_CORE      : natural := tsel(ETH_PORT_SPEED(0) = 400, 2, 1); -- TODO: support different speeds/number of channels for each port
     constant REGION_SIZE_CORE  : natural := region_size_core_f;
@@ -396,6 +397,7 @@ begin
         generic map (
             ETH_PORT_SPEED    => ETH_PORT_SPEED(p),
             ETH_PORT_CHAN     => ETH_PORT_CHAN (p),
+            EHIP_TYPE         => EHIP_TYPE        ,
             LANES             => LANES            ,
             REGIONS           => REGIONS_CORE     ,
             REGION_SIZE       => REGION_SIZE_CORE ,

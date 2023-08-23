@@ -32,7 +32,10 @@ generic(
     --          DK-DEV-AGI027RES card: 8;
     --          DK-DEV-1SDX-P    card: 4.
     LANES           : natural := 8;
-
+    -- Type of used IP core
+    -- Options: "EHIP=0" , "F-Tile"          ;
+    --          "EHIP>=1", "F-Tile_Multirate";  
+    EHIP_TYPE       : natural := 0;
     -- =====================================================================
     -- MFB configuration:
     -- =====================================================================
