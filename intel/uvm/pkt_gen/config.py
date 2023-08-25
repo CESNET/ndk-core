@@ -22,14 +22,12 @@ def json_object_get(json, path):
 class packet_config:
     def __init__(self, constraints = None):
         #init values
-        self.trill = 1
-        self.vlan  = 4
-        self.mpls  = 4
+        self.trill   = 1
+        self.vlan    = 4
+        self.mpls    = 4
+        self.ipv6ext = 4
 
-        self.constraints = None
-  
-        #configure
-        self.constraints
+        self.constraints = constraints
 
         mpls_stack = self.object_get(["mpls", "stack"]);
         if (mpls_stack != None):
@@ -39,12 +37,16 @@ class packet_config:
         if (vlan_stack != None):
             self.vlan = int(vlan_stack.get("max"));
 
+        ipv6ext_stack = self.object_get(["ipv6ext", "stack"]);
+        if (ipv6ext_stack != None):
+            self.ipv6ext = int(ipv6ext.get("max"));
+
     def copy(self):
-        ret = packet_config()
-        ret.trill = self.trill
-        ret.vlan = self.vlan
-        ret.mpls = self.mpls
-        ret.constraints = self.constraints
+        ret = packet_config(self.constraints)
+        ret.trill   = self.trill
+        ret.vlan    = self.vlan
+        ret.mpls    = self.mpls
+        ret.ipv6ext = self.ipv6ext
         return ret;
 
     def object_get(self, path):

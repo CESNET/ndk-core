@@ -1,6 +1,7 @@
 -- fpga_common.vhd: Common top level architecture
--- Copyright (C) 2019 CESNET z. s. p. o.
+-- Copyright (C) 2023 CESNET z. s. p. o.
 -- Author(s): Jakub Cabal <cabal@cesnet.cz>
+--            Vladislav Valek <valekv@cesnet.cz>
 --
 -- SPDX-License-Identifier: BSD-3-Clause
 
@@ -201,7 +202,7 @@ architecture FULL of FPGA_COMMON is
     constant MI_DATA_WIDTH      : integer := 32;
     constant MI_ADDR_WIDTH      : integer := 32;
 
-    constant PTC_DISABLE : boolean := (DMA_TYPE = 4);
+    constant PTC_ENABLE : boolean := (DMA_TYPE = 3);
 
     -- MVB parameters
     constant MVB_ITEMS          : integer := ETH_MFB_REGION;  -- Number of items (headers) in word - TODO
@@ -252,7 +253,7 @@ architecture FULL of FPGA_COMMON is
         end if;
 
         -- PTC conversion to DMA streams for DMA_TYPE=3
-        if ((PCIE_DIR="RQ" or PCIE_DIR="RC") and (not PTC_DISABLE)) then
+        if ((PCIE_DIR="RQ" or PCIE_DIR="RC") and PTC_ENABLE) then
             if (PCIE_ENDPOINT_TYPE="P_TILE" and PCIE_ENDPOINT_MODE = 1) then
                 -- 256b@~500MHz PCIe stream to 512b@200MHz PTC-DMA stream
                 pcie_mfb_regions := pcie_mfb_regions*2;
@@ -638,7 +639,7 @@ begin
         PCIE_CONS           => PCIE_CONS,
         PCIE_LANES          => PCIE_LANES,
 
-        PTC_DISABLE         => PTC_DISABLE,
+        PTC_DISABLE         => not PTC_ENABLE,
         DMA_BAR_ENABLE      => (DMA_TYPE = 4),
         XVC_ENABLE          => false,
         CARD_ID_WIDTH       => FPGA_ID_WIDTH,
@@ -933,14 +934,13 @@ begin
         HDR_META_WIDTH       => HDR_META_WIDTH            ,
 
         RX_CHANNELS          => DMA_RX_CHANNELS           ,
-        RX_DP_WIDTH          => 16                        ,
-        RX_HP_WIDTH          => 16                        ,
+        RX_DP_WIDTH          => DMA_RX_DATA_PTR_W         ,
+        RX_HP_WIDTH          => DMA_RX_HDR_PTR_W          ,
         RX_BLOCKING_MODE     => DMA_RX_BLOCKING_MODE      ,
 
         TX_CHANNELS          => DMA_TX_CHANNELS           ,
         TX_SEL_CHANNELS      => minimum(8,DMA_TX_CHANNELS),
-        TX_DP_WIDTH          => 16                        ,
-        TX_FIFO_DEPTH        => 512                       ,
+        TX_DP_WIDTH          => DMA_TX_DATA_PTR_W         ,
 
         RX_GEN_EN            => true                      ,
         TX_GEN_EN            => true                      ,
@@ -951,8 +951,7 @@ begin
 
         GEN_LOOP_EN          => DMA_GEN_LOOP_EN           ,
         DMA_400G_DEMO        => DMA_400G_DEMO             ,
-        DMA_TSU_ENABLE       => DMA_TSU_ENABLE            ,
- 
+
         PCIE_ENDPOINTS       => PCIE_ENDPOINTS
     )
     port map (
@@ -1273,7 +1272,9 @@ begin
         LANE_TX_POLARITY  => ETH_LANE_TXPOLARITY,
         RESET_WIDTH       => 1              ,
         DEVICE            => DEVICE         ,
-        BOARD             => BOARD
+        BOARD             => BOARD          ,
+
+        EHIP_PORT_TYPE    => EHIP_PORT_TYPE
     )
     port map (
         CLK_USER        => clk_app,

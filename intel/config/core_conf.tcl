@@ -24,6 +24,16 @@ set ETH_PORT_SPEED(0)  100
 set ETH_PORT_SPEED(1)  100
 set ETH_PORT_SPEED(2)  100
 set ETH_PORT_SPEED(3)  100
+# Type of used IP core for each one of the ETH_PORTS
+# FTILE_TYPE is an array where each index represents a given ETH_PORT and
+# is associated with a required type of used IP core for this port.
+# NOTE: at this moment, all ports must have the same type of used IP core!
+# Options are: 0 which is used for F-tile IP core
+#              1 which is used for F-tile Multirate IP core
+set EHIP_PORT_TYPE(0)  0
+set EHIP_PORT_TYPE(1)  0
+set EHIP_PORT_TYPE(2)  0
+set EHIP_PORT_TYPE(3)  0
 # Number of channels for each one of the ETH_PORTS
 # ETH_PORT_CHAN is an array where each index represents given ETH_PORT and
 # each index has associated a required number of channels this port has.
@@ -57,6 +67,11 @@ set QSFP_I2C_ADDR(0)   "0xA0"
 set QSFP_I2C_ADDR(1)   "0xA0"
 set QSFP_I2C_ADDR(2)   "0xA0"
 set QSFP_I2C_ADDR(3)   "0xA0"
+
+# ------------------------------------------------------------------------------
+# Application core parameters:
+# ------------------------------------------------------------------------------
+set APP_CORE_ENABLE true
 
 # ------------------------------------------------------------------------------
 # PCIe parameters (not all combinations work):
@@ -94,10 +109,10 @@ set DMA_TX_FRAME_SIZE_MAX 16383
 # In blocking mode, packets are dropped only when the RX DMA channel is off.
 # In non-blocking mode, packets are dropped whenever they cannot be sent.
 set DMA_RX_BLOCKING_MODE true
-
-# WARNING: Only for testing purposes. Otherwise corruption of data can occur.
-# (DMA Calypte only) Enabling of timestamping unit located before RX controller
-set DMA_TSU_ENABLE false
+# Widths of pointers for data/headers
+set DMA_RX_DATA_PTR_W 16
+set DMA_RX_HDR_PTR_W  16
+set DMA_TX_DATA_PTR_W 16
 
 # ------------------------------------------------------------------------------
 # Other parameters:

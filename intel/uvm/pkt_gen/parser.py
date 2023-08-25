@@ -13,6 +13,7 @@ from config import *
 from layers import trill
 import scapy.all
 import scapy.utils
+import scapy.volatile
 import scapy.contrib.mpls
 import random
 import string
@@ -160,6 +161,28 @@ class IPv4(base_node):
         return proto
 
 
+class IPv6Ext(base_node):
+    def __init__(self):
+        super().__init__("IPv6Ext");
+
+    def protocol_add(self, config):
+        possible_protocols = [ scapy.all.IPv6ExtHdrDestOpt(), scapy.all.IPv6ExtHdrFragment(id=random.randint(0, 2**32-1)), scapy.all.IPv6ExtHdrHopByHop(), scapy.all.IPv6ExtHdrRouting() ]
+        return random.choice(possible_protocols)
+
+    def protocol_next(self, config):
+        proto = { "Payload" : 1, "Empty" : 1, "ICMPv4" : 1, "ICMPv6" : 1, "UDP" : 1, "TCP" : 1, "SCTP" : 1, "IPv6Ext" : 1}
+        proto_weight = config.object_get([self.name, "weight"]);
+        if (proto_weight != None):
+            proto.update(proto_weight)
+        # Check if it is last generated IPv6Ext
+        if (config.ipv6ext != 0):
+            config.ipv6ext -= 1
+        if (config.ipv6ext == 0):
+            proto["IPv6Ext"] = 0;
+
+        return proto
+
+
 class IPv6(base_node):
     def __init__(self):
         super().__init__("IPv6");
@@ -184,9 +207,8 @@ class IPv6(base_node):
 
         return scapy.all.IPv6(version=6, src = src, dst = dst)
 
-
     def protocol_next(self, config):
-        proto = { "Payload" : 1, "Empty" : 1, "ICMPv4" : 1, "ICMPv6" : 1, "UDP" : 1, "TCP" : 1, "SCTP" : 1}
+        proto = { "Payload" : 1, "Empty" : 1, "ICMPv4" : 1, "ICMPv6" : 1, "UDP" : 1, "TCP" : 1, "SCTP" : 1, "IPv6Ext" : 1}
         proto_weight = config.object_get([self.name, "weight"]);
         if (proto_weight != None):
             proto.update(proto_weight)
@@ -221,7 +243,7 @@ class PPP(base_node):
         super().__init__("PPP");
 
     def protocol_add(self, config):
-        return scapy.all.PPP()
+        return scapy.all.PPPoE()/scapy.all.PPP()
 
     def protocol_next(self, config):
         proto = {"IPv4" : 1, "IPv6" : 1, "MPLS" : 1, "Empty" : 1}
@@ -232,13 +254,13 @@ class PPP(base_node):
         return proto
 
 
-
 class VLAN(base_node):
     def __init__(self):
         super().__init__("VLAN");
 
     def protocol_add(self, config):
-        return scapy.all.Dot1Q()
+        possible_protocols = [ scapy.all.Dot1Q(), scapy.all.Dot1AD() ]
+        return random.choice(possible_protocols)
 
     def protocol_next(self, config):
         proto   = {"IPv4" : 1, "IPv6" : 1, "VLAN" : 1 , "TRILL" : 1, "MPLS" : 1, "Empty" : 1, "PPP" : 1}
@@ -261,7 +283,7 @@ class ETH(base_node):
         super().__init__("ETH");
 
     def protocol_add(self, config):
-        return scapy.all.Ether()
+        return scapy.all.Ether(src=scapy.volatile.RandMAC(), dst=scapy.volatile.RandMAC())
 
     def protocol_next(self, config):
         proto = {"IPv4" : 1, "IPv6" : 1, "VLAN" : 1, "TRILL" : 1, "MPLS" : 1, "Empty" : 1, "PPP" : 1}
@@ -277,7 +299,7 @@ class ETH(base_node):
 
 class parser:
     def __init__(self, pcap_file, cfg, seed):
-        self.protocols = {"ETH" : ETH(), "VLAN" : VLAN(), "TRILL" : TRILL(), "PPP" : PPP(), "MPLS" : MPLS(), "IPv6" : IPv6(),
+        self.protocols = {"ETH" : ETH(), "VLAN" : VLAN(), "TRILL" : TRILL(), "PPP" : PPP(), "MPLS" : MPLS(), "IPv6" : IPv6(), "IPv6Ext" : IPv6Ext(),
                 "IPv4" : IPv4(), "TCP" : TCP(), "UDP" : UDP(), "ICMPv6" : ICMPv6(), "ICMPv4" : ICMPv4(), "SCTP" : SCTP(),
                 "Payload" : Payload(), "Empty" : Empty()};
         self.pcap_file = scapy.utils.PcapWriter(pcap_file, append=False, sync=True)

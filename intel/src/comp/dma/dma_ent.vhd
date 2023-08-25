@@ -81,7 +81,6 @@ generic(
     TX_CHANNELS          : natural := 8;
     TX_SEL_CHANNELS      : natural := 8;
     TX_DP_WIDTH          : natural := 16;
-    TX_FIFO_DEPTH        : natural := 512;
 
     RX_GEN_EN            : boolean := true;
     TX_GEN_EN            : boolean := true;
@@ -95,8 +94,7 @@ generic(
     -- =====================================================================
     -- Enable presence of Generator/Loopback Switch
     GEN_LOOP_EN          : boolean := false;
-    DMA_400G_DEMO        : boolean := false;
-    DMA_TSU_ENABLE       : boolean := false
+    DMA_400G_DEMO        : boolean := false
     -- =====================================================================
 );
 port(
