@@ -1375,7 +1375,7 @@ architecture FULL of NETWORK_MOD_CORE is
     signal mgmt_mac_loop  : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
 
     -- Synchronization of REPEATER_CTRL
-    -- signal sync_repeater_ctrl : std_logic_vector(REPEATER_CTRL'range);
+    signal sync_repeater_ctrl : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
 
     -- ===============================================================================
     --             Help signal for test of ftile_multrate_eth_F_NOF_1x100g
@@ -1514,7 +1514,6 @@ begin
         -- MDIO reg 3.4001 (vendor specific PCS status/abilities)
         mgmt_pcs_status(15 downto 1) <= (others => '0'); 
         mgmt_pcs_status(0)           <= '1';        -- MAC loopback ability supported
-
 
         -- Store mi_ia_sel for read operations
         sel_reg_p: process(MI_CLK_PHY)
@@ -1902,26 +1901,6 @@ begin
                     end if;
                 end if;
             end process;
-
-            -- =========================================================================
-            --  Loopback (repeater) control
-            -- =========================================================================
-            -- Synchronization of REPEATER_CTRL
-            -- sync_repeater_ctrl_i : entity work.ASYNC_BUS_HANDSHAKE
-            -- generic map (
-            --     DATA_WIDTH => 2
-            -- ) port map (
-            --     ACLK       => MI_CLK_PHY,
-            --     ARST       => MI_RESET_PHY,
-            --     ADATAIN    => REPEATER_CTRL,
-            --     ASEND      => '1',
-            --     AREADY     => open,
-            --     BCLK       => ftile_clk_out,
-            --     BRST       => '0',
-            --     BDATAOUT   => sync_repeater_ctrl,
-            --     BLOAD      => '1',
-            --     BVALID     => open
-            -- );
 
             -- =========================================================================
             -- ADAPTERS
