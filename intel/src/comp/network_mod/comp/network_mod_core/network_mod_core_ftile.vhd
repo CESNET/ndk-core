@@ -1073,7 +1073,7 @@ architecture FULL of NETWORK_MOD_CORE is
 
     signal mgmt_pcs_reset : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
     signal mgmt_pma_reset : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
-    signal mgmt_pcs_loop  : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
+    signal mgmt_mac_loop  : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
 
     -- Synchronization of REPEATER_CTRL
     signal sync_repeater_ctrl : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
@@ -1132,6 +1132,8 @@ begin
     signal ia_rd        : std_logic;
     signal init_done    : std_logic_vector(LANES_PER_CHANNEL-1 downto 0);
     signal init_ready   : std_logic_vector(LANES_PER_CHANNEL-1 downto 0);
+    signal mgmt_pcs_control : std_logic_vector(16-1 downto 0);
+    signal mgmt_pcs_status  : std_logic_vector(16-1 downto 0);    
 
     begin
         mgmt_i : entity work.mgmt
@@ -1167,7 +1169,11 @@ begin
             BLK_ERR_CLR   => open,
             SCR_BYPASS    => open,
             PCS_RESET     => mgmt_pcs_reset(i), --TODO
-            PCS_LPBCK     => mgmt_pcs_loop(i),
+            PCS_LPBCK     => open,
+            PCS_CONTROL(0)=> mgmt_mac_loop(i),
+            PCS_CONTROL(15 downto 1) => open,
+            PCS_CONTROL_I => mgmt_pcs_control,
+            PCS_STATUS    => mgmt_pcs_status,
             -- PCS Lane align
             ALGN_LOCKED   => ftile_rx_am_lock(i),
             BIP_ERR_CNTRS => (others => '0'),
@@ -1200,6 +1206,13 @@ begin
             DRPDI         => mi_ia_dwr,
             DRPSEL        => mi_ia_sel
         );
+        -- MDIO reg 3.4000 (vendor specific PCS control readout)
+        mgmt_pcs_control(15 downto 1) <= (others => '0');
+        mgmt_pcs_control(0)           <= sync_repeater_ctrl(i); -- MAC loopback active
+        -- MDIO reg 3.4001 (vendor specific PCS status/abilities)
+        mgmt_pcs_status(15 downto 1) <= (others => '0'); 
+        mgmt_pcs_status(0)           <= '1';        -- MAC loopback ability supported
+
 
         -- Store mi_ia_sel for read operations
         sel_reg_p: process(MI_CLK_PHY)
@@ -2878,7 +2891,7 @@ begin
     ) port map (
         ACLK       => MI_CLK_PHY,
         ARST       => MI_RESET_PHY,
-        ADATAIN    => mgmt_pcs_loop,
+        ADATAIN    => mgmt_mac_loop,
         ASEND      => '1',
         AREADY     => open,
         BCLK       => ftile_clk_out,
