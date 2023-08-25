@@ -1344,6 +1344,19 @@ architecture FULL of NETWORK_MOD_CORE is
     signal ftile_tx_mac_ready     : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
     signal ftile_tx_mac_error     : slv_array_t     (ETH_PORT_CHAN-1 downto 0)(TX_MAC_ERROR_WIDTH    -1 downto 0);
 
+    signal ftile_tx_loop_data      : slv_array_t     (ETH_PORT_CHAN-1 downto 0)(MAC_DATA_WIDTH        -1 downto 0);
+    signal ftile_tx_loop_valid     : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
+    signal ftile_tx_loop_inframe   : slv_array_t     (ETH_PORT_CHAN-1 downto 0)(MAC_INFRAME_WIDTH     -1 downto 0);
+    signal ftile_tx_loop_eop_empty : slv_array_t     (ETH_PORT_CHAN-1 downto 0)(MAC_EOP_EMPTY_WIDTH   -1 downto 0);
+    signal ftile_tx_loop_ready     : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
+    signal ftile_tx_loop_error     : slv_array_t     (ETH_PORT_CHAN-1 downto 0)(TX_MAC_ERROR_WIDTH    -1 downto 0);
+
+    signal ftile_tx_adap_data      : slv_array_t     (ETH_PORT_CHAN-1 downto 0)(MAC_DATA_WIDTH        -1 downto 0);
+    signal ftile_tx_adap_valid     : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
+    signal ftile_tx_adap_inframe   : slv_array_t     (ETH_PORT_CHAN-1 downto 0)(MAC_INFRAME_WIDTH     -1 downto 0);
+    signal ftile_tx_adap_eop_empty : slv_array_t     (ETH_PORT_CHAN-1 downto 0)(MAC_EOP_EMPTY_WIDTH   -1 downto 0);
+    signal ftile_tx_adap_error     : slv_array_t     (ETH_PORT_CHAN-1 downto 0)(TX_MAC_ERROR_WIDTH    -1 downto 0);
+
     signal ftile_rx_mac_data      : slv_array_t     (ETH_PORT_CHAN-1 downto 0)(MAC_DATA_WIDTH        -1 downto 0);
     signal ftile_rx_mac_valid     : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
     signal ftile_rx_mac_inframe   : slv_array_t     (ETH_PORT_CHAN-1 downto 0)(MAC_INFRAME_WIDTH     -1 downto 0);
@@ -1359,9 +1372,10 @@ architecture FULL of NETWORK_MOD_CORE is
 
     signal mgmt_pcs_reset : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
     signal mgmt_pma_reset : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
+    signal mgmt_mac_loop  : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
 
     -- Synchronization of REPEATER_CTRL
-    -- signal sync_repeater_ctrl : std_logic_vector(REPEATER_CTRL'range);
+    signal sync_repeater_ctrl : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
 
     -- ===============================================================================
     --             Help signal for test of ftile_multrate_eth_F_NOF_1x100g
@@ -1407,19 +1421,21 @@ begin
     );
     mgmt_g : for i in ETH_PORT_CHAN-1 downto 0 generate
 
-        signal mi_ia_drd    : std_logic_vector(MI_DATA_WIDTH_PHY-1 downto 0);
-        signal mi_ia_drdy   : std_logic;
-        signal mi_ia_en     : std_logic;
-        signal mi_ia_we_phy : std_logic;
-        signal mi_ia_sel    : std_logic_vector(4-1 downto 0);
-        signal mi_ia_addr   : std_logic_vector(32-1 downto 0);
-        signal mi_ia_dwr    : std_logic_vector(MI_DATA_WIDTH_PHY-1 downto 0);
-        signal mi_ia_ardy   : std_logic;
-        signal ia_ardy_vld  : std_logic;
-        signal ia_rd_sel    : std_logic_vector(mi_ia_sel'range);
-        signal ia_rd        : std_logic;
-        signal init_done    : std_logic_vector(LANES_PER_CHANNEL-1 downto 0);
-        signal init_ready   : std_logic_vector(LANES_PER_CHANNEL-1 downto 0);
+    signal mi_ia_drd        : std_logic_vector(MI_DATA_WIDTH_PHY-1 downto 0);
+    signal mi_ia_drdy       : std_logic;
+    signal mi_ia_en         : std_logic;
+    signal mi_ia_we_phy     : std_logic;
+    signal mi_ia_sel        : std_logic_vector(4-1 downto 0);
+    signal mi_ia_addr       : std_logic_vector(32-1 downto 0);
+    signal mi_ia_dwr        : std_logic_vector(MI_DATA_WIDTH_PHY-1 downto 0);
+    signal mi_ia_ardy       : std_logic;
+    signal ia_ardy_vld      : std_logic;
+    signal ia_rd_sel        : std_logic_vector(mi_ia_sel'range);
+    signal ia_rd            : std_logic;
+    signal init_done        : std_logic_vector(LANES_PER_CHANNEL-1 downto 0);
+    signal init_ready       : std_logic_vector(LANES_PER_CHANNEL-1 downto 0);
+    signal mgmt_pcs_control : std_logic_vector(16-1 downto 0);
+    signal mgmt_pcs_status  : std_logic_vector(16-1 downto 0);    
 
     begin
         mgmt_i : entity work.mgmt
@@ -1456,6 +1472,10 @@ begin
             SCR_BYPASS    => open,
             PCS_RESET     => mgmt_pcs_reset(i), --TODO
             PCS_LPBCK     => open,
+            PCS_CONTROL(0)=> mgmt_mac_loop(i),
+            PCS_CONTROL(15 downto 1) => open,
+            PCS_CONTROL_I => mgmt_pcs_control,
+            PCS_STATUS    => mgmt_pcs_status,
             -- PCS Lane align
             ALGN_LOCKED   => ftile_rx_am_lock(i),
             BIP_ERR_CNTRS => (others => '0'),
@@ -1488,6 +1508,12 @@ begin
             DRPDI         => mi_ia_dwr,
             DRPSEL        => mi_ia_sel
         );
+        -- MDIO reg 3.4000 (vendor specific PCS control readout)
+        mgmt_pcs_control(15 downto 1) <= (others => '0');
+        mgmt_pcs_control(0)           <= sync_repeater_ctrl(i); -- MAC loopback active
+        -- MDIO reg 3.4001 (vendor specific PCS status/abilities)
+        mgmt_pcs_status(15 downto 1) <= (others => '0'); 
+        mgmt_pcs_status(0)           <= '1';        -- MAC loopback ability supported
 
         -- Store mi_ia_sel for read operations
         sel_reg_p: process(MI_CLK_PHY)
@@ -1877,26 +1903,6 @@ begin
             end process;
 
             -- =========================================================================
-            --  Loopback (repeater) control
-            -- =========================================================================
-            -- Synchronization of REPEATER_CTRL
-            -- sync_repeater_ctrl_i : entity work.ASYNC_BUS_HANDSHAKE
-            -- generic map (
-            --     DATA_WIDTH => 2
-            -- ) port map (
-            --     ACLK       => MI_CLK_PHY,
-            --     ARST       => MI_RESET_PHY,
-            --     ADATAIN    => REPEATER_CTRL,
-            --     ASEND      => '1',
-            --     AREADY     => open,
-            --     BCLK       => ftile_clk_out,
-            --     BRST       => '0',
-            --     BDATAOUT   => sync_repeater_ctrl,
-            --     BLOAD      => '1',
-            --     BVALID     => open
-            -- );
-
-            -- =========================================================================
             -- ADAPTERS
             -- =========================================================================
             rx_ftile_adapter_i : entity work.RX_MAC_LITE_ADAPTER_MAC_SEG
@@ -1923,6 +1929,7 @@ begin
                 OUT_MFB_SRC_RDY  => TX_MFB_SRC_RDY(0),
                 OUT_LINK_UP      => open
             );
+
             tx_ftile_adapter_i : entity work.TX_MAC_LITE_ADAPTER_MAC_SEG
             generic map(
                 REGIONS     => REGIONS,
@@ -1939,11 +1946,11 @@ begin
                 IN_MFB_ERROR      => (others => '0'),
                 IN_MFB_SRC_RDY    => RX_MFB_SRC_RDY(0),
                 IN_MFB_DST_RDY    => RX_MFB_DST_RDY(0),
-                OUT_MAC_DATA      => ftile_tx_mac_data(0),
-                OUT_MAC_INFRAME   => ftile_tx_mac_inframe(0),
-                OUT_MAC_EOP_EMPTY => ftile_tx_mac_eop_empty(0),
-                OUT_MAC_ERROR     => ftile_tx_mac_error(0),
-                OUT_MAC_VALID     => ftile_tx_mac_valid(0),
+                OUT_MAC_DATA      => ftile_tx_adap_data(0),
+                OUT_MAC_INFRAME   => ftile_tx_adap_inframe(0),
+                OUT_MAC_EOP_EMPTY => ftile_tx_adap_eop_empty(0),
+                OUT_MAC_ERROR     => ftile_tx_adap_error(0),
+                OUT_MAC_VALID     => ftile_tx_adap_valid(0),
                 OUT_MAC_READY     => ftile_tx_mac_ready(0)
             );
 
@@ -2090,26 +2097,6 @@ begin
                 end process;
 
                 -- =========================================================================
-                --  Loopback (repeater) control
-                -- =========================================================================
-                -- Synchronization of REPEATER_CTRL
-                -- sync_repeater_ctrl_i : entity work.ASYNC_BUS_HANDSHAKE
-                -- generic map (
-                --     DATA_WIDTH => 2
-                -- ) port map (
-                --     ACLK       => MI_CLK_PHY,
-                --     ARST       => MI_RESET_PHY,
-                --     ADATAIN    => REPEATER_CTRL,
-                --     ASEND      => '1',
-                --     AREADY     => open,
-                --     BCLK       => ftile_clk_out,
-                --     BRST       => '0',
-                --     BDATAOUT   => sync_repeater_ctrl,
-                --     BLOAD      => '1',
-                --     BVALID     => open
-                -- );
-
-                -- =========================================================================
                 -- ADAPTERS
                 -- =========================================================================
                 rx_ftile_adapter_i : entity work.RX_MAC_LITE_ADAPTER_MAC_SEG
@@ -2136,6 +2123,7 @@ begin
                     OUT_MFB_SRC_RDY  => TX_MFB_SRC_RDY(i),
                     OUT_LINK_UP      => open
                 );
+
                 tx_ftile_adapter_i : entity work.TX_MAC_LITE_ADAPTER_MAC_SEG
                 generic map(
                     REGIONS     => REGIONS,
@@ -2152,11 +2140,11 @@ begin
                     IN_MFB_ERROR      => (others => '0'),
                     IN_MFB_SRC_RDY    => RX_MFB_SRC_RDY(i),
                     IN_MFB_DST_RDY    => RX_MFB_DST_RDY(i),
-                    OUT_MAC_DATA      => ftile_tx_mac_data(i),
-                    OUT_MAC_INFRAME   => ftile_tx_mac_inframe(i),
-                    OUT_MAC_EOP_EMPTY => ftile_tx_mac_eop_empty(i),
-                    OUT_MAC_ERROR     => ftile_tx_mac_error(i),
-                    OUT_MAC_VALID     => ftile_tx_mac_valid(i),
+                    OUT_MAC_DATA      => ftile_tx_adap_data(i),
+                    OUT_MAC_INFRAME   => ftile_tx_adap_inframe(i),
+                    OUT_MAC_EOP_EMPTY => ftile_tx_adap_eop_empty(i),
+                    OUT_MAC_ERROR     => ftile_tx_adap_error(i),
+                    OUT_MAC_VALID     => ftile_tx_adap_valid(i),
                     OUT_MAC_READY     => ftile_tx_mac_ready(i)
                 );
             end generate;
@@ -2726,6 +2714,7 @@ begin
                 OUT_MFB_SRC_RDY  => TX_MFB_SRC_RDY(i),
                 OUT_LINK_UP      => open
             );
+            
             tx_ftile_adapter_i : entity work.TX_MAC_LITE_ADAPTER_MAC_SEG
             generic map(
                 REGIONS     => REGIONS,
@@ -2742,11 +2731,11 @@ begin
                 IN_MFB_ERROR      => (others => '0'),
                 IN_MFB_SRC_RDY    => RX_MFB_SRC_RDY(i),
                 IN_MFB_DST_RDY    => RX_MFB_DST_RDY(i),
-                OUT_MAC_DATA      => ftile_tx_mac_data(i),
-                OUT_MAC_INFRAME   => ftile_tx_mac_inframe(i),
-                OUT_MAC_EOP_EMPTY => ftile_tx_mac_eop_empty(i),
-                OUT_MAC_ERROR     => ftile_tx_mac_error(i),
-                OUT_MAC_VALID     => ftile_tx_mac_valid(i),
+                OUT_MAC_DATA      => ftile_tx_adap_data(i),
+                OUT_MAC_INFRAME   => ftile_tx_adap_inframe(i),
+                OUT_MAC_EOP_EMPTY => ftile_tx_adap_eop_empty(i),
+                OUT_MAC_ERROR     => ftile_tx_adap_error(i),
+                OUT_MAC_VALID     => ftile_tx_adap_valid(i),
                 OUT_MAC_READY     => ftile_tx_mac_ready(i)
             );
             end generate; -- eth_adapt
@@ -2918,11 +2907,11 @@ begin
                     IN_MFB_SRC_RDY    => RX_MFB_SRC_RDY(i),
                     IN_MFB_DST_RDY    => RX_MFB_DST_RDY(i),
 
-                    OUT_MAC_DATA      => ftile_tx_mac_data(i),
-                    OUT_MAC_INFRAME   => ftile_tx_mac_inframe(i),
-                    OUT_MAC_EOP_EMPTY => ftile_tx_mac_eop_empty(i),
-                    OUT_MAC_ERROR     => ftile_tx_mac_error(i),
-                    OUT_MAC_VALID     => ftile_tx_mac_valid(i),
+                    OUT_MAC_DATA      => ftile_tx_adap_data(i),
+                    OUT_MAC_INFRAME   => ftile_tx_adap_inframe(i),
+                    OUT_MAC_EOP_EMPTY => ftile_tx_adap_eop_empty(i),
+                    OUT_MAC_ERROR     => ftile_tx_adap_error(i),
+                    OUT_MAC_VALID     => ftile_tx_adap_valid(i),
                     OUT_MAC_READY     => ftile_tx_mac_ready(i)
                 );
             end generate;
@@ -3118,11 +3107,11 @@ begin
                     IN_MFB_SRC_RDY    => RX_MFB_SRC_RDY(i),
                     IN_MFB_DST_RDY    => RX_MFB_DST_RDY(i),
 
-                    OUT_MAC_DATA      => ftile_tx_mac_data(i),
-                    OUT_MAC_INFRAME   => ftile_tx_mac_inframe(i),
-                    OUT_MAC_EOP_EMPTY => ftile_tx_mac_eop_empty(i),
-                    OUT_MAC_ERROR     => ftile_tx_mac_error(i),
-                    OUT_MAC_VALID     => ftile_tx_mac_valid(i),
+                    OUT_MAC_DATA      => ftile_tx_adap_data(i),
+                    OUT_MAC_INFRAME   => ftile_tx_adap_inframe(i),
+                    OUT_MAC_EOP_EMPTY => ftile_tx_adap_eop_empty(i),
+                    OUT_MAC_ERROR     => ftile_tx_adap_error(i),
+                    OUT_MAC_VALID     => ftile_tx_adap_valid(i),
                     OUT_MAC_READY     => ftile_tx_mac_ready(i)
                 );
             end generate;
@@ -3411,11 +3400,11 @@ begin
                     IN_MFB_SRC_RDY    => RX_MFB_SRC_RDY(i),
                     IN_MFB_DST_RDY    => RX_MFB_DST_RDY(i),
 
-                    OUT_MAC_DATA      => ftile_tx_mac_data(i),
-                    OUT_MAC_INFRAME   => ftile_tx_mac_inframe(i),
-                    OUT_MAC_EOP_EMPTY => ftile_tx_mac_eop_empty(i),
-                    OUT_MAC_ERROR     => ftile_tx_mac_error(i),
-                    OUT_MAC_VALID     => ftile_tx_mac_valid(i),
+                    OUT_MAC_DATA      => ftile_tx_adap_data(i),
+                    OUT_MAC_INFRAME   => ftile_tx_adap_inframe(i),
+                    OUT_MAC_EOP_EMPTY => ftile_tx_adap_eop_empty(i),
+                    OUT_MAC_ERROR     => ftile_tx_adap_error(i),
+                    OUT_MAC_VALID     => ftile_tx_adap_valid(i),
                     OUT_MAC_READY     => ftile_tx_mac_ready(i)
                 );
             end generate;
@@ -3587,14 +3576,75 @@ begin
                     IN_MFB_SRC_RDY    => RX_MFB_SRC_RDY(i),
                     IN_MFB_DST_RDY    => RX_MFB_DST_RDY(i),
 
-                    OUT_MAC_DATA      => ftile_tx_mac_data(i),
-                    OUT_MAC_INFRAME   => ftile_tx_mac_inframe(i),
-                    OUT_MAC_EOP_EMPTY => ftile_tx_mac_eop_empty(i),
-                    OUT_MAC_ERROR     => ftile_tx_mac_error(i),
-                    OUT_MAC_VALID     => ftile_tx_mac_valid(i),
+                    OUT_MAC_DATA      => ftile_tx_adap_data(i),
+                    OUT_MAC_INFRAME   => ftile_tx_adap_inframe(i),
+                    OUT_MAC_EOP_EMPTY => ftile_tx_adap_eop_empty(i),
+                    OUT_MAC_ERROR     => ftile_tx_adap_error(i),
+                    OUT_MAC_VALID     => ftile_tx_adap_valid(i),
                     OUT_MAC_READY     => ftile_tx_mac_ready(i)
                 );
             end generate;
+
+    end generate;
+
+    -- Synchronization of REPEATER_CTRL
+    sync_repeater_ctrl_i : entity work.ASYNC_BUS_HANDSHAKE
+    generic map (
+        DATA_WIDTH => ETH_PORT_CHAN
+    ) port map (
+        ACLK       => MI_CLK_PHY,
+        ARST       => MI_RESET_PHY,
+        ADATAIN    => mgmt_mac_loop,
+        ASEND      => '1',
+        AREADY     => open,
+        BCLK       => ftile_clk_out,
+        BRST       => '0',
+        BDATAOUT   => sync_repeater_ctrl,
+        BLOAD      => '1',
+        BVALID     => open
+    );
+    --
+    mac_loopbacks_g: for i in 0 to ETH_PORT_CHAN-1 generate
+
+        mac_loopback_i: entity work.macseg_loop
+        generic map (
+            SEGMENTS => REGIONS*REGION_SIZE
+        )
+        port map (
+            RST              => RESET_ETH,
+            CLK              => ftile_clk_out,
+            --
+            IN_MAC_DATA      => ftile_rx_mac_data(i),
+            IN_MAC_INFRAME   => ftile_rx_mac_inframe(i),
+            IN_MAC_EOP_EMPTY => ftile_rx_mac_eop_empty(i),
+            IN_MAC_VALID     => ftile_rx_mac_valid(i),
+            -- OUTPUT MAC SEGMENTED INTERFACE (Intel F-Tile IP)
+            OUT_MAC_DATA      => ftile_tx_loop_data(i),
+            OUT_MAC_INFRAME   => ftile_tx_loop_inframe(i),
+            OUT_MAC_EOP_EMPTY => ftile_tx_loop_eop_empty(i),
+            OUT_MAC_ERROR     => ftile_tx_loop_error(i),
+            OUT_MAC_VALID     => ftile_tx_loop_valid(i),
+            OUT_MAC_READY     => ftile_tx_mac_ready(i)
+        );
+
+        ftile_tx_mux: process(all)
+        begin
+            if sync_repeater_ctrl(i) = '1' then
+                -- MAC loopback on
+                ftile_tx_mac_data(i)      <= ftile_tx_loop_data(i);
+                ftile_tx_mac_inframe(i)   <= ftile_tx_loop_inframe(i);
+                ftile_tx_mac_eop_empty(i) <= ftile_tx_loop_eop_empty(i);
+                ftile_tx_mac_error(i)     <= ftile_tx_loop_error(i);
+                ftile_tx_mac_valid(i)     <= ftile_tx_loop_valid(i);
+            else
+                -- MAC loopback off
+                ftile_tx_mac_data(i)      <= ftile_tx_adap_data(i);
+                ftile_tx_mac_inframe(i)   <= ftile_tx_adap_inframe(i);
+                ftile_tx_mac_eop_empty(i) <= ftile_tx_adap_eop_empty(i);
+                ftile_tx_mac_error(i)     <= ftile_tx_adap_error(i);
+                ftile_tx_mac_valid(i)     <= ftile_tx_adap_valid(i);
+            end if;
+        end process;
 
     end generate;
 

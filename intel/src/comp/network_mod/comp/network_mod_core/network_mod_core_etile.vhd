@@ -543,6 +543,7 @@ architecture ETILE of NETWORK_MOD_CORE is
     signal mi_ia_ardy_phy : std_logic_vector(IA_OUTPUT_INFS-1 downto 0);
     signal mi_ia_drd_phy  : slv_array_t     (IA_OUTPUT_INFS-1 downto 0)(MI_DATA_WIDTH_PHY-1 downto 0);
     signal mi_ia_drdy_phy : std_logic_vector(IA_OUTPUT_INFS-1 downto 0);
+    signal ia_ardy_vld    : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
     -- eth reconfig interface
     signal eth_inf_dwr_phy          : slv_array_t     (ETH_PORT_CHAN-1 downto 0)(MI_DATA_WIDTH_PHY-1 downto 0);
     signal eth_inf_dwr_phy_ser      : std_logic_vector(ETH_PORT_CHAN*            MI_DATA_WIDTH_PHY-1 downto 0);
@@ -583,7 +584,7 @@ architecture ETILE of NETWORK_MOD_CORE is
 
     signal mgmt_pcs_reset : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
     signal mgmt_pma_reset : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
-    signal mgmt_pcs_loop  : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
+    signal mgmt_mac_loop  : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
     -- Synchronization of REPEATER_CTRL
     signal sync_repeater_ctrl : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
 
@@ -627,7 +628,8 @@ begin
     );
 
     mgmt_g : for i in ETH_PORT_CHAN-1 downto 0 generate
-
+    signal mgmt_pcs_control : std_logic_vector(16-1 downto 0);
+    signal mgmt_pcs_status  : std_logic_vector(16-1 downto 0);
     signal mi_ia_drd    : std_logic_vector(MI_DATA_WIDTH_PHY-1 downto 0);
     signal mi_ia_drdy   : std_logic;
     signal mi_ia_en     : std_logic;
@@ -675,7 +677,11 @@ begin
             BLK_ERR_CLR   => open,
             SCR_BYPASS    => open,
             PCS_RESET     => mgmt_pcs_reset(i), --TODO
-            PCS_LPBCK     => mgmt_pcs_loop(i),
+            PCS_LPBCK     => open,
+            PCS_CONTROL(0)=> mgmt_mac_loop(i),
+            PCS_CONTROL(15 downto 1) => open,
+            PCS_CONTROL_I => mgmt_pcs_control,
+            PCS_STATUS    => mgmt_pcs_status,
             -- PCS Lane align
             ALGN_LOCKED   => rx_am_lock(i),
             BIP_ERR_CNTRS => (others => '0'),
@@ -704,16 +710,22 @@ begin
             DRPEN         => mi_ia_en,
             DRPWE         => mi_ia_we_phy,
             DRPADDR       => mi_ia_addr,
-            DRPARDY       => mi_ia_ardy,
+            DRPARDY       => mi_ia_ardy, --  and ia_ardy_vld, -- not working
             DRPDI         => mi_ia_dwr,
             DRPSEL        => mi_ia_sel
         );
-
+        -- MDIO reg 3.4000 (vendor specific PCS control readout)
+        mgmt_pcs_control(15 downto 1) <= (others => '0');
+        mgmt_pcs_control(0)           <= sync_repeater_ctrl(i); -- MAC loopback active
+        -- MDIO reg 3.4001 (vendor specific PCS status/abilities)
+        mgmt_pcs_status(15 downto 1) <= (others => '0'); 
+        mgmt_pcs_status(0)           <= '1';        -- MAC loopback ability supported
 
         -- Store mi_ia_sel for read operations
         sel_reg_p: process(MI_CLK_PHY)
         begin
             if rising_edge(MI_CLK_PHY) then
+                ia_ardy_vld(i) <= mi_ia_en;
                 if mi_ia_en = '1' then
                     ia_rd_sel_r <= mi_ia_sel;
                 end if;
@@ -1570,7 +1582,7 @@ begin
     ) port map (
         ACLK       => MI_CLK_PHY,
         ARST       => MI_RESET_PHY,
-        ADATAIN    => mgmt_pcs_loop,
+        ADATAIN    => mgmt_mac_loop,
         ASEND      => '1',
         AREADY     => open,
         BCLK       => etile_clk_out,
