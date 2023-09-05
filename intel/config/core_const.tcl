@@ -102,3 +102,5 @@ VhdlPkgInt  DMA_TX_DATA_PTR_W    $DMA_TX_DATA_PTR_W
 # Other parameters
 VhdlPkgBool TSU_ENABLE    $TSU_ENABLE
 VhdlPkgInt  TSU_FREQUENCY $TSU_FREQUENCY
+
+VhdlPkgBool XVC_ENABLE            $XVC_ENABLE

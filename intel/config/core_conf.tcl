@@ -120,3 +120,6 @@ set DMA_TX_DATA_PTR_W 16
 set TSU_ENABLE      false
 # Generic value must be replaced for each card
 set TSU_FREQUENCY   161132812
+
+# Xilinx Virtual Cable: Debug Hub over PCI extended config space (as VSEC), available on UltraScale+.
+set XVC_ENABLE      false
