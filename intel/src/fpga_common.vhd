@@ -641,7 +641,7 @@ begin
 
         PTC_DISABLE         => not PTC_ENABLE,
         DMA_BAR_ENABLE      => (DMA_TYPE = 4),
-        XVC_ENABLE          => false,
+        XVC_ENABLE          => XVC_ENABLE,
         CARD_ID_WIDTH       => FPGA_ID_WIDTH,
         DEVICE              => DEVICE
     )
