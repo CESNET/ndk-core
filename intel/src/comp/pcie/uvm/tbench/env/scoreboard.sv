@@ -68,8 +68,7 @@ class scoreboard #(CQ_MFB_ITEM_WIDTH, CQ_MFB_REGIONS, CC_MFB_ITEM_WIDTH, RQ_MFB_
     // Models
     model_intel #(CQ_MFB_ITEM_WIDTH, CC_MFB_ITEM_WIDTH, RQ_MFB_ITEM_WIDTH, RC_MFB_ITEM_WIDTH, AVST_DOWN_META_W, AVST_UP_META_W, RQ_MFB_META_W, RC_MFB_META_W, CQ_MFB_META_W, CC_MFB_META_W, ENDPOINT_TYPE, DMA_UPHDR_WIDTH_W, DMA_DOWNHDR_WIDTH_W, DMA_PORTS, PCIE_ENDPOINTS, PCIE_TAG_WIDTH) m_model_intel;
     model_xilinx #(CQ_MFB_ITEM_WIDTH, CC_MFB_ITEM_WIDTH, RQ_MFB_ITEM_WIDTH, RC_MFB_ITEM_WIDTH, AXI_CQUSER_WIDTH, AXI_CCUSER_WIDTH, AXI_RCUSER_WIDTH, AXI_RQUSER_WIDTH, RQ_MFB_META_W, RC_MFB_META_W, CQ_MFB_META_W, CC_MFB_META_W, DMA_UPHDR_WIDTH_W, DMA_DOWNHDR_WIDTH_W, DMA_PORTS, PCIE_ENDPOINTS, PCIE_TAG_WIDTH) m_model_xilinx;
-    uvm_mtc::model #(CQ_MFB_ITEM_WIDTH, DEVICE, ENDPOINT_TYPE, 32, 32)          m_rq_mtc_model[PCIE_ENDPOINTS];
-    uvm_mtc::response_model #(CQ_MFB_ITEM_WIDTH, DEVICE, ENDPOINT_TYPE, 32, 32) m_rs_mtc_model[PCIE_ENDPOINTS];
+    uvm_mtc::model #(CQ_MFB_ITEM_WIDTH, 32, 32)          m_rq_mtc_model[PCIE_ENDPOINTS];
 
     // Contructor of scoreboard.
     function new(string name, uvm_component parent);
@@ -252,14 +251,14 @@ class scoreboard #(CQ_MFB_ITEM_WIDTH, CQ_MFB_REGIONS, CC_MFB_ITEM_WIDTH, RQ_MFB_
             mvb_rc_data_cmp[dma].model_tr_timeout_set(1000000ns);
         end
 
+        set_type_override_by_type(uvm_mtc::model #(CQ_MFB_ITEM_WIDTH, 32, 32)::get_type(), uvm_mtc::model_base #(CQ_MFB_ITEM_WIDTH, DEVICE, ENDPOINT_TYPE, 32, 32)::get_type());
         for (int unsigned pcie_e = 0; pcie_e < PCIE_ENDPOINTS; pcie_e++) begin
             string i_string;
             i_string.itoa(pcie_e);
 
             analysis_export_cc_mi[pcie_e] = uvm_common::subscriber #(uvm_mi::sequence_item_response #(32))::type_id::create({"analysis_export_cc_mi_", i_string}, this);
 
-            m_rq_mtc_model[pcie_e] = uvm_mtc::model #(CQ_MFB_ITEM_WIDTH, DEVICE, ENDPOINT_TYPE, 32, 32)::type_id::create({"m_rq_mtc_model_", i_string}, this);
-            m_rs_mtc_model[pcie_e] = uvm_mtc::response_model #(CQ_MFB_ITEM_WIDTH, DEVICE, ENDPOINT_TYPE, 32, 32)::type_id::create({"m_rs_mtc_model_", i_string}, this);
+            m_rq_mtc_model[pcie_e] = uvm_mtc::model #(CQ_MFB_ITEM_WIDTH, 32, 32)::type_id::create({"m_rq_mtc_model_", i_string}, this);
 
             mi_scrb[pcie_e] = uvm_mtc::mi_subscriber #(32, 32)::type_id::create({"mi_scrb_", i_string}, this);
             mi_rq_cmp[pcie_e] = uvm_common::comparer_ordered#(uvm_mi::sequence_item_request #(32, 32, 0))::type_id::create({"mi_rq_cmp_", i_string}, this);
@@ -286,15 +285,11 @@ class scoreboard #(CQ_MFB_ITEM_WIDTH, CQ_MFB_REGIONS, CC_MFB_ITEM_WIDTH, RQ_MFB_
                 avst_down_splitter[pcie_e].rc_data_port.connect(fifo_model_rc.mfb_in.analysis_export);
                 avst_down_splitter[pcie_e].rc_meta_port.connect(fifo_model_rc.meta_in.analysis_export);
 
-                m_rs_mtc_model[pcie_e].analysis_port_cc_meta.connect(mfb_cc2avst_up[pcie_e].in_meta.analysis_export);
-
+                m_rq_mtc_model[pcie_e].analysis_port_cc_meta.connect(mfb_cc2avst_up[pcie_e].in_meta.analysis_export);
                 avst_down_splitter[pcie_e].cq_data_port.connect(m_rq_mtc_model[pcie_e].analysis_imp_cq_data.analysis_export);
                 avst_down_splitter[pcie_e].cq_meta_port.connect(m_rq_mtc_model[pcie_e].analysis_imp_cq_meta.analysis_export);
+                m_rq_mtc_model[pcie_e].analysis_port_cc.connect(avst_up_data_cmp[pcie_e].analysis_imp_model);
 
-                avst_down_splitter[pcie_e].cq_data_port.connect(m_rs_mtc_model[pcie_e].analysis_imp_cq_data.analysis_export);
-                avst_down_splitter[pcie_e].cq_meta_port.connect(m_rs_mtc_model[pcie_e].analysis_imp_cq_meta.analysis_export);
-
-                m_rs_mtc_model[pcie_e].analysis_port_cc.connect(avst_up_data_cmp[pcie_e].analysis_imp_model);
                 m_model_intel.rq_data_out[pcie_e].connect(avst_up_data_cmp[pcie_e].analysis_imp_model);
                 analysis_imp_avst_up_data[pcie_e].connect(avst_up_data_cmp[pcie_e].analysis_imp_dut);
     
@@ -347,11 +342,7 @@ class scoreboard #(CQ_MFB_ITEM_WIDTH, CQ_MFB_REGIONS, CC_MFB_ITEM_WIDTH, RQ_MFB_
 
                 analysis_imp_axi_cq_data[pcie_e].port.connect(m_rq_mtc_model[pcie_e].analysis_imp_cq_data.analysis_export);
                 m_mtc_meta_c[pcie_e].out_meta_port.connect(m_rq_mtc_model[pcie_e].analysis_imp_cq_meta.analysis_export);
-
-                analysis_imp_axi_cq_data[pcie_e].port.connect(m_rs_mtc_model[pcie_e].analysis_imp_cq_data.analysis_export);
-                m_mtc_meta_c[pcie_e].out_meta_port.connect(m_rs_mtc_model[pcie_e].analysis_imp_cq_meta.analysis_export);
-
-                m_rs_mtc_model[pcie_e].analysis_port_cc.connect(axi_cc_data_cmp[pcie_e].analysis_imp_model);
+                m_rq_mtc_model[pcie_e].analysis_port_cc.connect(axi_cc_data_cmp[pcie_e].analysis_imp_model);
                 analysis_imp_axi_cc_data[pcie_e].connect(axi_cc_data_cmp[pcie_e].analysis_imp_dut);
 
             end
@@ -380,7 +371,7 @@ class scoreboard #(CQ_MFB_ITEM_WIDTH, CQ_MFB_REGIONS, CC_MFB_ITEM_WIDTH, RQ_MFB_
         for (int pcie_e = 0; pcie_e < PCIE_ENDPOINTS; pcie_e++) begin
             mi_scrb[pcie_e].port.connect(mi_rq_cmp[pcie_e].analysis_imp_dut);
             m_rq_mtc_model[pcie_e].analysis_port_mi_data.connect(mi_rq_cmp[pcie_e].analysis_imp_model);
-            analysis_export_cc_mi[pcie_e].port.connect(m_rs_mtc_model[pcie_e].analysis_imp_cc_mi.analysis_export);
+            analysis_export_cc_mi[pcie_e].port.connect(m_rq_mtc_model[pcie_e].analysis_imp_cc_mi.analysis_export);
         end
         // for (int unsigned dma = 0; dma < DMA_PORTS; dma++) begin
             // TODO: Create model and make comparators (This is use in case of DMA_BAR_ENABLE)
