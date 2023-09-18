@@ -464,7 +464,7 @@ begin
         --==========================================================================================
         -- Asynchronous FIFOX components
         --==========================================================================================
-        usr_rx_mfb_fifox_i : entity work.MFB_ASFIFOX
+        usr_rx_mfb_asfifox_i : entity work.MFB_ASFIFOX
             generic map (
                 MFB_REGIONS         => DMA_MFB_REGIONS,
                 MFB_REG_SIZE        => DMA_MFB_REGION_SIZE,
@@ -507,7 +507,7 @@ begin
                 TX_AEMPTY  => open,
                 TX_STATUS  => open);
 
-        usr_tx_mfb_fifox_i : entity work.MFB_ASFIFOX
+        usr_tx_mfb_asfifox_i : entity work.MFB_ASFIFOX
             generic map (
                 MFB_REGIONS         => DMA_MFB_REGIONS,
                 MFB_REG_SIZE        => DMA_MFB_REGION_SIZE,
