@@ -176,14 +176,14 @@ begin
     -- end generate;
 
     -- ----------------------------------
-    -- mac_valid_p: process (CLK)
-    -- begin
-    --     if rising_edge(CLK) then
-    --         OUT_MAC_VALID <= OUT_MAC_READY;
-    --         if (RST = '1') then
-    --             OUT_MAC_VALID <= '0';
-    --         end if;
-    --     end if;
-    -- end process;
+    mac_valid_p: process (CLK)
+    begin
+        if rising_edge(CLK) then
+            OUT_MAC_VALID <= OUT_MAC_READY;
+            if (RST = '1') then
+                OUT_MAC_VALID <= '0';
+            end if;
+        end if;
+    end process;
 
 end architecture;
