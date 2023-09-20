@@ -215,20 +215,29 @@ class scoreboard #(ETH_STREAMS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS,
         return ret;
     endfunction
 
-    function void report_phase(uvm_phase phase);
+    function string info(logic data = 0);
         string str = "";
 
-        for(int it = 0; it < ETH_STREAMS; it++) begin
-            $swrite(str, "%s\n\tETH[%0d] MFB %s", str, it, eth_mfb_cmp[it].info());
-            $swrite(str, "%s\n\tETH[%0d] MVB %s", str, it, eth_mvb_cmp[it].info());
+        for(int it = 0; it< ETH_STREAMS; it++) begin
+            str = {str, $sformatf("\n\tETH[%0d] MFB %s", it, eth_mfb_cmp[it].info())};
+            str = {str, $sformatf("\n\tETH[%0d] MVB %s", it, eth_mvb_cmp[it].info())};
         end
 
         for(int it = 0; it < DMA_STREAMS; it++) begin
-            $swrite(str, "%s\n\tDMA[%0d] MFB %s", str, it, dma_mvb_cmp[it].info());
-            $swrite(str, "%s\n\tDMA[%0d] MVB %s", str, it, dma_mvb_cmp[it].info());
+            str = {str, $sformatf("\n\tDMA[%0d] MFB %s", it, dma_mfb_cmp[it].info())};
+            str = {str, $sformatf("\n\tDMA[%0d] MVB %s", it, dma_mvb_cmp[it].info())};
         end
 
-        $swrite(str, "%s\n\tother errors %0d\n\tModel working %b", str, errors, m_model.used());
+        str = {str, $sformatf("\n\tOther errors %0d\n\tModel used %b\n\tScoreboard used %b", errors, m_model.used(), this.used())};
+
+        return str;
+    endfunction
+
+
+    function void report_phase(uvm_phase phase);
+        string str = "";
+
+        str = this.info();
         if (this.used() == 0 && this.success()) begin
             `uvm_info(get_type_name(), {str, "\n\n\t---------------------------------------\n\t----     VERIFICATION SUCCESS      ----\n\t---------------------------------------"}, UVM_NONE)
         end else begin
