@@ -328,7 +328,7 @@ begin
    -- QSFP28 I2C controller 
    i2c_qsfp_i : entity work.i2c_master_top
    generic map (
-      PRER_INIT    => X"00C7"  -- 250MHz CLK ~ 100KHz SCL
+      PRER_INIT    => X"0271"  -- 250MHz CLK -> 100KHz SCL
    )
    port map (
       CLK          => MI_CLK_PHY,
