@@ -284,14 +284,21 @@ architecture FULL of PCIE_ADAPTER is
 begin
 
     xilinx_g: if IS_XILINX_DEVICE generate
-        AVST_DOWN_READY <= '0';
-        AVST_UP_DATA    <= (others => '0');
-        AVST_UP_HDR     <= (others => '0');
-        AVST_UP_PREFIX  <= (others => '0');
-        AVST_UP_SOP     <= (others => '0');
-        AVST_UP_EOP     <= (others => '0');
-        AVST_UP_ERROR   <= (others => '0');
-        AVST_UP_VALID   <= (others => '0');
+        AVST_DOWN_READY    <= '0';
+        AVST_UP_DATA       <= (others => '0');
+        AVST_UP_HDR        <= (others => '0');
+        AVST_UP_PREFIX     <= (others => '0');
+        AVST_UP_SOP        <= (others => '0');
+        AVST_UP_EOP        <= (others => '0');
+        AVST_UP_ERROR      <= (others => '0');
+        AVST_UP_VALID      <= (others => '0');
+        CRDT_DOWN_UPDATE   <= (others => '0');
+        CRDT_DOWN_CNT_PH   <= (others => '0');
+        CRDT_DOWN_CNT_NPH  <= (others => '0');
+        CRDT_DOWN_CNT_CPLH <= (others => '0');
+        CRDT_DOWN_CNT_PD   <= (others => '0');
+        CRDT_DOWN_CNT_NPD  <= (others => '0');
+        CRDT_DOWN_CNT_CPLD <= (others => '0');
 
         cq_axi2mfb_i : entity work.PCIE_CQ_AXI2MFB
         generic map (
