@@ -1512,40 +1512,47 @@ begin
     -- =========================================================================
     --  TimeStamp Unit
     -- =========================================================================
+    tsu_gen_g: if (TSU_ENABLE) generate
+        tsu_freq <= std_logic_vector(to_unsigned(TSU_FREQUENCY-1, 32)); -- input frequency is from only a single source
 
-    tsu_freq <= std_logic_vector(to_unsigned(TSU_FREQUENCY-1, 32)); -- input frequency is from only a single source
+        tsu_gen_i: entity work.tsu_gen
+        generic map (
+            TS_MULT_SMART_DSP => TS_MULT_SMART_DSP,
+            TS_MULT_USE_DSP   => TS_MULT_USE_DSP,
+            PPS_SEL_WIDTH     => 0,
+            CLK_SEL_WIDTH     => 0
+        )
+        port map (
+            MI_CLK            => clk_mi   ,
+            MI_RESET          => rst_mi(7),
+            MI_DWR            => mi_adc_dwr(MI_ADC_PORT_TSU) ,
+            MI_ADDR           => mi_adc_addr(MI_ADC_PORT_TSU),
+            MI_RD             => mi_adc_rd(MI_ADC_PORT_TSU)  ,
+            MI_WR             => mi_adc_wr(MI_ADC_PORT_TSU)  ,
+            MI_BE             => mi_adc_be(MI_ADC_PORT_TSU)  ,
+            MI_DRD            => mi_adc_drd(MI_ADC_PORT_TSU) ,
+            MI_ARDY           => mi_adc_ardy(MI_ADC_PORT_TSU),
+            MI_DRDY           => mi_adc_drdy(MI_ADC_PORT_TSU),
+            PPS_N             => '0',
+            PPS_SRC           => (others => '0'),
+            PPS_SEL           => open,
+            CLK               => tsu_clk,
+            RESET             => tsu_rst,
+            CLK_FREQ          => tsu_freq,
+            CLK_SRC           => X"0001",
+            CLK_SEL           => open,
+            TS                => open,
+            TS_NS             => tsu_ns,
+            TS_DV             => tsu_dv
+        );
+    else generate
+        mi_adc_ardy(MI_ADC_PORT_TSU) <= mi_adc_rd(MI_ADC_PORT_TSU) or mi_adc_wr(MI_ADC_PORT_TSU);
+        mi_adc_drd(MI_ADC_PORT_TSU) <= (others => '0');
+        mi_adc_drdy(MI_ADC_PORT_TSU) <= mi_adc_rd(MI_ADC_PORT_TSU);
 
-    tsu_gen_i: entity work.tsu_gen
-    generic map (
-        TS_MULT_SMART_DSP => TS_MULT_SMART_DSP,
-        TS_MULT_USE_DSP   => TS_MULT_USE_DSP,
-        PPS_SEL_WIDTH     => 0,
-        CLK_SEL_WIDTH     => 0
-    )
-    port map (
-        MI_CLK            => clk_mi   ,
-        MI_RESET          => rst_mi(7),
-        MI_DWR            => mi_adc_dwr(MI_ADC_PORT_TSU) ,
-        MI_ADDR           => mi_adc_addr(MI_ADC_PORT_TSU),
-        MI_RD             => mi_adc_rd(MI_ADC_PORT_TSU)  ,
-        MI_WR             => mi_adc_wr(MI_ADC_PORT_TSU)  ,
-        MI_BE             => mi_adc_be(MI_ADC_PORT_TSU)  ,
-        MI_DRD            => mi_adc_drd(MI_ADC_PORT_TSU) ,
-        MI_ARDY           => mi_adc_ardy(MI_ADC_PORT_TSU),
-        MI_DRDY           => mi_adc_drdy(MI_ADC_PORT_TSU),
-        PPS_N             => '0',
-        PPS_SRC           => (others => '0'),
-        PPS_SEL           => open,
-        CLK               => tsu_clk,
-        RESET             => tsu_rst,
-        CLK_FREQ          => tsu_freq,
-        CLK_SRC           => X"0001",
-        CLK_SEL           => open,
-        TS                => open,
-        TS_NS             => tsu_ns,
-        TS_DV             => tsu_dv
-    );
-
+        tsu_ns <= (others => '0');
+        tsu_dv <= '0';
+    end generate;
     -- =========================================================================
     --  JTAG-OVER-PROTOCOL CONTROLLER
     -- =========================================================================
