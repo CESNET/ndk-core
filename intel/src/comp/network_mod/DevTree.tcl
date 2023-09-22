@@ -90,7 +90,7 @@ proc dts_eth_transciever {no type pmd_ctrl i2c_ctrl qsfp_i2c_addr} {
 proc dts_pmd_ctrl {no base} {
     set ret ""
     append ret "pmdctrl$no {"
-    append ret "reg = <$base 1>;"
+    append ret "reg = <$base 4>;"
     append ret "version = <0x00010000>;"
     append ret "};"
     return $ret;
