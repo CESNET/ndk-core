@@ -452,6 +452,7 @@ architecture CMAC of NETWORK_MOD_CORE is
     signal cmac_rx_synced          : std_logic_vector(NUM_LANES-1 downto 0);
     signal mgmt_pma_loopback       : std_logic;
     signal mgmt_pma_rem_loopback   : std_logic;  
+    signal mgmt_pcs_rev_loopback   : std_logic;
     signal mgmt_pma_reset          : std_logic;
     signal mgmt_gt_precursor       : std_logic_vector(32-1 downto 0);
     signal mgmt_gt_postcursor      : std_logic_vector(32-1 downto 0);
@@ -470,6 +471,8 @@ architecture CMAC of NETWORK_MOD_CORE is
     signal mgmt_cor_err_clr        : std_logic;
     signal mgmt_uncor_err          : std_logic_vector(32-1 downto 0);
     signal mgmt_uncor_err_clr      : std_logic;
+    signal mgmt_pcs_control        : std_logic_vector(16-1 downto 0);
+    signal mgmt_pcs_status         : std_logic_vector(16-1 downto 0);
 
     signal mgmt_drpdo              : std_logic_vector(16-1 downto 0);
     signal mgmt_drprdy             : std_logic;
@@ -603,6 +606,10 @@ begin
         SCR_BYPASS    => open,
         PCS_RESET     => mgmt_pcs_reset,
         PCS_LPBCK     => open,
+        PCS_CONTROL(0)=> mgmt_pcs_rev_loopback,
+        PCS_CONTROL(15 downto 1) => open,
+        PCS_CONTROL_I => mgmt_pcs_control,
+        PCS_STATUS    => mgmt_pcs_status,
         -- PCS Lane align
         ALGN_LOCKED   => cmac_rx_aligned,
         BIP_ERR_CNTRS => mgmt_bip_err_cntrs,
@@ -654,6 +661,12 @@ begin
         DRPDI             => mgmt_drpdi,
         DRPSEL            => mgmt_drpsel
     );
+    -- MDIO reg 3.4000 (vendor specific PCS control readout)
+    mgmt_pcs_control(15 downto 1) <= (others => '0');
+    mgmt_pcs_control(0)           <= mgmt_pcs_rev_loopback; -- PCS reverse loopback active
+    -- MDIO reg 3.4001 (vendor specific PCS status/abilities)
+    mgmt_pcs_status(15 downto 1)  <= (others => '0');
+    mgmt_pcs_status(0)            <= '1';        -- PCS reverse loopback ability supported
 
     -- DRP switch --------------------------------------------------------------
     process (all)
@@ -965,9 +978,10 @@ begin
         OUT_RST(0) => cmac_rst_322m
     );
 
-    cmac_gt_loopback <= "010010010010" when (mgmt_pma_loopback = '1')     else
-                        "100100100100" when (mgmt_pma_rem_loopback = '1') else
-                        "000000000000"; -- TODO repeater
+    -- NOTE: PMA reverse loopback is used instead of the Far end PCS loopback as it is easier to implement
+    cmac_gt_loopback <= "010010010010" when (mgmt_pma_loopback = '1')     else -- Near end PMA loopback
+                        "100100100100" when (mgmt_pma_rem_loopback = '1') or (mgmt_pcs_rev_loopback = '1') else -- Far end PMA loopback
+                        "000000000000"; -- Normal operation
         
     -- Disable polarity swaps when loopback is active             
     gt_rxpolarity <= (others => '0') when cmac_gt_loopback(1) = '1' else LANE_RX_POLARITY;
