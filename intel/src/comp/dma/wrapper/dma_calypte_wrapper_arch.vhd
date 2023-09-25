@@ -19,13 +19,12 @@ architecture CALYPTE of DMA_WRAPPER is
     --==============================================================================================
     --  MI Async and Splitting
     --==============================================================================================
-    constant MI_SPLIT_PORTS : natural := 4;
+    constant MI_SPLIT_PORTS : natural := 3;
     constant MI_SPLIT_BASES : slv_array_t(MI_SPLIT_PORTS-1 downto 0)(MI_WIDTH-1 downto 0) := (
         0 => X"00000000",               -- DMA Controller
-        1 => X"00300000",               -- TSU unit
-        2 => X"00380000",               -- MFB loopback
-        3 => X"003C0000");              -- TX DMA Debug Core
-    constant MI_SPLIT_ADDR_MASK : std_logic_vector(MI_WIDTH -1 downto 0) := X"003C0000";
+        1 => X"00300000",               -- MFB loopback
+        2 => X"00380000");              -- TX DMA Debug Core
+    constant MI_SPLIT_ADDR_MASK : std_logic_vector(MI_WIDTH -1 downto 0) := X"00380000";
 
     constant OUT_PIPE_EN : boolean := TRUE;
 
@@ -721,14 +720,14 @@ begin
                     MI_CLK               => MI_CLK,
                     MI_RESET             => MI_RESET,
 
-                    MI_ADDR              => mi_dmagen_addr(i)(3),
-                    MI_DWR               => mi_dmagen_dwr(i)(3),
-                    MI_BE                => mi_dmagen_be(i)(3),
-                    MI_RD                => mi_dmagen_rd(i)(3),
-                    MI_WR                => mi_dmagen_wr(i)(3),
-                    MI_DRD               => mi_dmagen_drd(i)(3),
-                    MI_ARDY              => mi_dmagen_ardy(i)(3),
-                    MI_DRDY              => mi_dmagen_drdy(i)(3));
+                    MI_ADDR              => mi_dmagen_addr(i)(2),
+                    MI_DWR               => mi_dmagen_dwr(i)(2),
+                    MI_BE                => mi_dmagen_be(i)(2),
+                    MI_RD                => mi_dmagen_rd(i)(2),
+                    MI_WR                => mi_dmagen_wr(i)(2),
+                    MI_DRD               => mi_dmagen_drd(i)(2),
+                    MI_ARDY              => mi_dmagen_ardy(i)(2),
+                    MI_DRDY              => mi_dmagen_drdy(i)(2));
         else generate
             tx_usr_mfb_meta_lbk(i)(log2(TX_CHANNELS) -1 downto 0)                                  <= tx_usr_mfb_meta_channel_dbg(i);
             tx_usr_mfb_meta_lbk(i)(HDR_META_WIDTH + log2(TX_CHANNELS) -1 downto log2(TX_CHANNELS)) <= tx_usr_mfb_meta_hdr_meta_dbg(i);
@@ -744,9 +743,9 @@ begin
 
             force_reset_dbg(i) <= '0';
 
-            mi_dmagen_ardy(i)(3) <= mi_dmagen_rd(i)(3) or mi_dmagen_wr(i)(3);
-            mi_dmagen_drd(i)(3)  <= (others => '0');
-            mi_dmagen_drdy(i)(3) <= mi_dmagen_rd(i)(3);
+            mi_dmagen_ardy(i)(2) <= mi_dmagen_rd(i)(2) or mi_dmagen_wr(i)(2);
+            mi_dmagen_drd(i)(2)  <= (others => '0');
+            mi_dmagen_drdy(i)(2) <= mi_dmagen_rd(i)(2);
         end generate;
 
         mfb_loopback_i : entity work.MFB_LOOPBACK
@@ -763,13 +762,13 @@ begin
                 MI_CLK             => MI_CLK,
                 MI_RESET           => MI_RESET,
 
-                MI_DWR             => mi_dmagen_dwr(i)(2),
-                MI_ADDR            => mi_dmagen_addr(i)(2),
-                MI_RD              => mi_dmagen_rd(i)(2),
-                MI_WR              => mi_dmagen_wr(i)(2),
-                MI_ARDY            => mi_dmagen_ardy(i)(2),
-                MI_DRD             => mi_dmagen_drd(i)(2),
-                MI_DRDY            => mi_dmagen_drdy(i)(2),
+                MI_DWR             => mi_dmagen_dwr(i)(1),
+                MI_ADDR            => mi_dmagen_addr(i)(1),
+                MI_RD              => mi_dmagen_rd(i)(1),
+                MI_WR              => mi_dmagen_wr(i)(1),
+                MI_ARDY            => mi_dmagen_ardy(i)(1),
+                MI_DRD             => mi_dmagen_drd(i)(1),
+                MI_DRDY            => mi_dmagen_drdy(i)(1),
 
                 CLK                => PCIE_USR_CLK(i),
                 RESET              => PCIE_USR_RESET(i),
