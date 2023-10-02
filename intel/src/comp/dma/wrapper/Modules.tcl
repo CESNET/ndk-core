@@ -18,8 +18,7 @@ set MFB_PIPE_BASE               "$OFM_PATH/comp/mfb_tools/flow/pipe"
 
 set DMA_MEDUSA_BASE             "$ENTITY_BASE/../../../../../../modules/ndk-mod-dma-medusa"
 set DMA_CALYPTE_BASE            "$OFM_PATH/comp/dma/dma_calypte"
-set MFB_LOOPBACK_BASE           "$OFM_PATH/comp/mfb_tools/flow/loopback"
-set TX_DMA_DEBUG_CORE_BASE      "$OFM_PATH/comp/dma/dma_calypte/comp/tx/comp/debug"
+set DMA_TEST_CORE_BASE          "$OFM_PATH/comp/dma/dma_calypte/comp/test_core"
 
 # Packages
 lappend PACKAGES "$OFM_PATH/comp/base/pkg/math_pack.vhd"
@@ -48,9 +47,8 @@ if { $ARCHGRP == "MEDUSA" } {
     lappend COMPONENTS [ list "TSU_GEN"                $TSU_BASE                   "FULL" ]
     lappend COMPONENTS [ list "MFB_PIPE"               $MFB_PIPE_BASE              "FULL" ]
     lappend COMPONENTS [ list "DMA_CALYPTE"            $DMA_CALYPTE_BASE           "FULL" ]
-    lappend COMPONENTS [ list "MFB_LOOPBACK"           $MFB_LOOPBACK_BASE          "FULL" ]
-    lappend COMPONENTS [ list "TX_DMA_DEBUG_CORE"      $TX_DMA_DEBUG_CORE_BASE     "FULL" ]
     lappend COMPONENTS [ list "MFB_RECONFIG"           $MFB_RECONFIG_BASE          "FULL" ]
+    lappend COMPONENTS [ list "DMA_TEST_CORE"          $DMA_TEST_CORE_BASE         "FULL" ]
 
     lappend MOD "$ENTITY_BASE/dma_calypte_wrapper_arch.vhd"
 }
