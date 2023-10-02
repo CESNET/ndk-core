@@ -998,8 +998,8 @@ begin
         TX_SEL_CHANNELS      => minimum(8,DMA_TX_CHANNELS),
         TX_DP_WIDTH          => DMA_TX_DATA_PTR_W         ,
 
-        RX_GEN_EN            => true                      ,
-        TX_GEN_EN            => true                      ,
+        RX_GEN_EN            => RX_GEN_EN                 ,
+        TX_GEN_EN            => TX_GEN_EN                 ,
 
         USR_EQ_DMA           => DMA_USR_EQ_DMA            ,
         CROX_EQ_DMA          => DMA_CROX_EQ_DMA           ,

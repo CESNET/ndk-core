@@ -141,7 +141,7 @@ proc dts_build_netcope {} {
     set mi_idx [incr mi_idx]
 
     # Creating separate space for MI bus when DMA Calypte are used, the core uses additional BAR for its function
-    if {$DMA_TYPE == 4} {
+    if {$DMA_TYPE == 4 && $DMA_TX_CHANNELS > 0} {
         append ret "mi$mi_idx: mi_bus$mi_idx {"
         append ret "#address-cells = <1>;"
         append ret "#size-cells = <1>;"

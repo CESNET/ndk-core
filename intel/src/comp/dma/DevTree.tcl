@@ -19,8 +19,13 @@ proc dts_dmamod_open {base type rxn txn pcie rx_frame_size_max tx_frame_size_max
         error "ERROR: Unsupported DMA Type: $type for DMA Module!"
     }
 
-    append ret "dma_params_rx$pcie:" [dts_dma_params "dma_params_rx$pcie" $rx_frame_size_max $rx_frame_size_min]
-    append ret "dma_params_tx$pcie:" [dts_dma_params "dma_params_tx$pcie" $tx_frame_size_max $tx_frame_size_min]
+    if {$rxn > 0} {
+        append ret "dma_params_rx$pcie:" [dts_dma_params "dma_params_rx$pcie" $rx_frame_size_max $rx_frame_size_min]
+    }
+
+    if {$txn > 0} {
+        append ret "dma_params_tx$pcie:" [dts_dma_params "dma_params_tx$pcie" $tx_frame_size_max $tx_frame_size_min]
+    }
 
     # RX DMA Channels
     for {set i 0} {$i < $rxn} {incr i} {

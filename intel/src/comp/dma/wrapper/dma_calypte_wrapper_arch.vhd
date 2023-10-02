@@ -223,7 +223,9 @@ begin
         --==========================================================================================
         --  MI Splitting and CDC
         --==========================================================================================
-        -- splitting the MI bus for the DMA Calypte module and the TSU unit
+        -- splitting the MI bus for the DMA Calypte, MFB loopback and TX debug core.
+        -- The Splitter only makes sense when TX direction is enabled, while at that case, both, the
+        -- MFB_LOOPBACK and the TX_DEBUG_CORE can be enabled.
         mi_gen_spl_i : entity work.MI_SPLITTER_PLUS_GEN
             generic map(
                 ADDR_WIDTH   => MI_WIDTH,
@@ -508,6 +510,15 @@ begin
                         TX_DST_RDY => rx_usr_mfb_dst_rdy_sync(i),
                         TX_AEMPTY  => open,
                         TX_STATUS  => open);
+            else generate
+                rx_usr_mfb_data_sync(i)     <= (others => '0');
+                rx_usr_mfb_meta_sync(i)     <= (others => '0');
+                rx_usr_mfb_sof_sync(i)      <= (others => '0');
+                rx_usr_mfb_eof_sync(i)      <= (others => '0');
+                rx_usr_mfb_sof_pos_sync(i)  <= (others => '0');
+                rx_usr_mfb_eof_pos_sync(i)  <= (others => '0');
+                rx_usr_mfb_src_rdy_sync(i)  <= '0';
+                rx_usr_mfb_dst_rdy_async(i) <= '1';
             end generate;
 
             usr_tx_mfb_asfifox_g: if (TX_GEN_EN) generate
@@ -553,6 +564,15 @@ begin
                         TX_DST_RDY => tx_usr_mfb_dst_rdy_async(i),
                         TX_AEMPTY  => open,
                         TX_STATUS  => open);
+            else generate
+                tx_usr_mfb_data_async(i)    <= (others => '0');
+                tx_usr_mfb_meta_async(i)    <= (others => '0');
+                tx_usr_mfb_sof_async(i)     <= (others => '0');
+                tx_usr_mfb_eof_async(i)     <= (others => '0');
+                tx_usr_mfb_sof_pos_async(i) <= (others => '0');
+                tx_usr_mfb_eof_pos_async(i) <= (others => '0');
+                tx_usr_mfb_src_rdy_async(i) <= '0';
+                tx_usr_mfb_dst_rdy_sync(i)  <= '1';
             end generate;
 
         else generate
@@ -578,9 +598,6 @@ begin
     --==============================================================================================
     --  DMA Calypte Module
     --==============================================================================================
-    dma_calypte_g : for i in 0 to DMA_STREAMS-1 generate
-    begin
-
         dma_calypte_i : entity work.DMA_CALYPTE
             generic map(
                 DEVICE => DEVICE,
@@ -833,12 +850,6 @@ begin
                 TX_MFB_SRC_RDY_IN  => tx_usr_mfb_src_rdy_lbk(i),
                 TX_MFB_DST_RDY_IN  => tx_usr_mfb_dst_rdy_lbk(i));
 
-    end generate;
-
-    -- =============================================================================================
-    -- Generating output pipes to PCIe interface
-    -- =============================================================================================
-    pipes_g: for i in 0 to (PCIE_ENDPOINTS -1) generate
         pcie_rq_mfb_pipe_i : entity work.MFB_PIPE
             generic map (
                 REGIONS     => PCIE_RQ_MFB_REGIONS,
@@ -847,7 +858,7 @@ begin
                 ITEM_WIDTH  => PCIE_RQ_MFB_ITEM_WIDTH,
 
                 META_WIDTH  => PCIE_RQ_META_WIDTH,
-                FAKE_PIPE   => not OUT_PIPE_EN,
+                FAKE_PIPE   => (not OUT_PIPE_EN) or (not RX_GEN_EN),
                 USE_DST_RDY => TRUE,
                 PIPE_TYPE   => "REG",
                 DEVICE      => DEVICE)
@@ -881,7 +892,7 @@ begin
                 ITEM_WIDTH  => PCIE_CC_MFB_ITEM_WIDTH,
 
                 META_WIDTH  => PCIE_CC_META_WIDTH,
-                FAKE_PIPE   => not OUT_PIPE_EN,
+                FAKE_PIPE   => (not OUT_PIPE_EN) or (not TX_GEN_EN),
                 USE_DST_RDY => TRUE,
                 PIPE_TYPE   => "REG",
                 DEVICE      => DEVICE)
@@ -915,7 +926,7 @@ begin
                 ITEM_WIDTH  => PCIE_CQ_MFB_ITEM_WIDTH,
 
                 META_WIDTH  => PCIE_CQ_META_WIDTH,
-                FAKE_PIPE   => not OUT_PIPE_EN,
+                FAKE_PIPE   => (not OUT_PIPE_EN) or (not TX_GEN_EN),
                 USE_DST_RDY => TRUE,
                 PIPE_TYPE   => "REG",
                 DEVICE      => DEVICE)
