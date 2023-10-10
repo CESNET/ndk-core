@@ -120,6 +120,7 @@ proc dts_build_netcope {} {
         append ret "compatible = \"netcope,bus,mi\";"
         append ret "resource = \"PCI0,BAR2\";"
         append ret "width = <0x20>;"
+        append ret "map-as-wc;"
 
         # -------------------------------------------------
         # These two widths are changeable
