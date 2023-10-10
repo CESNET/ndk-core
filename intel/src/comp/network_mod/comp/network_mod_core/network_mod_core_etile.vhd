@@ -628,18 +628,19 @@ begin
     );
 
     mgmt_g : for i in ETH_PORT_CHAN-1 downto 0 generate
-    signal mgmt_pcs_control : std_logic_vector(16-1 downto 0);
-    signal mgmt_pcs_status  : std_logic_vector(16-1 downto 0);
-    signal mi_ia_drd    : std_logic_vector(MI_DATA_WIDTH_PHY-1 downto 0);
-    signal mi_ia_drdy   : std_logic;
-    signal mi_ia_en     : std_logic;
-    signal mi_ia_we_phy : std_logic;
-    signal mi_ia_sel    : std_logic_vector(4-1 downto 0);
-    signal mi_ia_addr   : std_logic_vector(32-1 downto 0);
-    signal mi_ia_dwr    : std_logic_vector(MI_DATA_WIDTH_PHY-1 downto 0);
-    signal mi_ia_ardy   : std_logic;
-    signal ia_rd_sel    : std_logic_vector(mi_ia_sel'range);
-    signal ia_rd_sel_r  : std_logic_vector(mi_ia_sel'range);
+        signal mgmt_pcs_control_i : std_logic_vector(16-1 downto 0);
+        signal mgmt_pcs_status  : std_logic_vector(16-1 downto 0);
+        signal mi_ia_drd    : std_logic_vector(MI_DATA_WIDTH_PHY-1 downto 0);
+        signal mi_ia_drdy   : std_logic;
+        signal mi_ia_en     : std_logic;
+        signal mi_ia_we_phy : std_logic;
+        signal mi_ia_sel    : std_logic_vector(4-1 downto 0);
+        signal mi_ia_addr   : std_logic_vector(32-1 downto 0);
+        signal mi_ia_dwr    : std_logic_vector(MI_DATA_WIDTH_PHY-1 downto 0);
+        signal mi_ia_ardy   : std_logic;
+        signal ia_rd_sel    : std_logic_vector(mi_ia_sel'range);
+        signal ia_rd_sel_r  : std_logic_vector(mi_ia_sel'range);
+        signal mgmt_pcs_control : std_logic_vector(16-1 downto 0);
 
     begin
 
@@ -678,9 +679,8 @@ begin
             SCR_BYPASS    => open,
             PCS_RESET     => mgmt_pcs_reset(i), --TODO
             PCS_LPBCK     => open,
-            PCS_CONTROL(0)=> mgmt_mac_loop(i),
-            PCS_CONTROL(15 downto 1) => open,
-            PCS_CONTROL_I => mgmt_pcs_control,
+            PCS_CONTROL   => mgmt_pcs_control,
+            PCS_CONTROL_I => mgmt_pcs_control_i,
             PCS_STATUS    => mgmt_pcs_status,
             -- PCS Lane align
             ALGN_LOCKED   => rx_am_lock(i),
@@ -714,9 +714,10 @@ begin
             DRPDI         => mi_ia_dwr,
             DRPSEL        => mi_ia_sel
         );
+        mgmt_mac_loop(i) <= mgmt_pcs_control(0);
         -- MDIO reg 3.4000 (vendor specific PCS control readout)
-        mgmt_pcs_control(15 downto 1) <= (others => '0');
-        mgmt_pcs_control(0)           <= sync_repeater_ctrl(i); -- MAC loopback active
+        mgmt_pcs_control_i(15 downto 1) <= (others => '0');
+        mgmt_pcs_control_i(0)           <= sync_repeater_ctrl(i); -- MAC loopback active
         -- MDIO reg 3.4001 (vendor specific PCS status/abilities)
         mgmt_pcs_status(15 downto 1) <= (others => '0'); 
         mgmt_pcs_status(0)           <= '1';        -- MAC loopback ability supported
@@ -756,71 +757,79 @@ begin
 
         -- Mux read data from Eth/xvcr to mgmt
         drd_mux_p: process(all)
+            variable mi_index     : integer range 0 to IA_OUTPUT_INFS-1;
+            variable mi_index_vld : boolean;
+            variable init_lane_index     : integer range 0 to LANES-1;
+            variable init_lane_index_vld : boolean;
         begin
+            mi_index_vld := False;
+
             case ia_rd_sel is
                 when "0001" => -- XCVR0
-                    mi_ia_drd  <= mi_ia_drd_phy (0 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
-                    mi_ia_drdy <= mi_ia_drdy_phy(0 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
-                    mi_ia_ardy <= mi_ia_ardy_phy(0 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
+                    mi_index_vld := True;
+                    mi_index     := 0 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN;
                 when "0010" => -- XCVR1
                     if (LANES_PER_CHANNEL > 1) then
-                        mi_ia_drd  <= mi_ia_drd_phy (1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
-                        mi_ia_drdy <= mi_ia_drdy_phy(1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
-                        mi_ia_ardy <= mi_ia_ardy_phy(1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
-                    else -- RS-FEC
-                        mi_ia_drd  <= (others => '0');
-                        mi_ia_drdy <= '0';
-                        mi_ia_ardy <= '0';
+                        mi_index_vld := True;
+                        mi_index     := 1 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN;
                     end if;
                 when "0011" => -- XCVR2
                     if (LANES_PER_CHANNEL > 2) then
-                        mi_ia_drd  <= mi_ia_drd_phy (2 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
-                        mi_ia_drdy <= mi_ia_drdy_phy(2 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
-                        mi_ia_ardy <= mi_ia_ardy_phy(2 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
-                    else
-                        mi_ia_drd  <= (others => '0');
-                        mi_ia_drdy <= '0';
-                        mi_ia_ardy <= '0';
+                        mi_index_vld := True;
+                        mi_index     := 2 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN;
                     end if;
                 when "0100" => -- XCVR3
                     if (LANES_PER_CHANNEL > 3) then
-                        mi_ia_drd  <= mi_ia_drd_phy (3 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
-                        mi_ia_drdy <= mi_ia_drdy_phy(3 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
-                        mi_ia_ardy <= mi_ia_ardy_phy(3 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN);
-                    else
-                        mi_ia_drd  <= (others => '0');
-                        mi_ia_drdy <= '0';
-                        mi_ia_ardy <= '0';
+                        mi_index_vld := True;
+                        mi_index     := 3 + i*LANES_PER_CHANNEL + ETH_PORT_CHAN;
                     end if;
                 when "1001" => -- RS-FEC
-                    mi_ia_drd  <= mi_ia_drd_phy (IA_OUTPUT_INFS-1);
-                    mi_ia_drdy <= mi_ia_drdy_phy(IA_OUTPUT_INFS-1);
-                    mi_ia_ardy <= mi_ia_ardy_phy(IA_OUTPUT_INFS-1);
+                    mi_index_vld := True;
+                    mi_index     := IA_OUTPUT_INFS-1;
                 when others => -- "0000": Ethernet core
-                    mi_ia_drd  <= mi_ia_drd_phy(i);
-                    mi_ia_drdy <= mi_ia_drdy_phy(i);
-                    mi_ia_ardy <= mi_ia_ardy_phy(i);
+                    mi_index_vld := True;
+                    mi_index     := i;
             end case;
+
+            if (mi_index_vld) then
+                mi_ia_drd  <= mi_ia_drd_phy (mi_index);
+                mi_ia_drdy <= mi_ia_drdy_phy(mi_index);
+                mi_ia_ardy <= mi_ia_ardy_phy(mi_index);
+            else
+                mi_ia_drd  <= (others => '0');
+                mi_ia_drdy <= '0';
+                mi_ia_ardy <= '0';
+            end if;
 
             -- XCVR initialization debug - can be removed in the future to save some resources
-            xcvr_init_status(i) <= (others => '0');
+            init_lane_index_vld := False;
             case mi_ia_sel is
                 when "0010" =>
-                    if (LANES_PER_CHANNEL > 1) then
-                        xcvr_init_status(i) <= init_lane_status(1 + i*LANES_PER_CHANNEL); -- XCVR1
+                    if (LANES_PER_CHANNEL > 1) then -- XCVR1
+                        init_lane_index_vld := True;
+                        init_lane_index     := 1 + i*LANES_PER_CHANNEL;
                     end if;
                 when "0011" =>
-                    if (LANES_PER_CHANNEL > 2) then
-                        xcvr_init_status(i) <= init_lane_status(2 + i*LANES_PER_CHANNEL); -- XCVR2
+                    if (LANES_PER_CHANNEL > 2) then -- XCVR2
+                        init_lane_index_vld := True;
+                        init_lane_index     := 2+ i*LANES_PER_CHANNEL;
                     end if;
                 when "0100" =>
-                    if (LANES_PER_CHANNEL > 3) then
-                        xcvr_init_status(i) <= init_lane_status(3 + i*LANES_PER_CHANNEL); -- XCVR3
+                    if (LANES_PER_CHANNEL > 3) then -- XCVR3
+                        init_lane_index_vld := True;
+                        init_lane_index     := 3 + i*LANES_PER_CHANNEL;
                     end if;
                 when others =>
-                    xcvr_init_status(i) <= init_lane_status(0 + i*LANES_PER_CHANNEL); -- XCVR0
+                    -- XCVR0
+                    init_lane_index_vld := True;
+                    init_lane_index     := 0 + i*LANES_PER_CHANNEL;
             end case;
 
+            if (init_lane_index_vld) then
+                xcvr_init_status(i) <= init_lane_status(0 + i*LANES_PER_CHANNEL);
+            else
+                xcvr_init_status(i) <= (others => '0');
+            end if;
         end process;
 
     end generate;
@@ -865,7 +874,8 @@ begin
         xcvr_inf_wr_phy      (i) <= mi_ia_wr_phy(ETH_PORT_CHAN+i)       when init_busy = '0' else init_write;
         xcvr_inf_dwr_phy_res (i) <= xcvr_inf_dwr_phy (i)(8 -1 downto 0) when init_busy = '0' else init_writedata(8 -1 downto 0);
         xcvr_inf_addr_phy_res(i) <= xcvr_inf_addr_phy(i)(19-1 downto 0) when init_busy = '0' else init_addr;
-        xcvr_inf_drd_phy     (i) <= (8-1 downto 0 => xcvr_inf_drd_phy_res(i), others => '0');
+        xcvr_inf_drd_phy     (i)(MI_DATA_WIDTH_PHY-1 downto 8) <= (others => '0');
+        xcvr_inf_drd_phy     (i)(8-1 downto 0)                 <= xcvr_inf_drd_phy_res(i);
 
         xcvr_init: entity work.etile_xcvr_init
         port map (
@@ -904,7 +914,8 @@ begin
 
         rsfec_inf_dwr_phy_res  <= rsfec_inf_dwr_phy (8 -1 downto 0);
         rsfec_inf_addr_phy_res <= rsfec_inf_addr_phy(11-1 downto 0);
-        rsfec_inf_drd_phy <= (8-1 downto 0 => rsfec_inf_drd_phy_res, others => '0');
+        rsfec_inf_drd_phy(MI_DATA_WIDTH_PHY-1 downto 8) <= (others => '0');
+        rsfec_inf_drd_phy(8-1 downto 0)                 <= rsfec_inf_drd_phy_res;
     end generate;
 
     -- =========================================================================
@@ -1572,6 +1583,9 @@ begin
                 );
 
             end generate;
+
+        when others =>
+            assert (True) report "Unsupported case" severity failure;
 
     end generate;
 
