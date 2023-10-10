@@ -111,22 +111,6 @@ proc dts_build_netcope {} {
 
     append ret "};"
 
-    for {set i 1} {$i < $PCIE_ENDPOINTS} {incr i} {
-        # Create MI bus node
-        append ret "mi$i: mi_bus$i {"
-        append ret "#address-cells = <1>;"
-        append ret "#size-cells = <1>;"
-
-        append ret "compatible = \"netcope,bus,mi\";"
-        append ret "resource = \"PCI$i,BAR0\";"
-        append ret "width = <0x20>;"
-
-        if {$DMA_TYPE != 0} {
-            append ret [dts_dmamod_open $ADDR_DMA_MOD $DMA_TYPE [expr $DMA_RX_CHANNELS / $PCIE_ENDPOINTS] [expr $DMA_TX_CHANNELS / $PCIE_ENDPOINTS] $i $DMA_RX_FRAME_SIZE_MAX $DMA_TX_FRAME_SIZE_MAX $DMA_RX_FRAME_SIZE_MIN $DMA_TX_FRAME_SIZE_MIN]
-        }
-        append ret "};"
-    }
-
     # Creating separate space for MI bus when DMA Calypte are used, the core uses additional BAR for its function
     if {$DMA_TYPE == 4} {
         append ret "mi1: mi_bus1 {"
@@ -177,5 +161,22 @@ proc dts_build_netcope {} {
         }
         append ret "};"
     }
+
+    for {set i 1} {$i < $PCIE_ENDPOINTS} {incr i} {
+        # Create MI bus node
+        append ret "mi$i: mi_bus$i {"
+        append ret "#address-cells = <1>;"
+        append ret "#size-cells = <1>;"
+
+        append ret "compatible = \"netcope,bus,mi\";"
+        append ret "resource = \"PCI$i,BAR0\";"
+        append ret "width = <0x20>;"
+
+        if {$DMA_TYPE != 0} {
+            append ret [dts_dmamod_open $ADDR_DMA_MOD $DMA_TYPE [expr $DMA_RX_CHANNELS / $PCIE_ENDPOINTS] [expr $DMA_TX_CHANNELS / $PCIE_ENDPOINTS] $i $DMA_RX_FRAME_SIZE_MAX $DMA_TX_FRAME_SIZE_MAX $DMA_RX_FRAME_SIZE_MIN $DMA_TX_FRAME_SIZE_MIN]
+        }
+        append ret "};"
+    }
+
     return $ret
 }
