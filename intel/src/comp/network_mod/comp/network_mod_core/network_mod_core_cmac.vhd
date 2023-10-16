@@ -471,6 +471,7 @@ architecture CMAC of NETWORK_MOD_CORE is
     signal mgmt_cor_err_clr        : std_logic;
     signal mgmt_uncor_err          : std_logic_vector(32-1 downto 0);
     signal mgmt_uncor_err_clr      : std_logic;
+    signal mgmt_pcs_control_i      : std_logic_vector(16-1 downto 0);
     signal mgmt_pcs_control        : std_logic_vector(16-1 downto 0);
     signal mgmt_pcs_status         : std_logic_vector(16-1 downto 0);
 
@@ -606,9 +607,8 @@ begin
         SCR_BYPASS    => open,
         PCS_RESET     => mgmt_pcs_reset,
         PCS_LPBCK     => open,
-        PCS_CONTROL(0)=> mgmt_pcs_rev_loopback,
-        PCS_CONTROL(15 downto 1) => open,
-        PCS_CONTROL_I => mgmt_pcs_control,
+        PCS_CONTROL   => mgmt_pcs_control,
+        PCS_CONTROL_I => mgmt_pcs_control_i,
         PCS_STATUS    => mgmt_pcs_status,
         -- PCS Lane align
         ALGN_LOCKED   => cmac_rx_aligned,
@@ -661,12 +661,15 @@ begin
         DRPDI             => mgmt_drpdi,
         DRPSEL            => mgmt_drpsel
     );
+
+    mgmt_pcs_rev_loopback <= mgmt_pcs_control(0);
+
     -- MDIO reg 3.4000 (vendor specific PCS control readout)
-    mgmt_pcs_control(15 downto 1) <= (others => '0');
-    mgmt_pcs_control(0)           <= mgmt_pcs_rev_loopback; -- PCS reverse loopback active
+    mgmt_pcs_control_i(15 downto 1) <= (others => '0');
+    mgmt_pcs_control_i(0)           <= mgmt_pcs_rev_loopback; -- PCS reverse loopback active
     -- MDIO reg 3.4001 (vendor specific PCS status/abilities)
-    mgmt_pcs_status(15 downto 1)  <= (others => '0');
-    mgmt_pcs_status(0)            <= '1';        -- PCS reverse loopback ability supported
+    mgmt_pcs_status(15 downto 1)    <= (others => '0');
+    mgmt_pcs_status(0)              <= '1';        -- PCS reverse loopback ability supported
 
     -- DRP switch --------------------------------------------------------------
     process (all)
