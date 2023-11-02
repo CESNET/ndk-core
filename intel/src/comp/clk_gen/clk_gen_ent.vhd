@@ -7,14 +7,26 @@
 library IEEE;
 use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all;
+use IEEE.math_real.all;
 
 use work.math_pack.all;
 use work.type_pack.all;
 
 entity COMMON_CLK_GEN is
     generic(
-        -- Reference clock frequency in MHz
-        REFCLK_FREQ        : natural := 50;
+        -- Reference clock period in ns
+        REFCLK_PERIOD   : real    := 10.0;
+        -- Configuration of MMCM
+        -- Multiply factor of main clock
+        PLL_MULT_F      : real    := 12.0;
+        -- Division factor of main clock
+        PLL_MASTER_DIV  : natural := 3;
+        -- Output clock dividers
+        PLL_OUT0_DIV_F  : real    := 3.0;
+        PLL_OUT1_DIV    : natural := 4;
+        PLL_OUT2_DIV    : natural := 6;
+        PLL_OUT3_DIV    : natural := 12;
+
         -- Use FPGA init done signal as PLL reset input instead of async reset.
         -- It is recommended, see AN 891: Using the Reset Release Intel FPGA IP.
         -- Only for Intel Agilex and Stratix 10 FPGAs!

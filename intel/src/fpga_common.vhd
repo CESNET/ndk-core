@@ -8,6 +8,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use ieee.math_real.all;
 use ieee.fixed_pkg.all;
 
 use work.combo_const.all;
@@ -22,10 +23,21 @@ use work.mi_addr_space_pack.all;
 
 entity FPGA_COMMON is
 generic (
-    -- System clock frequency in MHz
-    -- PCIE clock frequency in Mhz if USE_PCIE_CLK is used
-    SYSCLK_FREQ             : natural := 100;
-    -- Switch CLK_GEN ref clock to clk_pci, default SYSCLK 
+    -- System clock period in ns
+    -- PCIE clock period in ns if USE_PCIE_CLK is used
+    SYSCLK_PERIOD   : real    := 10.0;
+    -- Settings of the MMCM
+    -- Multiply factor of main clock (Xilinx: 2-64)
+    PLL_MULT_F      : real    := 12.0;
+    -- Division factor of main clock (Xilinx: 1-106)
+    PLL_MASTER_DIV  : natural := 3;
+    -- Output clock dividers (Xilinx: 1-128)
+    PLL_OUT0_DIV_F  : real    := 3.0;
+    PLL_OUT1_DIV    : natural := 4;
+    PLL_OUT2_DIV    : natural := 6;
+    PLL_OUT3_DIV    : natural := 12;
+
+    -- Switch CLK_GEN ref clock to clk_pci, default SYSCLK
     USE_PCIE_CLK            : boolean := false; 
 
     -- Number of PCIe connectors present on board
@@ -595,8 +607,15 @@ begin
 
     clk_gen_i : entity work.COMMON_CLK_GEN
     generic map(
-        REFCLK_FREQ        => SYSCLK_FREQ,
-        INIT_DONE_AS_RESET => True,
+        REFCLK_PERIOD   => SYSCLK_PERIOD,
+        PLL_MULT_F      => PLL_MULT_F,
+        PLL_MASTER_DIV  => PLL_MASTER_DIV,
+        PLL_OUT0_DIV_F  => PLL_OUT0_DIV_F,
+        PLL_OUT1_DIV    => PLL_OUT1_DIV,
+        PLL_OUT2_DIV    => PLL_OUT2_DIV,
+        PLL_OUT3_DIV    => PLL_OUT3_DIV,
+
+        INIT_DONE_AS_RESET => TRUE,
         DEVICE             => DEVICE
     )
     port map (

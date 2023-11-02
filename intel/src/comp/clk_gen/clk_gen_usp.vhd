@@ -16,53 +16,29 @@ library unisim;
 use unisim.vcomponents.all;
 
 architecture USP of COMMON_CLK_GEN is
-
-    function ceil_to_0125 (ref_mult : real ) return real is
-    begin
-        return ceil((ref_mult + 0.125 - 0.001)/0.125)*0.125;
-    end function;
-
-    -- Period (in ns) of input reference clock
-    constant CLK_PERIOD : real := (real(1e3)/real(REFCLK_FREQ));
-
-    constant BASE_FREQ   : real    := 1200.0;
-    constant REFCLK_DIV  : natural := 2;
-    constant REFCLK_MULT : real    := ceil_to_0125(BASE_FREQ/(real(REFCLK_FREQ)/real(REFCLK_DIV)));
-
-    constant CLK0_FREQ : natural := 400;
-    constant CLK1_FREQ : natural := 300;
-    constant CLK2_FREQ : natural := 200;
-    constant CLK3_FREQ : natural := 100;
-
-    constant CLK0_DIV  : real    := BASE_FREQ/real(CLK0_FREQ);
-    constant CLK1_DIV  : natural := natural(BASE_FREQ)/CLK1_FREQ;
-    constant CLK2_DIV  : natural := natural(BASE_FREQ)/CLK2_FREQ;
-    constant CLK3_DIV  : natural := natural(BASE_FREQ)/CLK3_FREQ;
-
     signal clkfbout : std_logic;
     signal clkout0  : std_logic;
     signal clkout1  : std_logic;
     signal clkout2  : std_logic;
     signal clkout3  : std_logic;
-
 begin
 
     INIT_DONE_N <= '0';
 
     -- NOTE: CLKOUT 0-3 are High-Performance Clocks (UG472), the rest is not!
-    mmcm_i : MMCME2_BASE
+    mmcm_i : MMCME4_BASE
     generic map (
-        BANDWIDTH        => "LOW",
-        DIVCLK_DIVIDE    => REFCLK_DIV, --! Divide input 125 to 25 MHz by default
-        CLKFBOUT_MULT_F  => REFCLK_MULT, --! Multiply 25 to 1200 MHz by default
-        CLKOUT0_DIVIDE_F => CLK0_DIV,
-        CLKOUT1_DIVIDE   => CLK1_DIV,
-        CLKOUT2_DIVIDE   => CLK2_DIV,
-        CLKOUT3_DIVIDE   => CLK3_DIV,
+        BANDWIDTH        => "OPTIMIZED",
+        DIVCLK_DIVIDE    => PLL_MASTER_DIV,
+        CLKFBOUT_MULT_F  => PLL_MULT_F,
+        CLKOUT0_DIVIDE_F => PLL_OUT0_DIV_F,
+        CLKOUT1_DIVIDE   => PLL_OUT1_DIV,
+        CLKOUT2_DIVIDE   => PLL_OUT2_DIV,
+        CLKOUT3_DIVIDE   => PLL_OUT3_DIV,
         CLKOUT4_DIVIDE   => 10,
         CLKOUT5_DIVIDE   => 10,
         CLKOUT6_DIVIDE   => 10,
-        CLKIN1_PERIOD    => CLK_PERIOD --! Suppose 125 MHz input
+        CLKIN1_PERIOD    => REFCLK_PERIOD
     ) port map (
         CLKFBOUT  => clkfbout,
         CLKFBOUTB => open,
