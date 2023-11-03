@@ -55,7 +55,6 @@ generic (
     DMA_TX_CHANNELS         : natural := 4;
     -- DMA debug parameters
     DMA_400G_DEMO           : boolean := false;
-    DMA_GEN_LOOP_EN         : boolean := false;
 
     -- Ethernet core architecture: E_TILE, F_TILE, CMAC
     ETH_CORE_ARCH           : string := "F_TILE";

@@ -113,6 +113,8 @@ set DMA_RX_BLOCKING_MODE true
 set DMA_RX_DATA_PTR_W 16
 set DMA_RX_HDR_PTR_W  16
 set DMA_TX_DATA_PTR_W 16
+# Enables the GEN_LOOP_SWITCH component for debugging and testing
+set DMA_GEN_LOOP_EN true
 
 # ------------------------------------------------------------------------------
 # Other parameters:
