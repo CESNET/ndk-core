@@ -20,6 +20,23 @@ set DMA_TX_FRAME_SIZE_MIN 60
 set PCIE_LANES 16
 
 if {$DMA_TYPE == 4} {
+
+    set ETH_PORT_TX_MTU(0) 4096
+    set ETH_PORT_TX_MTU(1) 4096
+    set ETH_PORT_TX_MTU(2) 4096
+    set ETH_PORT_TX_MTU(3) 4096
+
+    set ETH_PORT_RX_MTU(0) 4096
+    set ETH_PORT_RX_MTU(1) 4096
+    set ETH_PORT_RX_MTU(2) 4096
+    set ETH_PORT_RX_MTU(3) 4096
+
+    set DMA_RX_FRAME_SIZE_MAX 4096
+    set DMA_TX_FRAME_SIZE_MAX 4096
+    set DMA_RX_DATA_PTR_W 14
+    set DMA_RX_HDR_PTR_W  14
+    set DMA_TX_DATA_PTR_W 14
+
     if {$PCIE_ENDPOINTS == 1 && $PCIE_ENDPOINT_MODE == 2} {
         set PCIE_LANES 8
     }
