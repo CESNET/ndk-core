@@ -155,6 +155,16 @@ port(
     -- =====================================================================
 
     -- =====================================================================
+    --  Application specific signals
+    -- =====================================================================
+
+    -- Selectively pause (choke) a DMA channel(s) from Application.
+    -- Can be used to avoid stopping the whole DMA Module when just a single channel is slacking behind.
+    TX_USR_CHOKE_CHANS   : in  slv_array_t(DMA_STREAMS -1 downto 0)(TX_CHANNELS -1 downto 0) := (others => (others => '0'));
+
+    -- =====================================================================
+
+    -- =====================================================================
     --  PCIe-side interfaces
     -- =====================================================================
 

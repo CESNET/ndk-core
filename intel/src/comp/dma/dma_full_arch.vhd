@@ -236,6 +236,8 @@ begin
             TX_USR_MFB_SRC_RDY => dma_tx_usr_mfb_src_rdy,
             TX_USR_MFB_DST_RDY => dma_tx_usr_mfb_dst_rdy,
 
+            TX_USR_CHOKE_CHANS => TX_USR_CHOKE_CHANS,
+
             PCIE_RQ_MVB_DATA    => PCIE_RQ_MVB_DATA,
             PCIE_RQ_MVB_VLD     => PCIE_RQ_MVB_VLD,
             PCIE_RQ_MVB_SRC_RDY => PCIE_RQ_MVB_SRC_RDY,

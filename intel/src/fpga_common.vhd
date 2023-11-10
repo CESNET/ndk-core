@@ -457,6 +457,8 @@ architecture FULL of FPGA_COMMON is
     signal app_dma_tx_mfb_src_rdy        : std_logic_vector(DMA_STREAMS -1 downto 0);
     signal app_dma_tx_mfb_dst_rdy        : std_logic_vector(DMA_STREAMS -1 downto 0);
 
+    signal app_dma_tx_usr_choke          : std_logic_vector(DMA_STREAMS*DMA_TX_CHANNELS-1 downto 0);
+
     signal eth_rx_mvb_data               : std_logic_vector(ETH_STREAMS*MVB_ITEMS*ETH_RX_HDR_WIDTH-1 downto 0);
     signal eth_rx_mvb_vld                : std_logic_vector(ETH_STREAMS*MVB_ITEMS-1 downto 0);
     signal eth_rx_mvb_src_rdy            : std_logic_vector(ETH_STREAMS-1 downto 0) := (others => '0');
@@ -1001,6 +1003,8 @@ begin
         TX_USR_MFB_SRC_RDY  => app_dma_tx_mfb_src_rdy,
         TX_USR_MFB_DST_RDY  => app_dma_tx_mfb_dst_rdy,
 
+        TX_USR_CHOKE_CHANS  => slv_array_downto_deser(app_dma_tx_usr_choke, DMA_STREAMS),
+
         PCIE_RQ_MVB_DATA    => dma_rq_mvb_data,
         PCIE_RQ_MVB_VLD     => dma_rq_mvb_vld,
         PCIE_RQ_MVB_SRC_RDY => dma_rq_mvb_src_rdy,
@@ -1206,6 +1210,8 @@ begin
         DMA_TX_MFB_EOF_POS  => slv_array_ser(app_dma_tx_mfb_eof_pos),
         DMA_TX_MFB_SRC_RDY  => app_dma_tx_mfb_src_rdy,
         DMA_TX_MFB_DST_RDY  => app_dma_tx_mfb_dst_rdy,
+
+        DMA_TX_USR_CHOKE_CHANS => app_dma_tx_usr_choke,
 
         MEM_CLK                => MEM_CLK,
         MEM_RST                => MEM_RST,
