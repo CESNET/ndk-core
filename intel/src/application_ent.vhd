@@ -270,6 +270,14 @@ port (
     -- DMA TX MFB streams: destination ready of each MFB bus
     DMA_TX_MFB_DST_RDY      : out std_logic_vector(DMA_STREAMS-1 downto 0);
  
+    -- =====================================================================
+    --  Application specific signals
+    -- =====================================================================
+
+    -- Selectively pause (choke) a DMA channel(s) from Application.
+    -- Can be used to avoid stopping the whole DMA Module when just a single channel is slacking behind.
+    DMA_TX_USR_CHOKE_CHANS  : out std_logic_vector(DMA_STREAMS* DMA_TX_CHANNELS-1 downto 0) := (others => '0');
+
     -- =========================================================================
     -- EXTERNAL MEMORY INTERFACES (clocked at MEM_CLK)
     -- =========================================================================
