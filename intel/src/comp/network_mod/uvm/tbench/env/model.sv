@@ -145,7 +145,7 @@ class model#(ETH_PORTS, int unsigned ETH_PORT_CHAN[ETH_PORTS-1:0], REGIONS, ITEM
             eth_rx_hdr[index].get(hdr);
             eth_rx_data[index].get(data);
 
-            `uvm_info(this.get_full_name(), {$sformatf("\n\tReceived data to port[%0d]", index), hdr.convert2string(), data.convert2string()}, /*UVM_FULL*/ UVM_FULL)
+            `uvm_info(this.get_full_name(), {$sformatf("\n\tReceived %0d data to port[%0d]", eth_recv[index], index), hdr.convert2string(), data.convert2string()}, /*UVM_FULL*/ UVM_FULL)
 
             eth_recv[index]++;
             length = data.item.size();
@@ -186,18 +186,18 @@ class model#(ETH_PORTS, int unsigned ETH_PORT_CHAN[ETH_PORTS-1:0], REGIONS, ITEM
                 msg = $sformatf("\n\tPORT [%0d]: Received %0d dropped %0d accepted %0d\n", index, eth_recv[index], eth_drop[index], eth_recv[index] - eth_drop[index]);
                 msg = {msg, $sformatf("\n\thdr input time %s", hdr.convert2string_time())};
                 msg = {msg, $sformatf("\n\tlength [%0d]"      , length)}; 
-                msg = {msg, $sformatf("\n\terror  [%h ]"      , error)}; 
-                msg = {msg, $sformatf("\n\terror frame   [%h]", error_frame)}; 
-                msg = {msg, $sformatf("\n\terror min MTU [%h]", error_min_tu)}; 
-                msg = {msg, $sformatf("\n\terror max MTU [%h]", error_max_tu)}; 
-                msg = {msg, $sformatf("\n\terror CRC     [%h]", error_crc)}; 
-                msg = {msg, $sformatf("\n\terror MAC     [%h]", error_mac)}; 
-                msg = {msg, $sformatf("\n\tbroadcast     [%h]", broadcast)}; 
-                msg = {msg, $sformatf("\n\tmulticast     [%h]", multicast)}; 
-                msg = {msg, $sformatf("\n\tMAC HIT VLD   [%h]", mac_hit_vld)}; 
-                msg = {msg, $sformatf("\n\t\tMAC HIT     [%h]", mac_hit)}; 
-                msg = {msg, $sformatf("\n\ttimestamp VLD [%h]", timestamp_vld)}; 
-                msg = {msg, $sformatf("\n\t\ttimestamp   [%h]", timestamp)}; 
+                msg = {msg, $sformatf("\n\terror  [0x%h ]"      , error)}; 
+                msg = {msg, $sformatf("\n\terror frame   [0x%h]", error_frame)}; 
+                msg = {msg, $sformatf("\n\terror min MTU [0x%h]", error_min_tu)}; 
+                msg = {msg, $sformatf("\n\terror max MTU [0x%h]", error_max_tu)}; 
+                msg = {msg, $sformatf("\n\terror CRC     [0x%h]", error_crc)}; 
+                msg = {msg, $sformatf("\n\terror MAC     [0x%h]", error_mac)}; 
+                msg = {msg, $sformatf("\n\tbroadcast     [0x%h]", broadcast)}; 
+                msg = {msg, $sformatf("\n\tmulticast     [0x%h]", multicast)}; 
+                msg = {msg, $sformatf("\n\tMAC HIT VLD   [0x%h]", mac_hit_vld)}; 
+                msg = {msg, $sformatf("\n\t\tMAC HIT     [0x%h]", mac_hit)}; 
+                msg = {msg, $sformatf("\n\ttimestamp VLD [0x%h]", timestamp_vld)}; 
+                msg = {msg, $sformatf("\n\t\ttimestamp   [0x%h]", timestamp)}; 
                 msg = {msg, data.convert2string()};
                 `uvm_info(this.get_full_name(), msg, UVM_HIGH);
 
@@ -218,6 +218,7 @@ class model#(ETH_PORTS, int unsigned ETH_PORT_CHAN[ETH_PORTS-1:0], REGIONS, ITEM
                 usr_tx_data[index].write(data_out);
                 usr_tx_hdr[index].write(hdr_out);
             end else begin
+                `uvm_info(this.get_full_name(), $sformatf("\n\tUSR RX [%0d] Drop: Received %0d dropped %0d accepted %0d\n", index, eth_recv[index], eth_drop[index], eth_recv[index] - eth_drop[index]), UVM_MEDIUM);
                 eth_drop[index]++;
             end
        end

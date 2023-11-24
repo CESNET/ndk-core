@@ -104,18 +104,18 @@ class comparer_tx_hdr #(int unsigned ITEM_WIDTH) extends uvm_common::comparer_ba
         msg = "\n\t\t\tCMP [DUT MODEL]"; 
         msg = {msg, $sformatf("\n\tlength %b [%0d %0d]"     , dut_length === model_length            , dut_length, model_length)}; 
         msg = {msg, $sformatf("\n\tport   %b [%0d %0d]"     , dut_port === model_port                , dut_port, model_port)}; 
-        msg = {msg, $sformatf("\n\terror  %b [%h  %h]"      , dut_error === model_error              , dut_error, model_error)}; 
-        msg = {msg, $sformatf("\n\terror frame   %b [%h %h]", dut_error_frame === model_error_frame  , dut_error_frame, model_error_frame)}; 
-        msg = {msg, $sformatf("\n\terror min MTU %b [%h %h]", dut_error_min_tu === model_error_min_tu, dut_error_min_tu, model_error_min_tu)}; 
-        msg = {msg, $sformatf("\n\terror max MTU %b [%h %h]", dut_error_max_tu === model_error_max_tu, dut_error_max_tu, model_error_max_tu)}; 
-        msg = {msg, $sformatf("\n\terror CRC     %b [%h %h]", dut_error_crc === model_error_crc      , dut_error_crc, model_error_crc)}; 
-        msg = {msg, $sformatf("\n\terror MAC     %b [%h %h]", dut_error_mac === model_error_mac      , dut_error_mac, model_error_mac)}; 
-        msg = {msg, $sformatf("\n\tbroadcast     %b [%h %h]", dut_broadcast === model_broadcast      , dut_broadcast, model_broadcast)}; 
-        msg = {msg, $sformatf("\n\tmulticast     %b [%h %h]", dut_multicast === model_multicast      , dut_multicast, model_multicast)}; 
-        msg = {msg, $sformatf("\n\tMAC HIT VLD   %b [%h %h]", dut_mac_hit_vld === model_mac_hit_vld  , dut_mac_hit_vld, model_mac_hit_vld)}; 
-        msg = {msg, $sformatf("\n\t\tMAC HIT     %b [%h %h]", dut_mac_hit === model_mac_hit          , dut_mac_hit, model_mac_hit)}; 
-        msg = {msg, $sformatf("\n\ttimestamp VLD %b [%h %h]", dut_timestamp_vld === model_timestamp_vld, dut_timestamp_vld, model_timestamp_vld)}; 
-        msg = {msg, $sformatf("\n\t\ttimestamp   %b [%h %h]", dut_timestamp === model_timestamp      , dut_timestamp, model_timestamp)}; 
+        msg = {msg, $sformatf("\n\terror  %b [0x%h  0x%h]"      , dut_error === model_error              , dut_error, model_error)}; 
+        msg = {msg, $sformatf("\n\terror frame   %b [0x%h 0x%h]", dut_error_frame === model_error_frame  , dut_error_frame, model_error_frame)}; 
+        msg = {msg, $sformatf("\n\terror min MTU %b [0x%h 0x%h]", dut_error_min_tu === model_error_min_tu, dut_error_min_tu, model_error_min_tu)}; 
+        msg = {msg, $sformatf("\n\terror max MTU %b [0x%h 0x%h]", dut_error_max_tu === model_error_max_tu, dut_error_max_tu, model_error_max_tu)}; 
+        msg = {msg, $sformatf("\n\terror CRC     %b [0x%h 0x%h]", dut_error_crc === model_error_crc      , dut_error_crc, model_error_crc)}; 
+        msg = {msg, $sformatf("\n\terror MAC     %b [0x%h 0x%h]", dut_error_mac === model_error_mac      , dut_error_mac, model_error_mac)}; 
+        msg = {msg, $sformatf("\n\tbroadcast     %b [0x%h 0x%h]", dut_broadcast === model_broadcast      , dut_broadcast, model_broadcast)}; 
+        msg = {msg, $sformatf("\n\tmulticast     %b [0x%h 0x%h]", dut_multicast === model_multicast      , dut_multicast, model_multicast)}; 
+        msg = {msg, $sformatf("\n\tMAC HIT VLD   %b [0x%h 0x%h]", dut_mac_hit_vld === model_mac_hit_vld  , dut_mac_hit_vld, model_mac_hit_vld)}; 
+        msg = {msg, $sformatf("\n\t\tMAC HIT     %b [0x%h 0x%h]", dut_mac_hit === model_mac_hit          , dut_mac_hit, model_mac_hit)}; 
+        msg = {msg, $sformatf("\n\ttimestamp VLD %b [0x%h 0x%h]", dut_timestamp_vld === model_timestamp_vld, dut_timestamp_vld, model_timestamp_vld)}; 
+        msg = {msg, $sformatf("\n\t\ttimestamp   %b [0x%h 0x%h]", dut_timestamp === model_timestamp      , dut_timestamp, model_timestamp)}; 
         return msg;
     endfunction
 endclass

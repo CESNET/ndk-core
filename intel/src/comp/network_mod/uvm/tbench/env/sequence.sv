@@ -342,7 +342,6 @@ class virt_sequence_simple#(ETH_PORTS, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, ITEM_
                         port[index].start(p_sequencer.port[index]);
                         transactions += port[index].rx_transaction_count();
                         #0;
-                        $write("TEST END %0d %0d %0d %0d\n", index, transactions, ETH_PORTS*1_000, seq_sync_port_end.stopped());
                     end
 
                     $write("END POVEL %0d\n", index);
