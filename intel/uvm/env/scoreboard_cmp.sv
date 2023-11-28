@@ -8,7 +8,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
 */
 
-class scoreboard_channel_mfb #(type CLASS_TYPE) extends uvm_common::comparer_base_tagged#(CLASS_TYPE, CLASS_TYPE);
+class scoreboard_channel_mfb #(type CLASS_TYPE) extends uvm_common::comparer_base_disordered#(CLASS_TYPE, CLASS_TYPE);
     `uvm_component_param_utils(uvm_app_core::scoreboard_channel_mfb #(CLASS_TYPE))
 
     function new(string name, uvm_component parent = null);
@@ -30,7 +30,7 @@ class scoreboard_channel_mfb #(type CLASS_TYPE) extends uvm_common::comparer_bas
 endclass
 
 
-class scoreboard_channel_header #(HDR_WIDTH, META_WIDTH, CHANNELS, PKT_MTU) extends uvm_common::comparer_base_tagged #(packet_header #(META_WIDTH, CHANNELS, PKT_MTU), uvm_logic_vector::sequence_item#(HDR_WIDTH));
+class scoreboard_channel_header #(HDR_WIDTH, META_WIDTH, CHANNELS, PKT_MTU) extends uvm_common::comparer_base_disordered #(packet_header #(META_WIDTH, CHANNELS, PKT_MTU), uvm_logic_vector::sequence_item#(HDR_WIDTH));
     `uvm_component_param_utils(uvm_app_core::scoreboard_channel_header #(HDR_WIDTH, META_WIDTH, CHANNELS, PKT_MTU))
 
     function new(string name, uvm_component parent = null);
