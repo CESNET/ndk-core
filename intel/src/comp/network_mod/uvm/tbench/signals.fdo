@@ -1,0 +1,34 @@
+# signals.fdo : Include file with signals
+# Copyright (C) 2023 CESNET z. s. p. o.
+# Author(s): Radek Iša <isa@cesnet.cz>
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
+SET TMP_ETH_PORTS 5
+
+add wave -divider "CLK and resets"
+add_wave "-noupdate -hex" /testbench/CLK_*
+add_wave "-noupdate -hex" /testbench/rst_*
+
+add wave -divider "ETHERNET"
+for {set it 0} {$it < $TMP_ETH_PORTS} {incr it} {
+    add_wave "-group \"RX [$it]\" -noupdate -hex" /testbench/eth_rx($it)/*
+    add_wave "-group \"TX [$it]\" -noupdate -hex" /testbench/eth_tx($it)/*
+}
+
+add wave -divider "USR"
+for {set it 0} {$it < $TMP_ETH_PORTS} {incr it} {
+    add_wave "-group \"RX [$it]\"        -noupdate -hex" /testbench/usr_rx     ($it)/*
+    add_wave "-group \"TX [$it] DATA\"   -noupdate -hex" /testbench/usr_tx_data($it)/*
+    add_wave "-group \"TX [$it] HEADER\" -noupdate -hex" /testbench/usr_tx_hdr ($it)/*
+}
+
+add wave -divider "MI INTERFACE"
+add_wave "-group MI     -noupdate -hex" /testbench/mi/*
+add_wave "-group MI_PHY -noupdate -hex" /testbench/mi_phy/*
+add_wave "-group MI_PMD -noupdate -hex" /testbench/mi_pmd/*
+
+add wave -divider "TSU"
+add_wave "-group TSU -noupdate -hex" /testbench/tsu/*
+
+

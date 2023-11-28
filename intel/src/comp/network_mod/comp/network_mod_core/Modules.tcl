@@ -76,8 +76,9 @@ if { $ARCHGRP == "F_TILE"} {
 }
 
 if { $ARCHGRP == "E_TILE"} {
-    lappend COMPONENTS [list "TX_ETILE_ADAPTER" "$TX_ADAPTER_BASE/avst_100g" "FULL"]
-    lappend COMPONENTS [list "RX_ETILE_ADAPTER" "$RX_ADAPTER_BASE/eth_avst"  "FULL"]
+    lappend COMPONENTS [list "TX_ETILE_ADAPTER"    "$TX_ADAPTER_BASE/avst_100g" "FULL"]
+    lappend COMPONENTS [list "RX_ETILE_ADAPTER"    "$RX_ADAPTER_BASE/eth_avst"  "FULL"]
+    lappend COMPONENTS [list "ASYNC_BUS_HANDSHAKE" "$OFM_PATH/comp/base/async/bus_handshake"  "FULL"]
 
     # IP are now in card top-level Modules.tcl
     # Uncomment for network module synthesis only!

@@ -70,18 +70,18 @@ architecture full of etile_xcvr_init is
     type t_config_rom is array(natural range <>) of std_logic_vector(2+32+16+16-1 downto 0);
     constant etile_config_rom : t_config_rom(0 to 11) := (
      -- |   OP    | Addr/val+code |   Data    |  Mask
-        OP_WRITE  & X"000400E2"   &  X"0055"  &  X"0000", -- 1. Activate reset: write(0x400E2, 0x0f)
-        OP_AWRITE & X"03250002"   &  X"0000"  &  X"0000", -- 2. PRBS generator on: attrib(0x0325,0x0002)
-        OP_AWRITE & X"01010008"   &  X"0000"  &  X"0000", -- 3. Change to internal serial loopback mode: attrib(0x0101, 0x0008)
-        OP_AWRITE & X"0001000a"   &  X"0000"  &  X"0000", -- 4. Enable initial coarse adaptive equalization: attrib(0x0001, 0x000a)
-        OP_AREAD  & X"0b000126"   &  X"0000"  &  X"0001", -- 5. Read initial coarse adaptation status: val = attrib(0x0b00, 0x0126). Repeat current step until val[0] = 0 to indicate that initial coarse adaptation has completed.
-        OP_AWRITE & X"01000008"   &  X"0000"  &  X"0000", -- 6. Disable Internal Serial Loopback: attrib(0x0100, 0x0008)
-        OP_AWRITE & X"0001000a"   &  X"0000"  &  X"0000", -- 7. Perform initial adaptation: attrib(0x0001, 0x000A)
-        OP_AREAD  & X"0b000126"   &  X"0080"  &  X"00FF", -- 8. Read adaptation status: val=0; while (val & 0x00ff) != 0x80: val = attrib(0x0b00, 0x0126)
-        OP_WRITE  & X"000400E2"   &  X"0000"  &  X"0000", -- 9. Deassert tx_reset/rx_reset: write(0x400E2, 0x0)
-        OP_AREAD  & X"03ff0002"   &  X"0002"  &  X"00FF", -- 10. PRBS generator off: ret = 0 while (ret & 0x00ff) != 0x02: ret = attrib(0x3ff, 0x0002)
-        OP_AWRITE & X"0006000a"   &  X"0000"  &  X"0000", -- 11. Enable continuous adaptive equalization: attrib(0x0006, 0x000A);
-        OP_AREAD  & X"0b000126"   &  X"00E2"  &  X"00FF"  -- 12. Read initial coarse adaptation status: val = 0 while (val & 0x00ff) != 0xE2: val = attrib(0x0b00, 0x0126)
+        std_logic_vector'(OP_WRITE  & X"000400E2"   &  X"0055"  &  X"0000"), -- 1. Activate reset: write(0x400E2, 0x0f)
+        std_logic_vector'(OP_AWRITE & X"03250002"   &  X"0000"  &  X"0000"), -- 2. PRBS generator on: attrib(0x0325,0x0002)
+        std_logic_vector'(OP_AWRITE & X"01010008"   &  X"0000"  &  X"0000"), -- 3. Change to internal serial loopback mode: attrib(0x0101, 0x0008)
+        std_logic_vector'(OP_AWRITE & X"0001000a"   &  X"0000"  &  X"0000"), -- 4. Enable initial coarse adaptive equalization: attrib(0x0001, 0x000a)
+        std_logic_vector'(OP_AREAD  & X"0b000126"   &  X"0000"  &  X"0001"), -- 5. Read initial coarse adaptation status: val = attrib(0x0b00, 0x0126). Repeat current step until val[0] = 0 to indicate that initial coarse adaptation has completed.
+        std_logic_vector'(OP_AWRITE & X"01000008"   &  X"0000"  &  X"0000"), -- 6. Disable Internal Serial Loopback: attrib(0x0100, 0x0008)
+        std_logic_vector'(OP_AWRITE & X"0001000a"   &  X"0000"  &  X"0000"), -- 7. Perform initial adaptation: attrib(0x0001, 0x000A)
+        std_logic_vector'(OP_AREAD  & X"0b000126"   &  X"0080"  &  X"00FF"), -- 8. Read adaptation status: val=0; while (val & 0x00ff) != 0x80: val = attrib(0x0b00, 0x0126)
+        std_logic_vector'(OP_WRITE  & X"000400E2"   &  X"0000"  &  X"0000"), -- 9. Deassert tx_reset/rx_reset: write(0x400E2, 0x0)
+        std_logic_vector'(OP_AREAD  & X"03ff0002"   &  X"0002"  &  X"00FF"), -- 10. PRBS generator off: ret = 0 while (ret & 0x00ff) != 0x02: ret = attrib(0x3ff, 0x0002)
+        std_logic_vector'(OP_AWRITE & X"0006000a"   &  X"0000"  &  X"0000"), -- 11. Enable continuous adaptive equalization: attrib(0x0006, 0x000A);
+        std_logic_vector'(OP_AREAD  & X"0b000126"   &  X"00E2"  &  X"00FF")  -- 12. Read initial coarse adaptation status: val = 0 while (val & 0x00ff) != 0xE2: val = attrib(0x0b00, 0x0126)
     );
 
     signal cfg_rom_out : std_logic_vector(etile_config_rom(0)'range);
