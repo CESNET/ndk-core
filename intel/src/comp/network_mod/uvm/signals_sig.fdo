@@ -24,15 +24,28 @@ add_wave "-noupdate -color yellow -group RESET_PHY"   /testbench/rst_mi_phy/*
 add_wave "-noupdate -color yellow -group RESET_PMD"   /testbench/rst_mi_pmd/*
 add_wave "-noupdate -color yellow -group RESET_TSU"   /testbench/rst_tsu/*
 
-
+add_wave "-noupdate -hex -group NET_MOD_TOP"   testbench/DUT_U/VHDL_DUT_U/*
 
 for {set it 0} {$it < $ETH_PORTS} {incr it} {
-    add_wave "-noupdate -hex -group \"port $it\" -group eth_rx"   "/testbench/eth_rx\[$it\]/*"
-    add_wave "-noupdate -hex -group \"port $it\" -group eth_tx"   "/testbench/eth_tx\[$it\]/*"
-    add_wave "-noupdate -hex -group \"port $it\" -group usr_rx"   "/testbench/usr_rx\[$it\]/*"
-    add_wave "-noupdate -hex -group \"port $it\" -group usr_tx_data"   "/testbench/usr_tx_data\[$it\]/*"
-    add_wave "-noupdate -hex -group \"port $it\" -group usr_tx_hdr"    "/testbench/usr_tx_hdr\[$it\]/*"
+    add_wave "-noupdate -hex -group \"ETH PORT $it\" -group NET_MOD_CORE"   testbench/DUT_U/VHDL_DUT_U/eth_core_g($it)/network_mod_core_i/*
+    add_wave "-noupdate -hex -group \"ETH PORT $it\" -group NET_MOD_LOGIC"  testbench/DUT_U/VHDL_DUT_U/eth_core_g($it)/network_mod_logic_i/*
+    add_wave "-noupdate -hex -group \"ETH PORT $it\" -group RX_ADAPTER"     testbench/DUT_U/VHDL_DUT_U/eth_core_g($it)/network_mod_core_i/eth_port_speed_sel_g/avst2mfb_i/*
+    add_wave "-noupdate -hex -group \"ETH PORT $it\" -group RX_MAC"         testbench/DUT_U/VHDL_DUT_U/eth_core_g($it)/network_mod_logic_i/mac_lites_g(0)/rx_mac_lite_i/*
+    add_wave "-noupdate -hex -group \"ETH PORT $it\" -group RX_MAC_RCONF"   testbench/DUT_U/VHDL_DUT_U/eth_core_g($it)/network_mod_logic_i/mac_lites_g(0)/rx_mac_lite_i/mfb_reconf_buf_i/*
+    add_wave "-noupdate -hex -group \"ETH PORT $it\" -group RX_MAC_BUF"     testbench/DUT_U/VHDL_DUT_U/eth_core_g($it)/network_mod_logic_i/mac_lites_g(0)/rx_mac_lite_i/buffer_i/*
+    #add_wave "-noupdate -hex -group \"ETH PORT $it\" -group RX_MAC_DBUF"    testbench/DUT_U/VHDL_DUT_U/eth_core_g($it)/network_mod_logic_i/mac_lites_g(0)/rx_mac_lite_i/buffer_i/dbuf_i/*
+    #add_wave "-noupdate -hex -group \"ETH PORT $it\" -group RX_MAC_CTRL"    testbench/DUT_U/VHDL_DUT_U/eth_core_g($it)/network_mod_logic_i/mac_lites_g(0)/rx_mac_lite_i/ctrl_unit_i/*
+    add_wave "-noupdate -hex -group \"ETH PORT $it\" -group TX_ADAPTER"     testbench/DUT_U/VHDL_DUT_U/eth_core_g($it)/network_mod_core_i/eth_port_speed_sel_g/mfb2avst_i/*
+    add_wave "-noupdate -hex -group \"ETH PORT $it\" -group TX_MAC"         testbench/DUT_U/VHDL_DUT_U/eth_core_g($it)/network_mod_logic_i/mac_lites_g(0)/tx_mac_lite_i/*
 }
+
+#for {set it 0} {$it < $ETH_PORTS} {incr it} {
+#    add_wave "-noupdate -hex -group \"port $it\" -group eth_rx"   "/testbench/eth_rx\[$it\]/*"
+#    add_wave "-noupdate -hex -group \"port $it\" -group eth_tx"   "/testbench/eth_tx\[$it\]/*"
+#    add_wave "-noupdate -hex -group \"port $it\" -group usr_rx"   "/testbench/usr_rx\[$it\]/*"
+#    add_wave "-noupdate -hex -group \"port $it\" -group usr_tx_data"   "/testbench/usr_tx_data\[$it\]/*"
+#    add_wave "-noupdate -hex -group \"port $it\" -group usr_tx_hdr"    "/testbench/usr_tx_hdr\[$it\]/*"
+#}
 
 add_wave "-noupdate -hex -group MI"              "/testbench/mi/*"
 add_wave "-noupdate -hex -group MI -group phy"   "/testbench/mi_phy/*"
