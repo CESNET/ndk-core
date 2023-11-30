@@ -20,8 +20,10 @@ class mi_sequence#(DATA_WIDTH, ADDR_WIDTH, ETH_PORTS, int unsigned ETH_PORT_CHAN
                 const int unsigned offset = port * port_offset + channel * channel_offset;
                 // ENABLE RX
                 write(offset + 'h000 + 'h20 , 'h1);
+                read(offset + 'h000 + 'h20);
                 // ENABLE TX
                 write(offset + 'h200 + 'h20 , 'h1);
+                read(offset + 'h200 + 'h20);
             end
         end
     endtask
@@ -328,6 +330,10 @@ class virt_sequence_simple#(ETH_PORTS, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, ITEM_
             tsu_rst.start(p_sequencer.tsu_rst);
         join_none
 
+        #(250ns)
+        mi.start(p_sequencer.mi);
+        #(250ns)
+
         for (int unsigned it = 0; it <  ETH_PORTS; it++) begin
             fork
                 automatic int unsigned index = it;
@@ -354,9 +360,6 @@ class virt_sequence_simple#(ETH_PORTS, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, ITEM_
                 end
             join_none
         end
-
-        #(250ns)
-        mi.start(p_sequencer.mi);
 
         //SEND STOP
         wait (transactions >= ETH_PORTS*1_000);
