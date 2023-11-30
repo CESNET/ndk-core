@@ -141,6 +141,7 @@ class model#(ETH_PORTS, int unsigned ETH_PORT_CHAN[ETH_PORTS-1:0], REGIONS, ITEM
             logic [48-1:0]  dst_mac;
             logic [48-1:0]  src_mac;
             logic [16-1:0]  eth_type;
+            string msg;
 
             eth_rx_hdr[index].get(hdr);
             eth_rx_data[index].get(data);
@@ -159,12 +160,12 @@ class model#(ETH_PORTS, int unsigned ETH_PORT_CHAN[ETH_PORTS-1:0], REGIONS, ITEM
             {dst_mac, src_mac, eth_type} = {>>{data.item.data[0: (48+48+16)/ITEM_WIDTH-1]}};
 
             //hdr.data; 0=> malformed packet, 1=> CRC error,  2=> data.size() < 64, 3 => data_size > rx_max_frame_size, 4 => if eth_type <= 1500 then data.size() != eth_type;
-            error_frame  = hdr.item.data[1];
-            error_min_tu = length < 60   | hdr.item.data[1];
-            error_max_tu = length > 1526 | hdr.item.data[3];
-            error_crc    = hdr.item.data[1];
+            error_frame  = |hdr.item.data;
+            error_min_tu = length < 60;
+            error_max_tu = length > 1526;
+            error_crc    = 0;
             error_mac    = 0;
-            error = (|hdr.item.data) | error_frame | error_min_tu | error_max_tu | error_crc | error_mac;
+            error = error_frame | error_min_tu | error_max_tu | error_crc | error_mac;
 
             broadcast = dst_mac === '1;
             multicast = (dst_mac[48-8] === 1) && !broadcast;
@@ -178,28 +179,28 @@ class model#(ETH_PORTS, int unsigned ETH_PORT_CHAN[ETH_PORTS-1:0], REGIONS, ITEM
             timestamp     = 'x;
 
             drop_sync[index][channel].get(drop);
-            drop |= (|hdr.item.data) | error_frame | error_min_tu | error_max_tu | error_crc | error_mac;
+            drop |= error_frame | error_min_tu | error_max_tu | error_crc | error_mac;
+
+            msg = $sformatf("\n\thdr input time %s", hdr.convert2string_time());
+            msg = {msg, $sformatf("\n\tlength        [%0d]" , length)};
+            msg = {msg, $sformatf("\n\terror         [0x%h]", error)};
+            msg = {msg, $sformatf("\n\terror frame   [0x%h]", error_frame)};
+            msg = {msg, $sformatf("\n\terror min MTU [0x%h]", error_min_tu)};
+            msg = {msg, $sformatf("\n\terror max MTU [0x%h]", error_max_tu)};
+            msg = {msg, $sformatf("\n\terror CRC     [0x%h]", error_crc)};
+            msg = {msg, $sformatf("\n\terror MAC     [0x%h]", error_mac)};
+            msg = {msg, $sformatf("\n\tbroadcast     [0x%h]", broadcast)};
+            msg = {msg, $sformatf("\n\tmulticast     [0x%h]", multicast)};
+            msg = {msg, $sformatf("\n\tMAC HIT VLD   [0x%h]", mac_hit_vld)};
+            msg = {msg, $sformatf("\n\tMAC HIT       [0x%h]", mac_hit)};
+            msg = {msg, $sformatf("\n\ttimestamp VLD [0x%h]", timestamp_vld)};
+            msg = {msg, $sformatf("\n\ttimestamp     [0x%h]", timestamp)};
+            msg = {msg, data.convert2string()};
+            `uvm_info(this.get_full_name(), msg, UVM_MEDIUM);
+
             if (!drop) begin
-                string msg;
                 //crc_value = ~crc32_ethernet(mfbTrans.data, 32'hffffffff); nebylo by lepší?? crc_value = crc32_ethernet(mfbTrans.data, 32'h0);
                 //crc = {<< byte{crc_value}};
-                msg = $sformatf("\n\tPORT [%0d]: Received %0d dropped %0d accepted %0d\n", index, eth_recv[index], eth_drop[index], eth_recv[index] - eth_drop[index]);
-                msg = {msg, $sformatf("\n\thdr input time %s", hdr.convert2string_time())};
-                msg = {msg, $sformatf("\n\tlength [%0d]"      , length)}; 
-                msg = {msg, $sformatf("\n\terror  [0x%h ]"      , error)}; 
-                msg = {msg, $sformatf("\n\terror frame   [0x%h]", error_frame)}; 
-                msg = {msg, $sformatf("\n\terror min MTU [0x%h]", error_min_tu)}; 
-                msg = {msg, $sformatf("\n\terror max MTU [0x%h]", error_max_tu)}; 
-                msg = {msg, $sformatf("\n\terror CRC     [0x%h]", error_crc)}; 
-                msg = {msg, $sformatf("\n\terror MAC     [0x%h]", error_mac)}; 
-                msg = {msg, $sformatf("\n\tbroadcast     [0x%h]", broadcast)}; 
-                msg = {msg, $sformatf("\n\tmulticast     [0x%h]", multicast)}; 
-                msg = {msg, $sformatf("\n\tMAC HIT VLD   [0x%h]", mac_hit_vld)}; 
-                msg = {msg, $sformatf("\n\t\tMAC HIT     [0x%h]", mac_hit)}; 
-                msg = {msg, $sformatf("\n\ttimestamp VLD [0x%h]", timestamp_vld)}; 
-                msg = {msg, $sformatf("\n\t\ttimestamp   [0x%h]", timestamp)}; 
-                msg = {msg, data.convert2string()};
-                `uvm_info(this.get_full_name(), msg, UVM_HIGH);
 
                 hdr_out = uvm_common::model_item#(uvm_logic_vector::sequence_item#(ETH_RX_HDR_WIDTH))::type_id::create("hdr_out", this);
                 hdr_out.start[$sformatf("ETH_RX[%0d]", index)] = $time();
@@ -214,12 +215,13 @@ class model#(ETH_PORTS, int unsigned ETH_PORT_CHAN[ETH_PORTS-1:0], REGIONS, ITEM
                 //data_out.item = uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)::type_id::create("data_out.item", this);
                 //data_out.item.data = new[data.data.size()-4](data.data); //remove CRC
 
-                `uvm_info(this.get_full_name(), $sformatf("\nUSR RX [%0d] OUTPUT\nHEADER%s\nDATA%s\n", index, hdr_out.convert2string(), data_out.convert2string()), UVM_MEDIUM);
                 usr_tx_data[index].write(data_out);
                 usr_tx_hdr[index].write(hdr_out);
+                //`uvm_info(this.get_full_name(), $sformatf("\nUSR RX [%0d] OUTPUT\nHEADER%s\nDATA%s\n", index, hdr_out.convert2string(), data_out.convert2string()), UVM_FULL);
+                `uvm_info(this.get_full_name(), $sformatf("\n\tUSR RX [%0d] ACCEPT: Received %0d dropped %0d accepted %0d\n", index, eth_recv[index], eth_drop[index], eth_recv[index] - eth_drop[index]), UVM_MEDIUM);
             end else begin
-                `uvm_info(this.get_full_name(), $sformatf("\n\tUSR RX [%0d] Drop: Received %0d dropped %0d accepted %0d\n", index, eth_recv[index], eth_drop[index], eth_recv[index] - eth_drop[index]), UVM_MEDIUM);
                 eth_drop[index]++;
+                `uvm_info(this.get_full_name(), $sformatf("\n\tUSR RX [%0d] DROP: Received %0d dropped %0d accepted %0d\n", index, eth_recv[index], eth_drop[index], eth_recv[index] - eth_drop[index]), UVM_MEDIUM);
             end
        end
     endtask
