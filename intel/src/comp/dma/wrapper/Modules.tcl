@@ -12,6 +12,7 @@ set MI_ASYNC_BASE               "$OFM_PATH/comp/mi_tools/async"
 set MFB_ASFIFOX_BASE            "$OFM_PATH/comp/mfb_tools/storage/asfifox"
 set MFB_META_INS_BASE           "$OFM_PATH/comp/mfb_tools/flow/metadata_insertor"
 set MFB_META_EXT_BASE           "$OFM_PATH/comp/mfb_tools/flow/metadata_extractor"
+set MFB_RECONFIG_BASE           "$OFM_PATH/comp/mfb_tools/flow/reconfigurator"
 set TSU_BASE                    "$OFM_PATH/comp/tsu/tsu_gen"
 set MFB_PIPE_BASE               "$OFM_PATH/comp/mfb_tools/flow/pipe"
 
@@ -49,6 +50,7 @@ if { $ARCHGRP == "MEDUSA" } {
     lappend COMPONENTS [ list "DMA_CALYPTE"            $DMA_CALYPTE_BASE           "FULL" ]
     lappend COMPONENTS [ list "MFB_LOOPBACK"           $MFB_LOOPBACK_BASE          "FULL" ]
     lappend COMPONENTS [ list "TX_DMA_DEBUG_CORE"      $TX_DMA_DEBUG_CORE_BASE     "FULL" ]
+    lappend COMPONENTS [ list "MFB_RECONFIG"           $MFB_RECONFIG_BASE          "FULL" ]
 
     lappend MOD "$ENTITY_BASE/dma_calypte_wrapper_arch.vhd"
 }

@@ -269,7 +269,7 @@ architecture FULL of FPGA_COMMON is
 
     -- MFB parameters
     constant MFB_REGIONS      : integer := ETH_MFB_REGION;  -- Number of regions in word - TODO
-    constant MFB_REGION_SIZE  : integer := mfb_reg_size_calc_f;  -- Number of blocks in region
+    constant MFB_REGION_SIZE  : integer := 8;  -- Number of blocks in region
     constant MFB_BLOCK_SIZE   : integer := 8;  -- Number of items in block
     constant MFB_ITEM_WIDTH   : integer := 8;  -- Width of one item in bits
 

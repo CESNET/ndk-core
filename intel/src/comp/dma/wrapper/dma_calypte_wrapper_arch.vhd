@@ -33,6 +33,11 @@ architecture CALYPTE of DMA_WRAPPER is
     constant DMA_LOOPBACK_EN      : boolean := FALSE;
     constant ST_SP_DBG_META_WIDTH : natural := 4;
 
+    constant DMA_MFB_REGIONS      : integer := 1;
+    constant DMA_MFB_REGION_SIZE  : integer := PCIE_RQ_MFB_REGIONS*4;
+    constant DMA_MFB_BLOCK_SIZE   : integer := 8;
+    constant DMA_MFB_ITEM_WIDTH   : integer := 8;
+
     -- MI split for DMA 0 and TSU
     signal mi_dmagen_dwr  : slv_array_2d_t(PCIE_ENDPOINTS -1 downto 0)(MI_SPLIT_PORTS -1 downto 0)(32-1 downto 0);
     signal mi_dmagen_addr : slv_array_2d_t(PCIE_ENDPOINTS -1 downto 0)(MI_SPLIT_PORTS -1 downto 0)(32-1 downto 0);
@@ -57,48 +62,66 @@ architecture CALYPTE of DMA_WRAPPER is
     --==============================================================================================
     -- Metadata insertor ---> FIFOX
     --==============================================================================================
-    signal rx_usr_mfb_data_async      : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS*USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE*USR_MFB_ITEM_WIDTH -1 downto 0);
+    signal rx_usr_mfb_data_res        : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS*USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE*USR_MFB_ITEM_WIDTH -1 downto 0);
+    signal rx_usr_mfb_meta_res        : slv_array_t(DMA_STREAMS-1 downto 0)(log2(USR_RX_PKT_SIZE_MAX +1)+log2(RX_CHANNELS)+HDR_META_WIDTH             -1 downto 0);
+    signal rx_usr_mfb_sof_res         : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS                                                           -1 downto 0);
+    signal rx_usr_mfb_eof_res         : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS                                                           -1 downto 0);
+    signal rx_usr_mfb_sof_pos_res     : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE))                          -1 downto 0);
+    signal rx_usr_mfb_eof_pos_res     : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE))       -1 downto 0);
+    signal rx_usr_mfb_src_rdy_res     : std_logic_vector(DMA_STREAMS-1 downto 0);
+    signal rx_usr_mfb_dst_rdy_res     : std_logic_vector(DMA_STREAMS-1 downto 0);
+
+    signal rx_usr_mfb_data_async      : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*DMA_MFB_REGION_SIZE*DMA_MFB_BLOCK_SIZE*DMA_MFB_ITEM_WIDTH -1 downto 0);
     signal rx_usr_mfb_meta_async      : slv_array_t(DMA_STREAMS-1 downto 0)(log2(USR_RX_PKT_SIZE_MAX +1)+log2(RX_CHANNELS)+HDR_META_WIDTH             -1 downto 0);
-    signal rx_usr_mfb_sof_async       : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS                                                           -1 downto 0);
-    signal rx_usr_mfb_eof_async       : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS                                                           -1 downto 0);
-    signal rx_usr_mfb_sof_pos_async   : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE))                          -1 downto 0);
-    signal rx_usr_mfb_eof_pos_async   : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE))       -1 downto 0);
+    signal rx_usr_mfb_sof_async       : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS                                                           -1 downto 0);
+    signal rx_usr_mfb_eof_async       : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS                                                           -1 downto 0);
+    signal rx_usr_mfb_sof_pos_async   : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*max(1,log2(DMA_MFB_REGION_SIZE))                          -1 downto 0);
+    signal rx_usr_mfb_eof_pos_async   : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*max(1,log2(DMA_MFB_REGION_SIZE*DMA_MFB_BLOCK_SIZE))       -1 downto 0);
     signal rx_usr_mfb_src_rdy_async   : std_logic_vector(DMA_STREAMS-1 downto 0);
     signal rx_usr_mfb_dst_rdy_async   : std_logic_vector(DMA_STREAMS-1 downto 0);
 
     --==============================================================================================
     -- FIFOX ---> Metadata extractor
     --==============================================================================================
-    signal tx_usr_mfb_data_async      : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS*USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE*USR_MFB_ITEM_WIDTH-1 downto 0);
+    signal tx_usr_mfb_data_res        : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS*USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE*USR_MFB_ITEM_WIDTH-1 downto 0);
+    signal tx_usr_mfb_meta_res        : slv_array_t(DMA_STREAMS-1 downto 0)(log2(USR_TX_PKT_SIZE_MAX+1)+HDR_META_WIDTH+log2(TX_CHANNELS)             -1 downto 0);
+    signal tx_usr_mfb_sof_res         : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS                                                          -1 downto 0);
+    signal tx_usr_mfb_eof_res         : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS                                                          -1 downto 0);
+    signal tx_usr_mfb_sof_pos_res     : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE))                         -1 downto 0);
+    signal tx_usr_mfb_eof_pos_res     : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE))      -1 downto 0);
+    signal tx_usr_mfb_src_rdy_res     : std_logic_vector(DMA_STREAMS-1 downto 0);
+    signal tx_usr_mfb_dst_rdy_res     : std_logic_vector(DMA_STREAMS-1 downto 0);
+
+    signal tx_usr_mfb_data_async      : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*DMA_MFB_REGION_SIZE*DMA_MFB_BLOCK_SIZE*DMA_MFB_ITEM_WIDTH-1 downto 0);
     signal tx_usr_mfb_meta_async      : slv_array_t(DMA_STREAMS-1 downto 0)(log2(USR_TX_PKT_SIZE_MAX+1)+HDR_META_WIDTH+log2(TX_CHANNELS)             -1 downto 0);
-    signal tx_usr_mfb_sof_async       : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS                                                          -1 downto 0);
-    signal tx_usr_mfb_eof_async       : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS                                                          -1 downto 0);
-    signal tx_usr_mfb_sof_pos_async   : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE))                         -1 downto 0);
-    signal tx_usr_mfb_eof_pos_async   : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE))      -1 downto 0);
+    signal tx_usr_mfb_sof_async       : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS                                                          -1 downto 0);
+    signal tx_usr_mfb_eof_async       : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS                                                          -1 downto 0);
+    signal tx_usr_mfb_sof_pos_async   : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*max(1,log2(DMA_MFB_REGION_SIZE))                         -1 downto 0);
+    signal tx_usr_mfb_eof_pos_async   : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*max(1,log2(DMA_MFB_REGION_SIZE*DMA_MFB_BLOCK_SIZE))      -1 downto 0);
     signal tx_usr_mfb_src_rdy_async   : std_logic_vector(DMA_STREAMS-1 downto 0);
     signal tx_usr_mfb_dst_rdy_async   : std_logic_vector(DMA_STREAMS-1 downto 0);
 
     --==============================================================================================
     --  MFB ASFIFOX ---> Loopback Module interface
     --==============================================================================================
-    signal rx_usr_mfb_data_sync      : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS*USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE*USR_MFB_ITEM_WIDTH-1 downto 0);
+    signal rx_usr_mfb_data_sync      : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*DMA_MFB_REGION_SIZE*DMA_MFB_BLOCK_SIZE*DMA_MFB_ITEM_WIDTH-1 downto 0);
     signal rx_usr_mfb_meta_sync      : slv_array_t(DMA_STREAMS-1 downto 0)(log2(USR_RX_PKT_SIZE_MAX+1)+HDR_META_WIDTH+log2(RX_CHANNELS)             -1 downto 0);
-    signal rx_usr_mfb_sof_sync       : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS                                                          -1 downto 0);
-    signal rx_usr_mfb_eof_sync       : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS                                                          -1 downto 0);
-    signal rx_usr_mfb_sof_pos_sync   : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE))                         -1 downto 0);
-    signal rx_usr_mfb_eof_pos_sync   : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE))      -1 downto 0);
+    signal rx_usr_mfb_sof_sync       : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS                                                          -1 downto 0);
+    signal rx_usr_mfb_eof_sync       : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS                                                          -1 downto 0);
+    signal rx_usr_mfb_sof_pos_sync   : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*max(1,log2(DMA_MFB_REGION_SIZE))                         -1 downto 0);
+    signal rx_usr_mfb_eof_pos_sync   : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*max(1,log2(DMA_MFB_REGION_SIZE*DMA_MFB_BLOCK_SIZE))      -1 downto 0);
     signal rx_usr_mfb_src_rdy_sync   : std_logic_vector(DMA_STREAMS-1 downto 0);
     signal rx_usr_mfb_dst_rdy_sync   : std_logic_vector(DMA_STREAMS-1 downto 0);
 
     --==============================================================================================
     --  Loopback Module ---> MFB ASFIFOX interface
     --==============================================================================================
-    signal tx_usr_mfb_data_sync      : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS*USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE*USR_MFB_ITEM_WIDTH-1 downto 0);
+    signal tx_usr_mfb_data_sync      : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*DMA_MFB_REGION_SIZE*DMA_MFB_BLOCK_SIZE*DMA_MFB_ITEM_WIDTH-1 downto 0);
     signal tx_usr_mfb_meta_sync      : slv_array_t(DMA_STREAMS-1 downto 0)(log2(USR_TX_PKT_SIZE_MAX+1)+HDR_META_WIDTH+log2(TX_CHANNELS)             -1 downto 0);
-    signal tx_usr_mfb_sof_sync       : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS                                                          -1 downto 0);
-    signal tx_usr_mfb_eof_sync       : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS                                                          -1 downto 0);
-    signal tx_usr_mfb_sof_pos_sync   : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE))                         -1 downto 0);
-    signal tx_usr_mfb_eof_pos_sync   : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE))      -1 downto 0);
+    signal tx_usr_mfb_sof_sync       : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS                                                          -1 downto 0);
+    signal tx_usr_mfb_eof_sync       : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS                                                          -1 downto 0);
+    signal tx_usr_mfb_sof_pos_sync   : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*max(1,log2(DMA_MFB_REGION_SIZE))                         -1 downto 0);
+    signal tx_usr_mfb_eof_pos_sync   : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*max(1,log2(DMA_MFB_REGION_SIZE*DMA_MFB_BLOCK_SIZE))      -1 downto 0);
     signal tx_usr_mfb_src_rdy_sync   : std_logic_vector(DMA_STREAMS-1 downto 0);
     signal tx_usr_mfb_dst_rdy_sync   : std_logic_vector(DMA_STREAMS-1 downto 0);
 
@@ -109,12 +132,12 @@ architecture CALYPTE of DMA_WRAPPER is
     signal rx_usr_mfb_meta_hdr_meta  : slv_array_t(DMA_STREAMS-1 downto 0)(HDR_META_WIDTH             -1 downto 0);
     signal rx_usr_mfb_meta_channel   : slv_array_t(DMA_STREAMS-1 downto 0)(log2(RX_CHANNELS)          -1 downto 0);
 
-    signal rx_usr_mfb_data_lbk      : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS*USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE*USR_MFB_ITEM_WIDTH-1 downto 0);
+    signal rx_usr_mfb_data_lbk      : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*DMA_MFB_REGION_SIZE*DMA_MFB_BLOCK_SIZE*DMA_MFB_ITEM_WIDTH-1 downto 0);
     signal rx_usr_mfb_meta_lbk      : slv_array_t(DMA_STREAMS-1 downto 0)(log2(USR_RX_PKT_SIZE_MAX+1)+HDR_META_WIDTH+log2(RX_CHANNELS)             -1 downto 0);
-    signal rx_usr_mfb_sof_lbk       : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS                                                          -1 downto 0);
-    signal rx_usr_mfb_eof_lbk       : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS                                                          -1 downto 0);
-    signal rx_usr_mfb_sof_pos_lbk   : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE))                         -1 downto 0);
-    signal rx_usr_mfb_eof_pos_lbk   : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE))      -1 downto 0);
+    signal rx_usr_mfb_sof_lbk       : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS                                                          -1 downto 0);
+    signal rx_usr_mfb_eof_lbk       : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS                                                          -1 downto 0);
+    signal rx_usr_mfb_sof_pos_lbk   : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*max(1,log2(DMA_MFB_REGION_SIZE))                         -1 downto 0);
+    signal rx_usr_mfb_eof_pos_lbk   : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*max(1,log2(DMA_MFB_REGION_SIZE*DMA_MFB_BLOCK_SIZE))      -1 downto 0);
     signal rx_usr_mfb_src_rdy_lbk   : std_logic_vector(DMA_STREAMS-1 downto 0);
     signal rx_usr_mfb_dst_rdy_lbk   : std_logic_vector(DMA_STREAMS-1 downto 0);
 
@@ -126,23 +149,23 @@ architecture CALYPTE of DMA_WRAPPER is
     signal tx_usr_mfb_meta_hdr_meta_dbg : slv_array_t(DMA_STREAMS-1 downto 0)(HDR_META_WIDTH             -1 downto 0);
     signal tx_usr_mfb_meta_channel_dbg  : slv_array_t(DMA_STREAMS-1 downto 0)(log2(TX_CHANNELS)          -1 downto 0);
 
-    signal tx_usr_mfb_data_dbg          : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS*USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE*USR_MFB_ITEM_WIDTH-1 downto 0);
-    signal tx_usr_mfb_sof_dbg           : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS                                                          -1 downto 0);
-    signal tx_usr_mfb_eof_dbg           : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS                                                          -1 downto 0);
-    signal tx_usr_mfb_sof_pos_dbg       : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE))                         -1 downto 0);
-    signal tx_usr_mfb_eof_pos_dbg       : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE))      -1 downto 0);
+    signal tx_usr_mfb_data_dbg          : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*DMA_MFB_REGION_SIZE*DMA_MFB_BLOCK_SIZE*DMA_MFB_ITEM_WIDTH-1 downto 0);
+    signal tx_usr_mfb_sof_dbg           : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS                                                          -1 downto 0);
+    signal tx_usr_mfb_eof_dbg           : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS                                                          -1 downto 0);
+    signal tx_usr_mfb_sof_pos_dbg       : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*max(1,log2(DMA_MFB_REGION_SIZE))                         -1 downto 0);
+    signal tx_usr_mfb_eof_pos_dbg       : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*max(1,log2(DMA_MFB_REGION_SIZE*DMA_MFB_BLOCK_SIZE))      -1 downto 0);
     signal tx_usr_mfb_src_rdy_dbg       : std_logic_vector(DMA_STREAMS-1 downto 0);
     signal tx_usr_mfb_dst_rdy_dbg       : std_logic_vector(DMA_STREAMS-1 downto 0);
 
     --==============================================================================================
     --  Debug Core --->  Loopback interface
     --==============================================================================================
-    signal tx_usr_mfb_data_lbk      : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS*USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE*USR_MFB_ITEM_WIDTH-1 downto 0);
+    signal tx_usr_mfb_data_lbk      : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*DMA_MFB_REGION_SIZE*DMA_MFB_BLOCK_SIZE*DMA_MFB_ITEM_WIDTH-1 downto 0);
     signal tx_usr_mfb_meta_lbk      : slv_array_t(DMA_STREAMS-1 downto 0)(log2(USR_TX_PKT_SIZE_MAX+1)+HDR_META_WIDTH+log2(TX_CHANNELS)             -1 downto 0);
-    signal tx_usr_mfb_sof_lbk       : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS                                                          -1 downto 0);
-    signal tx_usr_mfb_eof_lbk       : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS                                                          -1 downto 0);
-    signal tx_usr_mfb_sof_pos_lbk   : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE))                         -1 downto 0);
-    signal tx_usr_mfb_eof_pos_lbk   : slv_array_t(DMA_STREAMS-1 downto 0)(USR_MFB_REGIONS*max(1,log2(USR_MFB_REGION_SIZE*USR_MFB_BLOCK_SIZE))      -1 downto 0);
+    signal tx_usr_mfb_sof_lbk       : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS                                                          -1 downto 0);
+    signal tx_usr_mfb_eof_lbk       : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS                                                          -1 downto 0);
+    signal tx_usr_mfb_sof_pos_lbk   : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*max(1,log2(DMA_MFB_REGION_SIZE))                         -1 downto 0);
+    signal tx_usr_mfb_eof_pos_lbk   : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*max(1,log2(DMA_MFB_REGION_SIZE*DMA_MFB_BLOCK_SIZE))      -1 downto 0);
     signal tx_usr_mfb_src_rdy_lbk   : std_logic_vector(DMA_STREAMS-1 downto 0);
     signal tx_usr_mfb_dst_rdy_lbk   : std_logic_vector(DMA_STREAMS-1 downto 0);
 
@@ -303,15 +326,15 @@ begin
                 RX_MFB_SRC_RDY => RX_USR_MFB_SRC_RDY(i),
                 RX_MFB_DST_RDY => RX_USR_MFB_DST_RDY(i),
 
-                TX_MFB_DATA     => rx_usr_mfb_data_async(i),
+                TX_MFB_DATA     => rx_usr_mfb_data_res(i),
                 TX_MFB_META     => open,
-                TX_MFB_META_NEW => rx_usr_mfb_meta_async(i),
-                TX_MFB_SOF      => rx_usr_mfb_sof_async(i),
-                TX_MFB_EOF      => rx_usr_mfb_eof_async(i),
-                TX_MFB_SOF_POS  => rx_usr_mfb_sof_pos_async(i),
-                TX_MFB_EOF_POS  => rx_usr_mfb_eof_pos_async(i),
-                TX_MFB_SRC_RDY  => rx_usr_mfb_src_rdy_async(i),
-                TX_MFB_DST_RDY  => rx_usr_mfb_dst_rdy_async(i));
+                TX_MFB_META_NEW => rx_usr_mfb_meta_res(i),
+                TX_MFB_SOF      => rx_usr_mfb_sof_res(i),
+                TX_MFB_EOF      => rx_usr_mfb_eof_res(i),
+                TX_MFB_SOF_POS  => rx_usr_mfb_sof_pos_res(i),
+                TX_MFB_EOF_POS  => rx_usr_mfb_eof_pos_res(i),
+                TX_MFB_SRC_RDY  => rx_usr_mfb_src_rdy_res(i),
+                TX_MFB_DST_RDY  => rx_usr_mfb_dst_rdy_res(i));
 
         usr_tx_dma_meta_ext_i : entity work.METADATA_EXTRACTOR
             generic map (
@@ -329,14 +352,14 @@ begin
                 CLK   => USR_CLK,
                 RESET => USR_RESET,
 
-                RX_MFB_DATA    => tx_usr_mfb_data_async(i),
-                RX_MFB_META    => tx_usr_mfb_meta_async(i),
-                RX_MFB_SOF     => tx_usr_mfb_sof_async(i),
-                RX_MFB_EOF     => tx_usr_mfb_eof_async(i),
-                RX_MFB_SOF_POS => tx_usr_mfb_sof_pos_async(i),
-                RX_MFB_EOF_POS => tx_usr_mfb_eof_pos_async(i),
-                RX_MFB_SRC_RDY => tx_usr_mfb_src_rdy_async(i),
-                RX_MFB_DST_RDY => tx_usr_mfb_dst_rdy_async(i),
+                RX_MFB_DATA    => tx_usr_mfb_data_res(i),
+                RX_MFB_META    => tx_usr_mfb_meta_res(i),
+                RX_MFB_SOF     => tx_usr_mfb_sof_res(i),
+                RX_MFB_EOF     => tx_usr_mfb_eof_res(i),
+                RX_MFB_SOF_POS => tx_usr_mfb_sof_pos_res(i),
+                RX_MFB_EOF_POS => tx_usr_mfb_eof_pos_res(i),
+                RX_MFB_SRC_RDY => tx_usr_mfb_src_rdy_res(i),
+                RX_MFB_DST_RDY => tx_usr_mfb_dst_rdy_res(i),
 
                 TX_MVB_DATA    => tx_usr_mvb_data_all(i),
                 TX_MVB_VLD     => TX_USR_MVB_VLD(i),
@@ -357,15 +380,97 @@ begin
         TX_USR_MVB_CHANNEL(i)  <= tx_usr_mvb_data_all(i)(log2(TX_CHANNELS) -1 downto 0);
 
         --==========================================================================================
+        -- Reconfig
+        --==========================================================================================
+
+        urs_rx_mfb_reconf_i : entity work.MFB_RECONFIGURATOR
+        generic map(
+            RX_REGIONS           => USR_MFB_REGIONS,
+            RX_REGION_SIZE       => USR_MFB_REGION_SIZE,
+            RX_BLOCK_SIZE        => USR_MFB_BLOCK_SIZE,
+            RX_ITEM_WIDTH        => USR_MFB_ITEM_WIDTH,
+            TX_REGIONS           => DMA_MFB_REGIONS,
+            TX_REGION_SIZE       => DMA_MFB_REGION_SIZE,
+            TX_BLOCK_SIZE        => DMA_MFB_BLOCK_SIZE,
+            TX_ITEM_WIDTH        => DMA_MFB_ITEM_WIDTH,
+            META_WIDTH           => log2(USR_RX_PKT_SIZE_MAX + 1) + HDR_META_WIDTH + log2(RX_CHANNELS),
+            META_MODE            => 0,
+            FIFO_SIZE            => 32,
+            FRAMES_OVER_TX_BLOCK => 0,
+            DEVICE               => DEVICE
+        )
+        port map(
+            CLK        => USR_CLK,
+            RESET      => USR_RESET,
+    
+            RX_DATA    => rx_usr_mfb_data_res(i),
+            RX_META    => rx_usr_mfb_meta_res(i),
+            RX_SOF     => rx_usr_mfb_sof_res(i),
+            RX_EOF     => rx_usr_mfb_eof_res(i),
+            RX_SOF_POS => rx_usr_mfb_sof_pos_res(i),
+            RX_EOF_POS => rx_usr_mfb_eof_pos_res(i),
+            RX_SRC_RDY => rx_usr_mfb_src_rdy_res(i),
+            RX_DST_RDY => rx_usr_mfb_dst_rdy_res(i),
+    
+            TX_DATA    => rx_usr_mfb_data_async(i),
+            TX_META    => rx_usr_mfb_meta_async(i),
+            TX_SOF     => rx_usr_mfb_sof_async(i),
+            TX_EOF     => rx_usr_mfb_eof_async(i),
+            TX_SOF_POS => rx_usr_mfb_sof_pos_async(i),
+            TX_EOF_POS => rx_usr_mfb_eof_pos_async(i),
+            TX_SRC_RDY => rx_usr_mfb_src_rdy_async(i),
+            TX_DST_RDY => rx_usr_mfb_dst_rdy_async(i)
+        );
+    
+        urs_tx_mfb_reconf_i : entity work.MFB_RECONFIGURATOR
+        generic map(
+            RX_REGIONS           => DMA_MFB_REGIONS,
+            RX_REGION_SIZE       => DMA_MFB_REGION_SIZE,
+            RX_BLOCK_SIZE        => DMA_MFB_BLOCK_SIZE,
+            RX_ITEM_WIDTH        => DMA_MFB_ITEM_WIDTH,
+            TX_REGIONS           => USR_MFB_REGIONS,
+            TX_REGION_SIZE       => USR_MFB_REGION_SIZE,
+            TX_BLOCK_SIZE        => USR_MFB_BLOCK_SIZE,
+            TX_ITEM_WIDTH        => USR_MFB_ITEM_WIDTH,
+            META_WIDTH           => log2(USR_TX_PKT_SIZE_MAX + 1) + HDR_META_WIDTH + log2(TX_CHANNELS),
+            META_MODE            => 0,
+            FIFO_SIZE            => 32,
+            FRAMES_OVER_TX_BLOCK => 0,
+            DEVICE               => DEVICE
+        )
+        port map(
+            CLK        => USR_CLK,
+            RESET      => USR_RESET,
+    
+            RX_DATA    => tx_usr_mfb_data_async(i),
+            RX_META    => tx_usr_mfb_meta_async(i),
+            RX_SOF     => tx_usr_mfb_sof_async(i),
+            RX_EOF     => tx_usr_mfb_eof_async(i),
+            RX_SOF_POS => tx_usr_mfb_sof_pos_async(i),
+            RX_EOF_POS => tx_usr_mfb_eof_pos_async(i),
+            RX_SRC_RDY => tx_usr_mfb_src_rdy_async(i),
+            RX_DST_RDY => tx_usr_mfb_dst_rdy_async(i),
+    
+            TX_DATA    => tx_usr_mfb_data_res(i),
+            TX_META    => tx_usr_mfb_meta_res(i),
+            TX_SOF     => tx_usr_mfb_sof_res(i),
+            TX_EOF     => tx_usr_mfb_eof_res(i),
+            TX_SOF_POS => tx_usr_mfb_sof_pos_res(i),
+            TX_EOF_POS => tx_usr_mfb_eof_pos_res(i),
+            TX_SRC_RDY => tx_usr_mfb_src_rdy_res(i),
+            TX_DST_RDY => tx_usr_mfb_dst_rdy_res(i)
+        );
+
+        --==========================================================================================
         -- Asynchronous FIFOX components
         --==========================================================================================
         usr_rx_mfb_fifox_i : entity work.MFB_ASFIFOX
             generic map (
-                MFB_REGIONS         => USR_MFB_REGIONS,
-                MFB_REG_SIZE        => USR_MFB_REGION_SIZE,
-                MFB_BLOCK_SIZE      => USR_MFB_BLOCK_SIZE,
-                MFB_ITEM_WIDTH      => USR_MFB_ITEM_WIDTH,
-                FIFO_ITEMS          => 128,
+                MFB_REGIONS         => DMA_MFB_REGIONS,
+                MFB_REG_SIZE        => DMA_MFB_REGION_SIZE,
+                MFB_BLOCK_SIZE      => DMA_MFB_BLOCK_SIZE,
+                MFB_ITEM_WIDTH      => DMA_MFB_ITEM_WIDTH,
+                FIFO_ITEMS          => 512,
                 RAM_TYPE            => "BRAM",
                 FWFT_MODE           => TRUE,
                 OUTPUT_REG          => FALSE,
@@ -404,11 +509,11 @@ begin
 
         usr_tx_mfb_fifox_i : entity work.MFB_ASFIFOX
             generic map (
-                MFB_REGIONS         => USR_MFB_REGIONS,
-                MFB_REG_SIZE        => USR_MFB_REGION_SIZE,
-                MFB_BLOCK_SIZE      => USR_MFB_BLOCK_SIZE,
-                MFB_ITEM_WIDTH      => USR_MFB_ITEM_WIDTH,
-                FIFO_ITEMS          => 128,
+                MFB_REGIONS         => DMA_MFB_REGIONS,
+                MFB_REG_SIZE        => DMA_MFB_REGION_SIZE,
+                MFB_BLOCK_SIZE      => DMA_MFB_BLOCK_SIZE,
+                MFB_ITEM_WIDTH      => DMA_MFB_ITEM_WIDTH,
+                FIFO_ITEMS          => 512,
                 RAM_TYPE            => "BRAM",
                 FWFT_MODE           => TRUE,
                 OUTPUT_REG          => FALSE,
@@ -457,10 +562,10 @@ begin
             generic map(
                 DEVICE => DEVICE,
 
-                USR_MFB_REGIONS     => USR_MFB_REGIONS,
-                USR_MFB_REGION_SIZE => USR_MFB_REGION_SIZE,
-                USR_MFB_BLOCK_SIZE  => USR_MFB_BLOCK_SIZE,
-                USR_MFB_ITEM_WIDTH  => USR_MFB_ITEM_WIDTH,
+                USR_MFB_REGIONS     => DMA_MFB_REGIONS,
+                USR_MFB_REGION_SIZE => DMA_MFB_REGION_SIZE,
+                USR_MFB_BLOCK_SIZE  => DMA_MFB_BLOCK_SIZE,
+                USR_MFB_ITEM_WIDTH  => DMA_MFB_ITEM_WIDTH,
 
                 PCIE_RQ_MFB_REGIONS     => PCIE_RQ_MFB_REGIONS,
                 PCIE_RQ_MFB_REGION_SIZE => PCIE_RQ_MFB_REGION_SIZE,
@@ -571,10 +676,10 @@ begin
                 generic map (
                     DEVICE          => DEVICE,
 
-                    MFB_REGIONS     => USR_MFB_REGIONS,
-                    MFB_REGION_SIZE => USR_MFB_REGION_SIZE,
-                    MFB_BLOCK_SIZE  => USR_MFB_BLOCK_SIZE,
-                    MFB_ITEM_WIDTH  => USR_MFB_ITEM_WIDTH,
+                    MFB_REGIONS     => DMA_MFB_REGIONS,
+                    MFB_REGION_SIZE => DMA_MFB_REGION_SIZE,
+                    MFB_BLOCK_SIZE  => DMA_MFB_BLOCK_SIZE,
+                    MFB_ITEM_WIDTH  => DMA_MFB_ITEM_WIDTH,
 
                     DMA_META_WIDTH  => HDR_META_WIDTH,
                     PKT_SIZE_MAX    => USR_TX_PKT_SIZE_MAX,
@@ -646,10 +751,10 @@ begin
 
         mfb_loopback_i : entity work.MFB_LOOPBACK
             generic map (
-                REGIONS       => USR_MFB_REGIONS,
-                REGION_SIZE   => USR_MFB_REGION_SIZE,
-                BLOCK_SIZE    => USR_MFB_BLOCK_SIZE,
-                ITEM_WIDTH    => USR_MFB_ITEM_WIDTH,
+                REGIONS       => DMA_MFB_REGIONS,
+                REGION_SIZE   => DMA_MFB_REGION_SIZE,
+                BLOCK_SIZE    => DMA_MFB_BLOCK_SIZE,
+                ITEM_WIDTH    => DMA_MFB_ITEM_WIDTH,
                 META_WIDTH    => log2(maximum(TX_CHANNELS,RX_CHANNELS)) + log2(maximum(USR_RX_PKT_SIZE_MAX,USR_TX_PKT_SIZE_MAX)+1) + HDR_META_WIDTH,
 
                 FAKE_LOOPBACK => not DMA_LOOPBACK_EN,
