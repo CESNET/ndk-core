@@ -33,9 +33,16 @@ if {$DMA_TYPE == 4} {
 
     set DMA_RX_FRAME_SIZE_MAX 4096
     set DMA_TX_FRAME_SIZE_MAX 4096
-    set DMA_RX_DATA_PTR_W 14
-    set DMA_RX_HDR_PTR_W  14
-    set DMA_TX_DATA_PTR_W 14
+    set DMA_RX_DATA_PTR_W 16
+    set DMA_RX_HDR_PTR_W  16
+
+    # This is because the size of the buffer depends on the width of the pointer in TX DMA
+    # If the pointer width is set to too big value, the system will automatically
+    # cut this value to the highest allowed which is 13.
+    if {$DMA_TX_DATA_PTR_W > 13} {
+        puts "WARNING: Too big width of TX DMA data pointer: $DMA_TX_DATA_PTR_W! Defaulting to 13."
+        set DMA_TX_DATA_PTR_W 13
+    }
 
     if {$PCIE_ENDPOINTS == 1 && $PCIE_ENDPOINT_MODE == 2} {
         set PCIE_LANES 8
