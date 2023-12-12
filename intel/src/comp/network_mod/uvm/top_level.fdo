@@ -26,16 +26,12 @@ if {[info exists env(CORE_PARAMS)]} {
 # Disable Code Coverage
 set SIM_FLAGS(CODE_COVERAGE) false
 set SIM_FLAGS(UVM_ENABLE) true
-if {[info exists PARAMS(UVM_TEST)]} {
-    set SIM_FLAGS(UVM_TEST) $PARAMS(UVM_TEST)
-} else {
-    set SIM_FLAGS(UVM_TEST) "test::base"
-}
+set SIM_FLAGS(UVM_TEST) "test::base"
 set SIM_FLAGS(UVM_VERBOSITY) "UVM_NONE"
 # Because checking array index is beffore constant propagation
 set SIM_FLAGS(DEBUG) true
 #set SIM_FLAGS(RAND_SEED) 3304987736
-set SIM_FLAGS(RAND_SEED) 2201292564
+#set SIM_FLAGS(RAND_SEED) 2201292564
 
 if {[info exists PARAMS(NETWORK_ARCH)]} {
     set NETWORK_ARCH $PARAMS(NETWORK_ARCH)
