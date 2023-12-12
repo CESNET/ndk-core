@@ -46,6 +46,7 @@ class base#(
     uvm_network_mod_env::env#(ETH_CORE_ARCH, ETH_PORTS, ETH_PORT_SPEED, ETH_PORT_CHAN, EHIP_PORT_TYPE, ETH_PORT_RX_MTU, ETH_PORT_TX_MTU, LANES, QSFP_PORTS,
                             QSFP_I2C_PORTS, QSFP_I2C_TRISTATE, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, REGIONS, REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, MI_DATA_WIDTH,
                             MI_ADDR_WIDTH, MI_DATA_WIDTH_PHY, MI_ADDR_WIDTH_PHY, LANE_RX_POLARITY, LANE_TX_POLARITY, RESET_WIDTH, DEVICE, BOARD) m_env;
+    localparam time timeout_max = 200us;
 
     // ------------------------------------------------------------------------
     // Functions
@@ -92,11 +93,11 @@ class base#(
         ///////////////////
         // Wait to end
         time_start = $time();
-        while((time_start + 200us) > $time() && m_env.used()) begin
+        while((time_start + timeout_max) > $time() && m_env.used()) begin
             #(300ns);
         end
 
-        if ((time_start + 200us) < $time()) begin
+        if ((time_start + timeout_max) < $time()) begin
             `uvm_warning(this.get_full_name(), $sformatf("TIMEOUT exeed %0dns ", ($time() - time_start)/1ns));
         end
         phase.drop_objection(this);
