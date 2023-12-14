@@ -21,6 +21,8 @@ class sequence_pcap#(ITEM_WIDTH) extends uvm_common::sequence_base#(uvm_logic_ve
     string rule_ipv4   = "";
     rand int unsigned transaction_count;
     rand int unsigned pkt_gen_seed;
+    int unsigned transaction_count_min = 100;
+    int unsigned transaction_count_max = 200;
 
     //randomization packet
     //ETH next protocol  (IPV4, IPV6, VLAN, MPLS, Empty, PPP)
@@ -99,7 +101,7 @@ class sequence_pcap#(ITEM_WIDTH) extends uvm_common::sequence_base#(uvm_logic_ve
         proto_next_prot.sum() > 0;
     };
 
-    constraint c1 {transaction_count inside {[cfg.transaction_count_min : cfg.transaction_count_max]};}
+    constraint c1 {transaction_count inside {[transaction_count_min : transaction_count_max]};}
 
     // Constructor - creates new instance of this class
     function new(string name = "sequence_pcap");
