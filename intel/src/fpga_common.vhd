@@ -76,6 +76,15 @@ generic (
     QSFP_I2C_PORTS          : natural := 1;
     QSFP_I2C_TRISTATE       : boolean := true;
 
+    HBM_PORTS               : natural := 1;
+    HBM_ADDR_WIDTH          : natural := 32;
+    HBM_DATA_WIDTH          : natural := 256;
+    HBM_BURST_WIDTH         : natural := 2;
+    HBM_ID_WIDTH            : natural := 6;
+    HBM_LEN_WIDTH           : natural := 4;
+    HBM_SIZE_WIDTH          : natural := 3;
+    HBM_RESP_WIDTH          : natural := 2;
+
     MEM_PORTS               : natural := 2;
     MEM_ADDR_WIDTH          : natural := 27;
     MEM_DATA_WIDTH          : natural := 512;
@@ -130,6 +139,49 @@ port (
     QSFP_RESET_N            : out   std_logic_vector(QSFP_PORTS-1 downto 0);
     QSFP_MODPRS_N           : in    std_logic_vector(QSFP_PORTS-1 downto 0);
     QSFP_INT_N              : in    std_logic_vector(QSFP_PORTS-1 downto 0);
+
+    -- =========================================================================
+    -- HBM AXI interfaces (clocked at HBM_CLK)
+    -- =========================================================================
+    HBM_CLK                 : in  std_logic := '0';
+    HBM_RESET               : in  std_logic := '0';
+    HBM_INIT_DONE           : in  std_logic := '0';
+
+    HBM_AXI_ARADDR          : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_ADDR_WIDTH-1 downto 0);
+    HBM_AXI_ARBURST         : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_BURST_WIDTH-1 downto 0);
+    HBM_AXI_ARID            : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_ID_WIDTH-1 downto 0);
+    HBM_AXI_ARLEN           : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_LEN_WIDTH-1 downto 0);
+    HBM_AXI_ARSIZE          : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_SIZE_WIDTH-1 downto 0);
+    HBM_AXI_ARVALID         : out std_logic_vector(HBM_PORTS-1 downto 0);
+    HBM_AXI_ARREADY         : in  std_logic_vector(HBM_PORTS-1 downto 0) := (others => '0');
+
+    HBM_AXI_RDATA           : in  slv_array_t(HBM_PORTS-1 downto 0)(HBM_DATA_WIDTH-1 downto 0) := (others => (others => '0'));
+    HBM_AXI_RDATA_PARITY    : in  slv_array_t(HBM_PORTS-1 downto 0)((HBM_DATA_WIDTH/8)-1 downto 0) := (others => (others => '0'));
+    HBM_AXI_RID             : in  slv_array_t(HBM_PORTS-1 downto 0)(HBM_ID_WIDTH-1 downto 0) := (others => (others => '0'));
+    HBM_AXI_RLAST           : in  std_logic_vector(HBM_PORTS-1 downto 0) := (others => '0');
+    HBM_AXI_RRESP           : in  slv_array_t(HBM_PORTS-1 downto 0)(HBM_RESP_WIDTH-1 downto 0) := (others => (others => '0'));
+    HBM_AXI_RVALID          : in  std_logic_vector(HBM_PORTS-1 downto 0) := (others => '0');
+    HBM_AXI_RREADY          : out std_logic_vector(HBM_PORTS-1 downto 0);
+
+    HBM_AXI_AWADDR          : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_ADDR_WIDTH-1 downto 0);
+    HBM_AXI_AWBURST         : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_BURST_WIDTH-1 downto 0);
+    HBM_AXI_AWID            : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_ID_WIDTH-1 downto 0);
+    HBM_AXI_AWLEN           : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_LEN_WIDTH-1 downto 0);
+    HBM_AXI_AWSIZE          : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_SIZE_WIDTH-1 downto 0);
+    HBM_AXI_AWVALID         : out std_logic_vector(HBM_PORTS-1 downto 0);
+    HBM_AXI_AWREADY         : in  std_logic_vector(HBM_PORTS-1 downto 0) := (others => '0');
+
+    HBM_AXI_WDATA           : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_DATA_WIDTH-1 downto 0);
+    HBM_AXI_WDATA_PARITY    : out slv_array_t(HBM_PORTS-1 downto 0)((HBM_DATA_WIDTH/8)-1 downto 0);
+    HBM_AXI_WLAST           : out std_logic_vector(HBM_PORTS-1 downto 0);
+    HBM_AXI_WSTRB           : out slv_array_t(HBM_PORTS-1 downto 0)((HBM_DATA_WIDTH/8)-1 downto 0);
+    HBM_AXI_WVALID          : out std_logic_vector(HBM_PORTS-1 downto 0);
+    HBM_AXI_WREADY          : in  std_logic_vector(HBM_PORTS-1 downto 0) := (others => '0');
+
+    HBM_AXI_BID             : in  slv_array_t(HBM_PORTS-1 downto 0)(HBM_ID_WIDTH-1 downto 0) := (others => (others => '0'));
+    HBM_AXI_BRESP           : in  slv_array_t(HBM_PORTS-1 downto 0)(HBM_RESP_WIDTH-1 downto 0) := (others => (others => '0'));
+    HBM_AXI_BVALID          : in  std_logic_vector(HBM_PORTS-1 downto 0) := (others => '0');
+    HBM_AXI_BREADY          : out std_logic_vector(HBM_PORTS-1 downto 0);
 
     -- External memory interfaces (clocked at MEM_CLK)
     MEM_CLK                 : in  std_logic_vector(MEM_PORTS-1 downto 0) := (others => '0');
@@ -1112,6 +1164,14 @@ begin
         MFB_REG_SIZE          => MFB_REGION_SIZE,
         MFB_BLOCK_SIZE        => MFB_BLOCK_SIZE,
         MFB_ITEM_WIDTH        => MFB_ITEM_WIDTH,
+        HBM_PORTS             => HBM_PORTS,
+        HBM_DATA_WIDTH        => HBM_DATA_WIDTH,
+        HBM_ADDR_WIDTH        => HBM_ADDR_WIDTH,
+        HBM_BURST_WIDTH       => HBM_BURST_WIDTH,
+        HBM_ID_WIDTH          => HBM_ID_WIDTH,
+        HBM_LEN_WIDTH         => HBM_LEN_WIDTH,
+        HBM_SIZE_WIDTH        => HBM_SIZE_WIDTH,
+        HBM_RESP_WIDTH        => HBM_RESP_WIDTH,
         MEM_PORTS             => MEM_PORTS,
         MEM_ADDR_WIDTH        => MEM_ADDR_WIDTH,
         MEM_BURST_WIDTH       => MEM_BURST_WIDTH,
@@ -1212,6 +1272,46 @@ begin
         DMA_TX_MFB_DST_RDY  => app_dma_tx_mfb_dst_rdy,
 
         DMA_TX_USR_CHOKE_CHANS => app_dma_tx_usr_choke,
+
+        HBM_CLK              => HBM_CLK,
+        HBM_RESET            => HBM_RESET,
+        HBM_INIT_DONE        => HBM_INIT_DONE,
+
+        HBM_AXI_ARADDR       => HBM_AXI_ARADDR,
+        HBM_AXI_ARBURST      => HBM_AXI_ARBURST,
+        HBM_AXI_ARID         => HBM_AXI_ARID,
+        HBM_AXI_ARLEN        => HBM_AXI_ARLEN,
+        HBM_AXI_ARSIZE       => HBM_AXI_ARSIZE,
+        HBM_AXI_ARVALID      => HBM_AXI_ARVALID,
+        HBM_AXI_ARREADY      => HBM_AXI_ARREADY,
+
+        HBM_AXI_RDATA        => HBM_AXI_RDATA,
+        HBM_AXI_RDATA_PARITY => HBM_AXI_RDATA_PARITY,
+        HBM_AXI_RID          => HBM_AXI_RID,
+        HBM_AXI_RLAST        => HBM_AXI_RLAST,
+        HBM_AXI_RRESP        => HBM_AXI_RRESP,
+        HBM_AXI_RVALID       => HBM_AXI_RVALID,
+        HBM_AXI_RREADY       => HBM_AXI_RREADY,
+
+        HBM_AXI_AWADDR       => HBM_AXI_AWADDR,
+        HBM_AXI_AWBURST      => HBM_AXI_AWBURST,
+        HBM_AXI_AWID         => HBM_AXI_AWID,
+        HBM_AXI_AWLEN        => HBM_AXI_AWLEN,
+        HBM_AXI_AWSIZE       => HBM_AXI_AWSIZE,
+        HBM_AXI_AWVALID      => HBM_AXI_AWVALID,
+        HBM_AXI_AWREADY      => HBM_AXI_AWREADY,
+        
+        HBM_AXI_WDATA        => HBM_AXI_WDATA,
+        HBM_AXI_WDATA_PARITY => HBM_AXI_WDATA_PARITY,
+        HBM_AXI_WLAST        => HBM_AXI_WLAST,
+        HBM_AXI_WSTRB        => HBM_AXI_WSTRB,
+        HBM_AXI_WVALID       => HBM_AXI_WVALID,
+        HBM_AXI_WREADY       => HBM_AXI_WREADY,
+
+        HBM_AXI_BID          => HBM_AXI_BID,
+        HBM_AXI_BRESP        => HBM_AXI_BRESP,
+        HBM_AXI_BVALID       => HBM_AXI_BVALID,
+        HBM_AXI_BREADY       => HBM_AXI_BREADY,
 
         MEM_CLK                => MEM_CLK,
         MEM_RST                => MEM_RST,

@@ -43,6 +43,22 @@ generic (
     MFB_BLOCK_SIZE     : natural := 8;
     -- MFB parameters: width of one item in bits
     MFB_ITEM_WIDTH     : natural := 8;
+    -- HBM parameters: number of HBM ports
+    HBM_PORTS          : natural := 1;
+    -- HBM parameters: width of AXI address signal
+    HBM_ADDR_WIDTH     : natural := 32;
+    -- HBM parameters: width of AXI data signal
+    HBM_DATA_WIDTH     : natural := 256;
+    -- HBM parameters: width of AXI burst signal
+    HBM_BURST_WIDTH    : natural := 2;
+    -- HBM parameters: width of AXI ID signal
+    HBM_ID_WIDTH       : natural := 6;
+    -- HBM parameters: width of AXI LEN signal
+    HBM_LEN_WIDTH      : natural := 4;
+    -- HBM parameters: width of AXI size signal
+    HBM_SIZE_WIDTH     : natural := 3;
+    -- HBM parameters: width of AXI resp signal
+    HBM_RESP_WIDTH     : natural := 2;
     -- MEM parameters: number of external memory ports (EMIFs)
     MEM_PORTS          : natural := 1;
     -- MEM parameters: width of AVMM address signal
@@ -277,6 +293,49 @@ port (
     -- Selectively pause (choke) a DMA channel(s) from Application.
     -- Can be used to avoid stopping the whole DMA Module when just a single channel is slacking behind.
     DMA_TX_USR_CHOKE_CHANS  : out std_logic_vector(DMA_STREAMS* DMA_TX_CHANNELS-1 downto 0) := (others => '0');
+
+    -- =========================================================================
+    -- HBM AXI INTERFACES (clocked at HBM_CLK)
+    -- =========================================================================
+    HBM_CLK                 : in  std_logic;
+    HBM_RESET               : in  std_logic;
+    HBM_INIT_DONE           : in  std_logic;
+
+    HBM_AXI_ARADDR          : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_ADDR_WIDTH-1 downto 0) := (others => (others => '0'));
+    HBM_AXI_ARBURST         : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_BURST_WIDTH-1 downto 0) := (others => (others => '0'));
+    HBM_AXI_ARID            : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_ID_WIDTH-1 downto 0) := (others => (others => '0'));
+    HBM_AXI_ARLEN           : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_LEN_WIDTH-1 downto 0) := (others => (others => '0'));
+    HBM_AXI_ARSIZE          : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_SIZE_WIDTH-1 downto 0) := (others => (others => '0'));
+    HBM_AXI_ARVALID         : out std_logic_vector(HBM_PORTS-1 downto 0) := (others => '0');
+    HBM_AXI_ARREADY         : in  std_logic_vector(HBM_PORTS-1 downto 0);
+
+    HBM_AXI_RDATA           : in  slv_array_t(HBM_PORTS-1 downto 0)(HBM_DATA_WIDTH-1 downto 0);
+    HBM_AXI_RDATA_PARITY    : in  slv_array_t(HBM_PORTS-1 downto 0)((HBM_DATA_WIDTH/8)-1 downto 0);
+    HBM_AXI_RID             : in  slv_array_t(HBM_PORTS-1 downto 0)(HBM_ID_WIDTH-1 downto 0);
+    HBM_AXI_RLAST           : in  std_logic_vector(HBM_PORTS-1 downto 0);
+    HBM_AXI_RRESP           : in  slv_array_t(HBM_PORTS-1 downto 0)(HBM_RESP_WIDTH-1 downto 0);
+    HBM_AXI_RVALID          : in  std_logic_vector(HBM_PORTS-1 downto 0);
+    HBM_AXI_RREADY          : out std_logic_vector(HBM_PORTS-1 downto 0) := (others => '0');
+
+    HBM_AXI_AWADDR          : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_ADDR_WIDTH-1 downto 0) := (others => (others => '0'));
+    HBM_AXI_AWBURST         : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_BURST_WIDTH-1 downto 0) := (others => (others => '0'));
+    HBM_AXI_AWID            : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_ID_WIDTH-1 downto 0) := (others => (others => '0'));
+    HBM_AXI_AWLEN           : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_LEN_WIDTH-1 downto 0) := (others => (others => '0'));
+    HBM_AXI_AWSIZE          : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_SIZE_WIDTH-1 downto 0) := (others => (others => '0'));
+    HBM_AXI_AWVALID         : out std_logic_vector(HBM_PORTS-1 downto 0) := (others => '0');
+    HBM_AXI_AWREADY         : in  std_logic_vector(HBM_PORTS-1 downto 0);
+
+    HBM_AXI_WDATA           : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_DATA_WIDTH-1 downto 0) := (others => (others => '0'));
+    HBM_AXI_WDATA_PARITY    : out slv_array_t(HBM_PORTS-1 downto 0)((HBM_DATA_WIDTH/8)-1 downto 0) := (others => (others => '0'));
+    HBM_AXI_WLAST           : out std_logic_vector(HBM_PORTS-1 downto 0) := (others => '0');
+    HBM_AXI_WSTRB           : out slv_array_t(HBM_PORTS-1 downto 0)((HBM_DATA_WIDTH/8)-1 downto 0) := (others => (others => '0'));
+    HBM_AXI_WVALID          : out std_logic_vector(HBM_PORTS-1 downto 0) := (others => '0');
+    HBM_AXI_WREADY          : in  std_logic_vector(HBM_PORTS-1 downto 0);
+
+    HBM_AXI_BID             : in  slv_array_t(HBM_PORTS-1 downto 0)(HBM_ID_WIDTH-1 downto 0);
+    HBM_AXI_BRESP           : in  slv_array_t(HBM_PORTS-1 downto 0)(HBM_RESP_WIDTH-1 downto 0);
+    HBM_AXI_BVALID          : in  std_logic_vector(HBM_PORTS-1 downto 0);
+    HBM_AXI_BREADY          : out std_logic_vector(HBM_PORTS-1 downto 0) := (others => '0');
 
     -- =========================================================================
     -- EXTERNAL MEMORY INTERFACES (clocked at MEM_CLK)
