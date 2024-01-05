@@ -1334,17 +1334,8 @@ begin
     rx_avst_empty_arr <= slv_array_deser(rx_avst_empty, ETH_PORT_CHAN);
     rx_avst_error_arr <= slv_array_deser(rx_avst_error, ETH_PORT_CHAN);
 
-    tx_adapter_g : for IT in ETH_PORT_CHAN-1 downto 0 generate
-        signal mfb2avst_rx_mfb_sof : std_logic_vector(1-1 downto 0);
-        signal mfb2avst_rx_mfb_eof : std_logic_vector(1-1 downto 0);
+    channel_g : for IT in ETH_PORT_CHAN-1 downto 0 generate
     begin
-
-        process(RX_MFB_SOF, RX_MFB_EOF)
-        begin
-            mfb2avst_rx_mfb_sof <= RX_MFB_SOF(IT);
-            mfb2avst_rx_mfb_eof <= RX_MFB_EOF(IT);
-        end process;
-
         -- TX adaption
         mfb2avst_i : entity work.TX_MAC_LITE_ADAPTER_AVST_100G
         generic map(
@@ -1402,6 +1393,51 @@ begin
             OUT_MFB_SRC_RDY  => TX_MFB_SRC_RDY(IT),
             OUT_LINK_UP      => open -- this is done here
         );
+
+
+        repeater_i: entity work.avst_loop
+        generic map (
+            SEGMENTS => AVST_DATA_WIDTH/64
+        )
+        port map (
+            RST              => RESET_ETH,
+            CLK              => etile_clk_out,
+            --
+            IN_AVST_DATA     => rx_avst_data_arr(IT),
+            IN_AVST_SOP      => rx_avst_sop(IT),
+            IN_AVST_EOP      => rx_avst_eop(IT),
+            IN_AVST_EMPTY    => rx_avst_empty_arr(IT),
+            IN_AVST_VALID    => rx_avst_valid(IT),
+            -- OUTPUT AVST INTERFACE (Intel E-Tile Ethernet IP)
+            TX_AVST_DATA     => tx_loop_avst_data(IT),
+            TX_AVST_SOP      => tx_loop_avst_sop(IT),
+            TX_AVST_EOP      => tx_loop_avst_eop(IT),
+            TX_AVST_EMPTY    => tx_loop_avst_empty(IT),
+            TX_AVST_VALID    => tx_loop_avst_valid(IT),
+            TX_AVST_READY    => tx_avst_ready(IT)
+        );
+        tx_loop_avst_error(IT) <= '0';
+
+        eth_tx_mux: process(all)
+        begin
+            if sync_repeater_ctrl(IT) = '1' then
+                -- MAC loopback on
+                tx_avst_data_arr(IT)  <= tx_loop_avst_data(IT);
+                tx_avst_sop(IT)       <= tx_loop_avst_sop(IT);
+                tx_avst_eop(IT)       <= tx_loop_avst_eop(IT);
+                tx_avst_empty_arr(IT) <= tx_loop_avst_empty(IT);
+                tx_avst_error(IT)     <= tx_loop_avst_error(IT);
+                tx_avst_valid(IT)     <= tx_loop_avst_valid(IT);
+            else
+                -- MAC loopback off
+                tx_avst_data_arr(IT)  <= tx_ad_avst_data(IT);
+                tx_avst_sop(IT)       <= tx_ad_avst_sop(IT);
+                tx_avst_eop(IT)       <= tx_ad_avst_eop(IT);
+                tx_avst_empty_arr(IT) <= tx_ad_avst_empty(IT);
+                tx_avst_error(IT)     <= tx_ad_avst_error(IT);
+                tx_avst_valid(IT)     <= tx_ad_avst_valid(IT);
+            end if;
+        end process;
     end generate;
 
     process(etile_clk_out)
@@ -1434,53 +1470,5 @@ begin
         BLOAD      => '1',
         BVALID     => open
     );
-
-    mac_loopbacks_g: for i in 0 to ETH_PORT_CHAN-1 generate
-
-        repeater_i: entity work.avst_loop
-        generic map (
-            SEGMENTS => AVST_DATA_WIDTH/64
-        )
-        port map (
-            RST              => RESET_ETH,
-            CLK              => etile_clk_out,
-            --
-            IN_AVST_DATA     => rx_avst_data_arr(i),
-            IN_AVST_SOP      => rx_avst_sop(i),
-            IN_AVST_EOP      => rx_avst_eop(i),
-            IN_AVST_EMPTY    => rx_avst_empty_arr(i),
-            IN_AVST_VALID    => rx_avst_valid(i),
-            -- OUTPUT AVST INTERFACE (Intel E-Tile Ethernet IP)
-            TX_AVST_DATA     => tx_loop_avst_data(i),
-            TX_AVST_SOP      => tx_loop_avst_sop(i),
-            TX_AVST_EOP      => tx_loop_avst_eop(i),
-            TX_AVST_EMPTY    => tx_loop_avst_empty(i),
-            TX_AVST_VALID    => tx_loop_avst_valid(i),
-            TX_AVST_READY    => tx_avst_ready(i)
-        );
-        tx_loop_avst_error(i) <= '0';
-
-        eth_tx_mux: process(all)
-        begin
-            if sync_repeater_ctrl(i) = '1' then
-                -- MAC loopback on
-                tx_avst_data_arr(i)  <= tx_loop_avst_data(i);
-                tx_avst_sop(i)       <= tx_loop_avst_sop(i);
-                tx_avst_eop(i)       <= tx_loop_avst_eop(i);
-                tx_avst_empty_arr(i) <= tx_loop_avst_empty(i);
-                tx_avst_error(i)     <= tx_loop_avst_error(i);
-                tx_avst_valid(i)     <= tx_loop_avst_valid(i);
-            else
-                -- MAC loopback off
-                tx_avst_data_arr(i)  <= tx_ad_avst_data(i);
-                tx_avst_sop(i)       <= tx_ad_avst_sop(i);
-                tx_avst_eop(i)       <= tx_ad_avst_eop(i);
-                tx_avst_empty_arr(i) <= tx_ad_avst_empty(i);
-                tx_avst_error(i)     <= tx_ad_avst_error(i);
-                tx_avst_valid(i)     <= tx_ad_avst_valid(i);
-            end if;
-        end process;
-
-    end generate;
 
 end architecture;
