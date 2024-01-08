@@ -501,20 +501,6 @@ architecture ETILE of NETWORK_MOD_CORE is
     signal tx_avst_data_arr  : slv_array_t(ETH_PORT_CHAN-1 downto 0)(AVST_DATA_WIDTH -1 downto 0);
     signal tx_avst_empty_arr : slv_array_t(ETH_PORT_CHAN-1 downto 0)(AVST_EMPTY_WIDTH-1 downto 0);
 
-    signal tx_ad_avst_data   : slv_array_t(ETH_PORT_CHAN-1 downto 0)(AVST_DATA_WIDTH -1 downto 0);
-    signal tx_ad_avst_sop    : std_logic_vector(ETH_PORT_CHAN                 -1 downto 0);
-    signal tx_ad_avst_eop    : std_logic_vector(ETH_PORT_CHAN                 -1 downto 0);
-    signal tx_ad_avst_empty  : slv_array_t(ETH_PORT_CHAN-1 downto 0)(AVST_EMPTY_WIDTH-1 downto 0);
-    signal tx_ad_avst_error  : std_logic_vector(ETH_PORT_CHAN                 -1 downto 0);
-    signal tx_ad_avst_valid  : std_logic_vector(ETH_PORT_CHAN                 -1 downto 0);
-
-    signal tx_loop_avst_data   : slv_array_t(ETH_PORT_CHAN-1 downto 0)(AVST_DATA_WIDTH -1 downto 0);
-    signal tx_loop_avst_sop    : std_logic_vector(ETH_PORT_CHAN                 -1 downto 0);
-    signal tx_loop_avst_eop    : std_logic_vector(ETH_PORT_CHAN                 -1 downto 0);
-    signal tx_loop_avst_empty  : slv_array_t(ETH_PORT_CHAN-1 downto 0)(AVST_EMPTY_WIDTH-1 downto 0);
-    signal tx_loop_avst_error  : std_logic_vector(ETH_PORT_CHAN                 -1 downto 0);
-    signal tx_loop_avst_valid  : std_logic_vector(ETH_PORT_CHAN                 -1 downto 0);
-
     signal rx_avst_data_arr  : slv_array_t(ETH_PORT_CHAN-1 downto 0)(AVST_DATA_WIDTH    -1 downto 0);
     signal rx_avst_empty_arr : slv_array_t(ETH_PORT_CHAN-1 downto 0)(AVST_EMPTY_WIDTH   -1 downto 0);
     signal rx_avst_error_arr : slv_array_t(ETH_PORT_CHAN-1 downto 0)(RX_AVST_ERROR_WIDTH-1 downto 0);
@@ -569,7 +555,6 @@ architecture ETILE of NETWORK_MOD_CORE is
     signal xcvr_inf_drd_phy          : slv_array_t     (LANES-1 downto 0)(MI_DATA_WIDTH_PHY-1 downto 0);
     signal xcvr_inf_drd_phy_res      : slv_array_t     (LANES-1 downto 0)(8                -1 downto 0);
     signal xcvr_inf_drd_phy_res_ser  : std_logic_vector(LANES*            8                -1 downto 0);
-    signal xcvr_init_status          : slv_array_t(ETH_PORT_CHAN-1 downto 0)(32-1 downto 0);
     signal init_lane_status          : slv_array_t(LANES-1 downto 0)(32-1 downto 0);
     -- rsfec reconfig interface
     signal rsfec_inf_dwr_phy      : std_logic_vector(MI_DATA_WIDTH_PHY-1 downto 0);
@@ -642,6 +627,7 @@ begin
         signal ia_rd_sel_r  : std_logic_vector(mi_ia_sel'range);
         signal mgmt_pcs_control : std_logic_vector(16-1 downto 0);
 
+        signal xcvr_init_status          : std_logic_vector(32-1 downto 0);
     begin
 
         mgmt_i : entity work.mgmt
@@ -695,7 +681,7 @@ begin
             PMA_RESET     => mgmt_pma_reset(i), --TODO
             PMA_RETUNE    => open,
             PMA_CONTROL   => open,
-            PMA_STATUS    => xcvr_init_status(i),
+            PMA_STATUS    => xcvr_init_status,
             PMA_PTRN_EN   => open,
             PMA_TX_DIS    => open,
             PMA_RX_OK     => (others => rx_pcs_ready(i)), --TODO
@@ -826,9 +812,9 @@ begin
             end case;
 
             if (init_lane_index_vld) then
-                xcvr_init_status(i) <= init_lane_status(0 + i*LANES_PER_CHANNEL);
+                xcvr_init_status <= init_lane_status(0 + i*LANES_PER_CHANNEL);
             else
-                xcvr_init_status(i) <= (others => '0');
+                xcvr_init_status <= (others => '0');
             end if;
         end process;
 
@@ -1334,7 +1320,23 @@ begin
     rx_avst_empty_arr <= slv_array_deser(rx_avst_empty, ETH_PORT_CHAN);
     rx_avst_error_arr <= slv_array_deser(rx_avst_error, ETH_PORT_CHAN);
 
-    channel_g : for IT in ETH_PORT_CHAN-1 downto 0 generate
+    adapter_g : for IT in ETH_PORT_CHAN-1 downto 0 generate
+        signal mfb2avst_rx_mfb_sof : std_logic_vector(1-1 downto 0);
+        signal mfb2avst_rx_mfb_eof : std_logic_vector(1-1 downto 0);
+
+        signal tx_ad_avst_data   : std_logic_vector(AVST_DATA_WIDTH -1 downto 0);
+        signal tx_ad_avst_sop    : std_logic;
+        signal tx_ad_avst_eop    : std_logic;
+        signal tx_ad_avst_empty  : std_logic_vector(AVST_EMPTY_WIDTH-1 downto 0);
+        signal tx_ad_avst_error  : std_logic;
+        signal tx_ad_avst_valid  : std_logic;
+
+        signal tx_loop_avst_data   : std_logic_vector(AVST_DATA_WIDTH -1 downto 0);
+        signal tx_loop_avst_sop    : std_logic;
+        signal tx_loop_avst_eop    : std_logic;
+        signal tx_loop_avst_empty  : std_logic_vector(AVST_EMPTY_WIDTH-1 downto 0);
+        signal tx_loop_avst_error  : std_logic;
+        signal tx_loop_avst_valid  : std_logic;
     begin
         -- TX adaption
         mfb2avst_i : entity work.TX_MAC_LITE_ADAPTER_AVST_100G
@@ -1355,12 +1357,12 @@ begin
             RX_MFB_SRC_RDY => RX_MFB_SRC_RDY(IT),
             RX_MFB_DST_RDY => RX_MFB_DST_RDY(IT),
 
-            TX_AVST_DATA   => tx_ad_avst_data (IT),
-            TX_AVST_SOP    => tx_ad_avst_sop  (IT),
-            TX_AVST_EOP    => tx_ad_avst_eop  (IT),
-            TX_AVST_EMPTY  => tx_ad_avst_empty(IT),
-            TX_AVST_ERROR  => tx_ad_avst_error(IT),
-            TX_AVST_VALID  => tx_ad_avst_valid(IT),
+            TX_AVST_DATA   => tx_ad_avst_data,
+            TX_AVST_SOP    => tx_ad_avst_sop,
+            TX_AVST_EOP    => tx_ad_avst_eop,
+            TX_AVST_EMPTY  => tx_ad_avst_empty,
+            TX_AVST_ERROR  => tx_ad_avst_error,
+            TX_AVST_VALID  => tx_ad_avst_valid,
             TX_AVST_READY  => tx_avst_ready(IT)
         );
 
@@ -1409,33 +1411,33 @@ begin
             IN_AVST_EMPTY    => rx_avst_empty_arr(IT),
             IN_AVST_VALID    => rx_avst_valid(IT),
             -- OUTPUT AVST INTERFACE (Intel E-Tile Ethernet IP)
-            TX_AVST_DATA     => tx_loop_avst_data(IT),
-            TX_AVST_SOP      => tx_loop_avst_sop(IT),
-            TX_AVST_EOP      => tx_loop_avst_eop(IT),
-            TX_AVST_EMPTY    => tx_loop_avst_empty(IT),
-            TX_AVST_VALID    => tx_loop_avst_valid(IT),
+            TX_AVST_DATA     => tx_loop_avst_data,
+            TX_AVST_SOP      => tx_loop_avst_sop,
+            TX_AVST_EOP      => tx_loop_avst_eop,
+            TX_AVST_EMPTY    => tx_loop_avst_empty,
+            TX_AVST_VALID    => tx_loop_avst_valid,
             TX_AVST_READY    => tx_avst_ready(IT)
         );
-        tx_loop_avst_error(IT) <= '0';
+        tx_loop_avst_error <= '0';
 
         eth_tx_mux: process(all)
         begin
             if sync_repeater_ctrl(IT) = '1' then
                 -- MAC loopback on
-                tx_avst_data_arr(IT)  <= tx_loop_avst_data(IT);
-                tx_avst_sop(IT)       <= tx_loop_avst_sop(IT);
-                tx_avst_eop(IT)       <= tx_loop_avst_eop(IT);
-                tx_avst_empty_arr(IT) <= tx_loop_avst_empty(IT);
-                tx_avst_error(IT)     <= tx_loop_avst_error(IT);
-                tx_avst_valid(IT)     <= tx_loop_avst_valid(IT);
+                tx_avst_data_arr(IT)  <= tx_loop_avst_data;
+                tx_avst_sop(IT)       <= tx_loop_avst_sop;
+                tx_avst_eop(IT)       <= tx_loop_avst_eop;
+                tx_avst_empty_arr(IT) <= tx_loop_avst_empty;
+                tx_avst_error(IT)     <= tx_loop_avst_error;
+                tx_avst_valid(IT)     <= tx_loop_avst_valid;
             else
                 -- MAC loopback off
-                tx_avst_data_arr(IT)  <= tx_ad_avst_data(IT);
-                tx_avst_sop(IT)       <= tx_ad_avst_sop(IT);
-                tx_avst_eop(IT)       <= tx_ad_avst_eop(IT);
-                tx_avst_empty_arr(IT) <= tx_ad_avst_empty(IT);
-                tx_avst_error(IT)     <= tx_ad_avst_error(IT);
-                tx_avst_valid(IT)     <= tx_ad_avst_valid(IT);
+                tx_avst_data_arr(IT)  <= tx_ad_avst_data;
+                tx_avst_sop(IT)       <= tx_ad_avst_sop;
+                tx_avst_eop(IT)       <= tx_ad_avst_eop;
+                tx_avst_empty_arr(IT) <= tx_ad_avst_empty;
+                tx_avst_error(IT)     <= tx_ad_avst_error;
+                tx_avst_valid(IT)     <= tx_ad_avst_valid;
             end if;
         end process;
     end generate;
