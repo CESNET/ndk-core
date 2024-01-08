@@ -1338,6 +1338,13 @@ begin
         signal tx_loop_avst_error  : std_logic;
         signal tx_loop_avst_valid  : std_logic;
     begin
+
+        process(RX_MFB_SOF, RX_MFB_EOF)
+        begin
+            mfb2avst_rx_mfb_sof <= RX_MFB_SOF(IT);
+            mfb2avst_rx_mfb_eof <= RX_MFB_EOF(IT);
+        end process;
+
         -- TX adaption
         mfb2avst_i : entity work.TX_MAC_LITE_ADAPTER_AVST_100G
         generic map(
@@ -1350,9 +1357,9 @@ begin
             RESET          => RESET_ETH    ,
 
             RX_MFB_DATA    => RX_MFB_DATA   (IT),
-            RX_MFB_SOF     => RX_MFB_SOF    (IT),
+            RX_MFB_SOF     => mfb2avst_rx_mfb_sof,
             RX_MFB_SOF_POS => RX_MFB_SOF_POS(IT),
-            RX_MFB_EOF     => RX_MFB_EOF    (IT),
+            RX_MFB_EOF     => mfb2avst_rx_mfb_eof,
             RX_MFB_EOF_POS => RX_MFB_EOF_POS(IT),
             RX_MFB_SRC_RDY => RX_MFB_SRC_RDY(IT),
             RX_MFB_DST_RDY => RX_MFB_DST_RDY(IT),
