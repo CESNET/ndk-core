@@ -3,31 +3,31 @@
 //-- Author(s): Radek Iša <isa@cesnet.cz>
 
 //-- SPDX-License-Identifier: BSD-3-Clause
-class mi_sequence#(DATA_WIDTH, ADDR_WIDTH, ETH_PORTS, int unsigned ETH_PORT_CHAN[ETH_PORTS-1:0]) extends uvm_mi::sequence_slave_sim#(DATA_WIDTH, ADDR_WIDTH);
-      `uvm_object_param_utils(uvm_network_mod_env::mi_sequence#(DATA_WIDTH, ADDR_WIDTH, ETH_PORTS, ETH_PORT_CHAN))
-
-    function new(string name = "mi_sequence");
-        super.new(name);
-    endfunction
-
-
-    virtual task create_sequence_item();
-        const int unsigned port_offset    = 'h2000;
-        const int unsigned channel_offset = 'h400;
-
-        for (int unsigned port = 0; port < ETH_PORTS; port++) begin
-            for (int unsigned channel = 0; channel < ETH_PORT_CHAN[port]; channel++) begin
-                const int unsigned offset = port * port_offset + channel * channel_offset;
-                // ENABLE RX
-                write(offset + 'h000 + 'h20 , 'h1);
-                read(offset + 'h000 + 'h20);
-                // ENABLE TX
-                write(offset + 'h200 + 'h20 , 'h1);
-                read(offset + 'h200 + 'h20);
-            end
-        end
-    endtask
-endclass
+//class mi_sequence#(DATA_WIDTH, ADDR_WIDTH, ETH_PORTS, int unsigned ETH_PORT_CHAN[ETH_PORTS-1:0]) extends uvm_mi::sequence_slave_sim#(DATA_WIDTH, ADDR_WIDTH);
+//      `uvm_object_param_utils(uvm_network_mod_env::mi_sequence#(DATA_WIDTH, ADDR_WIDTH, ETH_PORTS, ETH_PORT_CHAN))
+//
+//    function new(string name = "mi_sequence");
+//        super.new(name);
+//    endfunction
+//
+//
+//    virtual task create_sequence_item();
+//        const int unsigned port_offset    = 'h2000;
+//        const int unsigned channel_offset = 'h400;
+//
+//        for (int unsigned port = 0; port < ETH_PORTS; port++) begin
+//            for (int unsigned channel = 0; channel < ETH_PORT_CHAN[port]; channel++) begin
+//                const int unsigned offset = port * port_offset + channel * channel_offset;
+//                // ENABLE RX
+//                write(offset + 'h000 + 'h20 , 'h1);
+//                read(offset + 'h000 + 'h20);
+//                // ENABLE TX
+//                write(offset + 'h200 + 'h20 , 'h1);
+//                read(offset + 'h200 + 'h20);
+//            end
+//        end
+//    endtask
+//endclass
 
 
 class virt_sequence_port#(ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, ITEM_WIDTH, REGIONS, REGION_SIZE, BLOCK_SIZE, ETH_PORT_CHAN, MI_DATA_WIDTH, MI_ADDR_WIDTH) extends uvm_sequence;
@@ -141,6 +141,8 @@ class virt_sequence_port#(ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, ITEM_WIDTH, REGION
     endtask
 
     task body();
+        uvm_status_e   status;
+        uvm_reg_data_t data;
         uvm_common::sequence_cfg state;
 
         if(!uvm_config_db#(uvm_common::sequence_cfg)::get(m_sequencer, "", "state", state)) begin
@@ -155,7 +157,19 @@ class virt_sequence_port#(ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, ITEM_WIDTH, REGION
             end
         join_none
 
-        #(250ns);
+        #(400ns);
+
+        for (int unsigned it = 0; it < ETH_PORT_CHAN; it++) begin
+            fork
+                p_sequencer.regmodel.channel[it].rx_enable.write(status, 1'h1);
+                p_sequencer.regmodel.channel[it].tx_enable.write(status, 1'h1);
+            join;
+
+            fork
+                p_sequencer.regmodel.channel[it].rx_enable.read(status, data);
+                p_sequencer.regmodel.channel[it].tx_enable.read(status, data);
+            join;
+        end
 
         fork
             while (!seq_sync_usr_rx.cfg[0].stopped()) begin
@@ -275,7 +289,6 @@ class virt_sequence_simple#(ETH_PORTS, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, ITEM_
     //uvm_pkg::
     virt_sequence_port#(ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, ITEM_WIDTH, REGIONS, REGION_SIZE, BLOCK_SIZE, ETH_PORT_CHAN[0], MI_DATA_WIDTH, MI_ADDR_WIDTH) port[ETH_PORTS];
     //MI SEQUENCE
-    uvm_sequence#(uvm_mi::sequence_item_request#(MI_DATA_WIDTH, MI_ADDR_WIDTH), uvm_mi::sequence_item_response #(MI_DATA_WIDTH)) mi;
 
     //SYNC END
     uvm_common::sequence_cfg_signal seq_sync_end;
@@ -308,7 +321,6 @@ class virt_sequence_simple#(ETH_PORTS, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, ITEM_
         for (int unsigned it = 0; it < ETH_PORTS; it++) begin
             port[it] = virt_sequence_port#(ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, ITEM_WIDTH, REGIONS, REGION_SIZE, BLOCK_SIZE, ETH_PORT_CHAN[0], MI_DATA_WIDTH, MI_ADDR_WIDTH)::type_id::create($sformatf("port_%0d", it), p_sequencer.port[it]);
         end
-        mi = mi_sequence#(MI_DATA_WIDTH, MI_ADDR_WIDTH, ETH_PORTS, ETH_PORT_CHAN)::type_id::create("mi", p_sequencer.mi);
     endtask
 
     //function void post_randomize();
@@ -324,7 +336,6 @@ class virt_sequence_simple#(ETH_PORTS, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, ITEM_
         assert(mi_phy_rst.randomize());
         assert(mi_pmd_rst.randomize());
         assert(tsu_rst.randomize());
-        assert(mi.randomize());
 
         fork
             usr_rst.start(p_sequencer.usr_rst);
@@ -333,10 +344,6 @@ class virt_sequence_simple#(ETH_PORTS, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, ITEM_
             mi_pmd_rst.start(p_sequencer.mi_pmd_rst);
             tsu_rst.start(p_sequencer.tsu_rst);
         join_none
-
-        #(250ns)
-        mi.start(p_sequencer.mi);
-        #(250ns)
 
         for (int unsigned it = 0; it <  ETH_PORTS; it++) begin
             fork
@@ -395,7 +402,6 @@ class virt_sequence_stop#(ETH_PORTS, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, ITEM_WI
     //uvm_pkg::
     virt_sequence_port#(ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, ITEM_WIDTH, REGIONS, REGION_SIZE, BLOCK_SIZE, ETH_PORT_CHAN[0], MI_DATA_WIDTH, MI_ADDR_WIDTH) port[ETH_PORTS];
     //MI SEQUENCE
-    uvm_sequence#(uvm_mi::sequence_item_request#(MI_DATA_WIDTH, MI_ADDR_WIDTH), uvm_mi::sequence_item_response #(MI_DATA_WIDTH)) mi;
 
     function new(string name = "uvm_network_mod_env::sequence_simple");
         super.new(name);
