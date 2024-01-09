@@ -29,7 +29,7 @@ if {$ARCHGRP == "P_TILE"} {
     lappend COMPONENTS [ list "PCIE_CII2CFG" "$PCIE_COMP_BASE/pcie_cii2cfg" "FULL" ]
     lappend COMPONENTS [ list "PCIE_CRDT"    "$PCIE_COMP_BASE/pcie_crdt"    "FULL" ]
     lappend MOD "$ENTITY_BASE/pcie_core_rtile.vhd"
-} elseif {$ARCHGRP == "USP"} {
+} elseif {$ARCHGRP == "USP" || $ARCHGRP == "USP_PCIE4C" || $ARCHGRP == "USP_PCIE4"} {
     lappend MOD "$ENTITY_BASE/pcie_core_usp.vhd"
 } else {
     lappend MOD "$ENTITY_BASE/pcie_core_empty.vhd"

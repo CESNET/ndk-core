@@ -245,6 +245,9 @@ architecture FULL of FPGA_COMMON is
 
     constant PCIE_MPS     : natural := 256;
     constant PCIE_MRRS    : natural := 512;
+
+    constant IS_USP_PCIE_EP : boolean := (PCIE_ENDPOINT_TYPE="USP" or PCIE_ENDPOINT_TYPE="USP_PCIE4" or PCIE_ENDPOINT_TYPE="USP_PCIE4C");
+
     constant RESET_WIDTH  : natural := 10;
     constant TS_MULT_SMART_DSP : boolean := (DEVICE="ULTRASCALE");
     constant TS_MULT_USE_DSP   : boolean := (DEVICE="AGILEX" or DEVICE="STRATIX10");
@@ -293,7 +296,7 @@ architecture FULL of FPGA_COMMON is
             end if;
         end if;
 
-        if (PCIE_ENDPOINT_TYPE="USP") then -- Gen3 mode only
+        if (IS_USP_PCIE_EP = True) then -- Gen3 mode only
             if (PCIE_ENDPOINT_MODE = 0) then -- x16
                 pcie_mfb_regions := 2; --2x256b AXI
             elsif (PCIE_ENDPOINT_MODE = 2) then --x8
@@ -340,7 +343,7 @@ architecture FULL of FPGA_COMMON is
     -- DMA MFB RC parameters
     constant DMA_RC_MFB_REGIONS     : natural := pcie_mfb_regions_calc_f("RC");
     constant DMA_RC_MFB_REGION_SIZE : natural := 1;
-    constant DMA_RC_MFB_BLOCK_SIZE  : natural := tsel(PCIE_ENDPOINT_TYPE="USP",4,8);
+    constant DMA_RC_MFB_BLOCK_SIZE  : natural := tsel(IS_USP_PCIE_EP,4,8);
     constant DMA_RC_MFB_ITEM_WIDTH  : natural := 32;
 
     constant DMA_CQ_MFB_REGIONS     : natural := pcie_mfb_regions_calc_f("CQ");
