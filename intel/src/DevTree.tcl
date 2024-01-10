@@ -11,7 +11,7 @@ proc dts_build_netcope {} {
     set ADDR_TSU        "0x00004000"
     set ADDR_GEN_LOOP   "0x00005000"
     set ADDR_ETH_MAC    "0x00008000"
-    #set ADDR_DDR_MOD    "0x00010000"
+    set ADDR_JTAG_IP    "0x00010000"
     set ADDR_DMA_MOD    "0x01000000"
     #set ADDR_MSIX_MOD   "0x01400000"
     set ADDR_ETH_PCS    "0x00800000"

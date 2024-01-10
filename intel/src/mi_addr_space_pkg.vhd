@@ -25,7 +25,7 @@ package mi_addr_space_pack is
              4 => X"0000_4000", -- Timestamp unit
              5 => X"0000_5000", -- Debug GLS modules
              6 => X"0000_8000", -- Ethernet MACs
-             7 => X"0001_0000", -- DRAFT: Memory controller
+             7 => X"0001_0000", -- Intel JTAG-over-protocol IP
              8 => X"0080_0000", -- Ethernet PCS/PMA
              9 => X"0100_0000", -- DMA controller
             10 => X"0140_0000", -- DRAFT: MSIX controller
@@ -38,7 +38,7 @@ package mi_addr_space_pack is
     constant MI_ADC_PORT_TSU     : natural := 4;
     constant MI_ADC_PORT_GENLOOP : natural := 5;
     constant MI_ADC_PORT_NETMOD  : natural := 6;
-    constant MI_ADC_PORT_DDRMOD  : natural := 7;
+    constant MI_ADC_PORT_JTAG_IP : natural := 7;
     constant MI_ADC_PORT_ETHMOD  : natural := 8;
     constant MI_ADC_PORT_DMA     : natural := 9;
     constant MI_ADC_PORT_MSIX    : natural := 10;
