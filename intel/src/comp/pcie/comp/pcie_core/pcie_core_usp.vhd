@@ -16,8 +16,10 @@ use UNISIM.vcomponents.all;
 
 architecture USP of PCIE_CORE is
 
-    constant VSEC_BASE_ADDRESS : natural := 16#480#;
-    constant DTB_NEXT_POINTER  : natural := tsel(XVC_ENABLE, 16#4A0#, 0);
+    constant VSEC_BASE_ADDRESS : natural := tsel(ENDPOINT_TYPE = "USP_PCIE4C", 16#E80#, 16#480#);
+    constant XVC_BASE_ADDRESS  : natural := tsel(ENDPOINT_TYPE = "USP_PCIE4C", 16#EA0#, 16#4A0#);
+    constant DTB_NEXT_POINTER  : natural := tsel(XVC_ENABLE, XVC_BASE_ADDRESS, 0);
+
     constant PCIE_HIPS         : natural := tsel((ENDPOINT_MODE = 0 or ENDPOINT_MODE = 2),PCIE_ENDPOINTS,PCIE_ENDPOINTS/2);
     constant AXI_DATA_WIDTH    : natural := CQ_MFB_REGIONS*256;
     constant AXI_CQUSER_WIDTH  : natural := tsel((ENDPOINT_MODE = 0), 183, 88);
@@ -809,7 +811,7 @@ begin
             RQ_MFB_REGION_SIZE => RQ_MFB_REGION_SIZE,
             RQ_MFB_BLOCK_SIZE  => RQ_MFB_BLOCK_SIZE,
             RQ_MFB_ITEM_WIDTH  => RQ_MFB_ITEM_WIDTH,
-            ENDPOINT_TYPE      => "USP",
+            ENDPOINT_TYPE      => ENDPOINT_TYPE,
             DEVICE             => DEVICE,
             AXI_CQUSER_WIDTH   => AXI_CQUSER_WIDTH,
             AXI_CCUSER_WIDTH   => AXI_CCUSER_WIDTH,

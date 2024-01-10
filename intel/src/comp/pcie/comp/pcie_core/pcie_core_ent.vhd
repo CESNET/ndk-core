@@ -37,6 +37,8 @@ entity PCIE_CORE is
         -- =====================================================================
         -- PCIE configuration
         -- =====================================================================
+        -- PCIe endpoint type
+        ENDPOINT_TYPE    : string := "P_TILE";
         -- PCIe Endpoint (EP) mode: 0=x16, 1=x8x8, 2=x8
         ENDPOINT_MODE    : natural := 0;
         -- Number of PCIe endpoints
