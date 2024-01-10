@@ -93,6 +93,12 @@ proc dts_build_netcope {} {
         append ret [dts_stratix_adc_sensors $ADDR_SDM_SYSMON]
     }
 
+    global CLOCK_GEN_ARCH
+    # Intel JTAG-over-protocol controller
+    if {$CLOCK_GEN_ARCH == "INTEL"} {
+        append ret [dts_jtag_op_controller $ADDR_JTAG_IP]
+    }
+
     # Populate application, if exists
     global APP_CORE_ENABLE
     if {$APP_CORE_ENABLE} {

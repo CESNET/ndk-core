@@ -25,6 +25,7 @@ set MI_TEST_SPACE_BASE   "$OFM_PATH/comp/mi_tools/test_space"
 set DMA_GENERATOR_BASE   "$OFM_PATH/comp/mfb_tools/debug/dma_generator"
 set HWID_BASE            "$OFM_PATH/comp/base/misc/hwid"
 set ETH_LED_CTRL_BASE    "$OFM_PATH/comp/nic/eth_leds/led_ctrl_top"
+set JTAG_OP_CTRL_BASE    "$ENTITY_BASE/src/comp/jtag_op_ctrl"
 
 # Packages
 lappend PACKAGES "$OFM_PATH/comp/base/pkg/math_pack.vhd"
@@ -60,6 +61,7 @@ if { $ARCHGRP_ARR(APPLICATION_CORE_ENTITY_ONLY) } {
   lappend COMPONENTS [list "ETH_LED_CTRL"    $ETH_LED_CTRL_BASE    "FULL"                       ]
   lappend COMPONENTS [list "DMA"             $DMA_BASE             $DMA_ARCH                    ]
   lappend COMPONENTS [list "DMA_GENERATOR"   $DMA_GENERATOR_BASE   "FULL"                       ]
+  lappend COMPONENTS [list "JTAG_OP_CTRL"    $JTAG_OP_CTRL_BASE    $ARCHGRP_ARR(CLOCK_GEN_ARCH) ]
 
   lappend MOD "$ENTITY_BASE/src/application_ent.vhd"
   lappend MOD "$ENTITY_BASE/src/fpga_common.vhd"
