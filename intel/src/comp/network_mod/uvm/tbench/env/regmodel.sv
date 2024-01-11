@@ -8,8 +8,10 @@
 class reg_model_channel extends uvm_reg_block;
     `uvm_object_param_utils(uvm_network_mod_env::reg_model_channel)
 
-    rand reg_enable rx_enable;
-    rand reg_enable tx_enable;
+    localparam RX_MAC_COUNT = 4;
+
+    rand uvm_rx_mac_lite::regmodel#(RX_MAC_COUNT) rx_mac;
+    rand uvm_tx_mac_lite::regmodel                tx_mac;
 
     function new(string name = "reg_model_channel");
         super.new(name, build_coverage(UVM_NO_COVERAGE));
@@ -19,25 +21,25 @@ class reg_model_channel extends uvm_reg_block;
         uvm_reg_frontdoor casted;
 
         void'($cast(casted, frontdoor.clone()));
-        rx_enable.set_frontdoor(casted);
+        rx_mac.set_frontdoor(casted);
         void'($cast(casted, frontdoor.clone()));
-        tx_enable.set_frontdoor(casted);
+        tx_mac.set_frontdoor(casted);
     endfunction
 
     virtual function void build(uvm_reg_addr_t base, int unsigned bus_width);
-        rx_enable = reg_enable::type_id::create("rx_enabled");
-        tx_enable = reg_enable::type_id::create("tx_enabled");
+        rx_mac    = uvm_rx_mac_lite::regmodel#(RX_MAC_COUNT)::type_id::create("rx_mac", , get_full_name());
+        tx_mac    = uvm_tx_mac_lite::regmodel::type_id::create("tx_mac", , get_full_name());
 
-        rx_enable.build();
-        rx_enable.configure(this);
-        tx_enable.build();
-        tx_enable.configure(this);
+        rx_mac.build('h0, bus_width);
+        rx_mac.configure(this, "rx_mac");
+        tx_mac.build('h0, bus_width);
+        tx_mac.configure(this, "tx_mac");
 
         //create map
         this.default_map = create_map("MAP", base, bus_width/8, UVM_LITTLE_ENDIAN);
         //Add registers to map
-        this.default_map.add_reg(rx_enable, 'h000 + 'h20, "RW");
-        this.default_map.add_reg(tx_enable, 'h200 + 'h20, "RW");
+        this.default_map.add_submap(tx_mac.default_map, 'h000);
+        this.default_map.add_submap(rx_mac.default_map, 'h200);
 
         this.lock_model();
     endfunction

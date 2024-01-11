@@ -21,6 +21,7 @@ package uvm_network_mod_env;
     `include "scoreboard.sv"
     `include "env.sv"
 
+    `include "reg_sequence.sv"
     `include "sequence_eth.sv"
     `include "sequence.sv"
 endpackage
