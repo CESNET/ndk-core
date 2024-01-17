@@ -90,7 +90,7 @@ if { $DMA_TYPE == 4 } {
 
 VhdlPkgProjectText $PROJECT_NAME
 
-VhdlPkgStr BOARD         $CARD_NAME
+VhdlPkgStr CARD_NAME     $CARD_NAME
 VhdlPkgStr PCIE_MOD_ARCH $PCIE_MOD_ARCH
 VhdlPkgStr NET_MOD_ARCH  $NET_MOD_ARCH
 
