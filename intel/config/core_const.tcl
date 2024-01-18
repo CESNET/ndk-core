@@ -13,7 +13,9 @@
 set BUILD_TIME [format "%d" [clock seconds]]
 set BUILD_UID  [format "%d" [exec id -u]]
 
+# ------------------------------------------------------------------------------
 # Fixed DMA parameters
+# ------------------------------------------------------------------------------
 set DMA_RX_FRAME_SIZE_MIN 60
 set DMA_TX_FRAME_SIZE_MIN 60
 
@@ -67,7 +69,8 @@ if {$ETH_PORTS <= $PCIE_ENDPOINTS} {
 }
 
 if { $DMA_TYPE == 4 } {
-    if { $PCIE_ENDPOINTS != 1 || $PCIE_ENDPOINT_MODE != 2} {
+    if {!(($PCIE_ENDPOINTS == 1 && $PCIE_GEN == 3 && $PCIE_ENDPOINT_MODE == 0) ||
+          ($PCIE_ENDPOINTS == 1 && $PCIE_GEN == 3 && $PCIE_ENDPOINT_MODE == 2)) } {
         error "Incompatible DMA_TYPE: $DMA_TYPE with chosen PCIE_ENDPOINTS: $PCIE_ENDPOINTS\
                 and PCIE_ENDPOINT_MODE: $PCIE_ENDPOINT_MODE! Try to use PCIE_CONF=1xGen3x8LL."
     }
