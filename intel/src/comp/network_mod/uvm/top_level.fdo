@@ -27,10 +27,9 @@ if {[info exists env(CORE_PARAMS)]} {
 set SIM_FLAGS(CODE_COVERAGE) false
 set SIM_FLAGS(UVM_ENABLE) true
 set SIM_FLAGS(UVM_TEST) "test::base"
-set SIM_FLAGS(UVM_VERBOSITY) "UVM_NONE"
+set SIM_FLAGS(UVM_VERBOSITY) UVM_NONE
 # Because checking array index is beffore constant propagation
-set SIM_FLAGS(DEBUG) true
-
+set SIM_FLAGS(DEBUG) false
 
 if {[info exists PARAMS(NETWORK_ARCH)]} {
     set NETWORK_ARCH $PARAMS(NETWORK_ARCH)
