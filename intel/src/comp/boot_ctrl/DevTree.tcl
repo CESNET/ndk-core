@@ -13,14 +13,12 @@ proc dts_boot_controller {base type} {
     append ret "compatible = \"netcope,boot_controller\";"
     append ret "reg = <$base 8>;"
     append ret "version = <0x00000001>;"
-    if {$type == 3} {
-        append ret "type = <3>;"
+    append ret "type = <$type>;"
+    if {$type == 1 || $type == 3 } {
         append ret "axi_quad_flash_controller {"
         append ret "reg = <[expr $base+0x100] 0x80>;"
         append ret "compatible = \"xlnx,axi-quad-spi\";"
         append ret "};"
-    } else {
-        append ret "type = <2>;"
     }
     append ret "};"
     return $ret
