@@ -44,10 +44,24 @@ proc dts_build_netcope {} {
     append ret "resource = \"PCI0,BAR0\";"
     append ret "width = <0x20>;"
 
-    # BOOT component
     global BOOT_TYPE
-    if {$BOOT_TYPE == 2 || $BOOT_TYPE == 3} {
+    # BOOT_TYPE overview:
+    # ===================
+    # 0 = NO boot controller (Intel Devkits)
+    # 1 = AXI QSPI + ICAP controller (AMD Alveo cards)
+    # 2 = Generic flash + custom BMC controller (Silicom fb4CGg3@VU9P, Netcope NFB-200G2QL, ReflexCES AGI-FH400G)
+    # 3 = AXI QSPI + custom BMC controller (Silicom fb2CGhh@KU15P)
+    # 4 = ASx4 BOOT via Intel SDM client (Bittware IA-420f)
+    # 5 = OFS PMCI boot controller (Silicom N6010)
+
+    # BOOT component
+    set boot_active_serial 0
+    if {$BOOT_TYPE == 1 || $BOOT_TYPE == 2 || $BOOT_TYPE == 3} {
         append ret "boot:" [dts_boot_controller $ADDR_BOOT_CTRL $BOOT_TYPE]
+    }
+    if {$BOOT_TYPE == 4} {
+        # ASx4 BOOT via Intel SDM client
+        set boot_active_serial 1
     }
     if {$BOOT_TYPE == 5} {
         # OFS PMCI BOOT component
@@ -77,11 +91,6 @@ proc dts_build_netcope {} {
     global SDM_SYSMON_ARCH
     # Intel FPGA SDM controller
     if {$SDM_SYSMON_ARCH == "INTEL_SDM"} {
-        set boot_active_serial 0
-        if {$BOOT_TYPE == 4} {
-            # ASx4 BOOT via Intel SDM client
-            set boot_active_serial 1
-        }
         append ret [dts_sdm_controller $ADDR_SDM_SYSMON $boot_active_serial]
     }
     # Deprecated ID component to access Xilinx SYSMON
