@@ -1547,6 +1547,30 @@ begin
     );
 
     -- =========================================================================
+    --  JTAG-OVER-PROTOCOL CONTROLLER
+    -- =========================================================================
+    jtag_op_ctrl_i: entity work.JTAG_OP_CTRL
+    generic map (
+        MI_ADDR_WIDTH => 32,
+        MI_DATA_WIDTH => 32,
+        DEVICE        => DEVICE
+    )
+    port map (
+        USER_CLK      => clk_mi,
+        USER_RESET    => rst_mi(7),
+        JOP_CLK       => clk_usr_x1,
+        JOP_RESET     => rst_usr_x1(0),
+        MI_DWR        => mi_adc_dwr(MI_ADC_PORT_JTAG_IP),
+        MI_ADDR       => mi_adc_addr(MI_ADC_PORT_JTAG_IP),
+        MI_RD         => mi_adc_rd(MI_ADC_PORT_JTAG_IP),
+        MI_WR         => mi_adc_wr(MI_ADC_PORT_JTAG_IP),
+        MI_BE         => mi_adc_be(MI_ADC_PORT_JTAG_IP),
+        MI_DRD        => mi_adc_drd(MI_ADC_PORT_JTAG_IP),
+        MI_ARDY       => mi_adc_ardy(MI_ADC_PORT_JTAG_IP),
+        MI_DRDY       => mi_adc_drdy(MI_ADC_PORT_JTAG_IP)
+    );
+
+    -- =========================================================================
     --  STATUS LEDs
     -- =========================================================================
 
