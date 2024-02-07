@@ -88,7 +88,7 @@ class env#(
     protected uvm_logic_vector_mvb::env_tx      #(REGIONS, ETH_RX_HDR_WIDTH)                                      m_usr_tx_hdr[ETH_PORTS];
 
     //MI
-    protected uvm_mi::agent_slave #(MI_DATA_WIDTH, MI_ADDR_WIDTH) m_mi;
+    //protected uvm_mi::agent_slave #(MI_DATA_WIDTH, MI_ADDR_WIDTH) m_mi;
     protected uvm_mi::agent_slave #(MI_DATA_WIDTH, MI_ADDR_WIDTH) m_mi_pmd;
     protected uvm_mi::agent_slave #(MI_DATA_WIDTH, MI_ADDR_WIDTH) m_mi_phy;
 
@@ -97,6 +97,7 @@ class env#(
 
     // SCOREBOARD
     protected scoreboard#(ETH_PORTS, ETH_PORT_CHAN, REGIONS, ITEM_WIDTH, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH) m_scoreboard;
+    protected uvm_mi::regmodel#(uvm_network_mod_env::regmodel #(ETH_PORTS, ETH_PORT_CHAN), MI_DATA_WIDTH, MI_ADDR_WIDTH) m_regmodel;
 
     // Constructor of environment.
     function new(string name, uvm_component parent);
@@ -111,9 +112,10 @@ class env#(
     function void build_phase(uvm_phase phase);
         uvm_reset::config_item cfg_rst;
         uvm_logic_vector_mvb::config_item       cfg_tsu;
-        uvm_mi::config_item     cfg_mi;
-        uvm_mi::config_item     cfg_mi_phy;
-        uvm_mi::config_item     cfg_mi_pmd;
+        //uvm_mi::config_item     cfg_mi;
+        uvm_mi::regmodel_config  cfg_mi;
+        uvm_mi::config_item      cfg_mi_phy;
+        uvm_mi::config_item      cfg_mi_pmd;
 
         //RESETS
         super.build_phase(phase);
@@ -199,10 +201,11 @@ class env#(
         end
 
         cfg_mi  = new();
-        cfg_mi.active         = UVM_ACTIVE;
-        cfg_mi.interface_name = "vif_mi";
-        uvm_config_db #(uvm_mi::config_item)::set(this, "m_mi", "m_config", cfg_mi);
-        m_mi = uvm_mi::agent_slave #(MI_DATA_WIDTH, MI_ADDR_WIDTH)::type_id::create("m_mi", this);
+        cfg_mi.addr_base            = 'h0;
+        cfg_mi.agent.active         = UVM_ACTIVE;
+        cfg_mi.agent.interface_name = "vif_mi";
+        uvm_config_db#(uvm_mi::regmodel_config)::set(this, "m_regmodel", "m_config", cfg_mi);
+        m_regmodel = uvm_mi::regmodel#(uvm_network_mod_env::regmodel #(ETH_PORTS, ETH_PORT_CHAN), MI_DATA_WIDTH, MI_ADDR_WIDTH)::type_id::create("m_regmodel", this);;
 
         cfg_mi_phy  = new();
         cfg_mi_phy.active         = UVM_ACTIVE;
@@ -250,6 +253,7 @@ class env#(
         m_sequencer.mi_phy_rst = m_mi_phy_rst.m_sequencer;
         m_sequencer.mi_pmd_rst = m_mi_pmd_rst.m_sequencer;
         m_sequencer.tsu_rst    = m_tsu_rst.m_sequencer;
+        m_sequencer.set_regmodel(m_regmodel.m_regmodel);
         for (int unsigned it = 0; it < ETH_PORTS; it++) begin
             m_sequencer.port[it].eth_rst     = m_eth_rst[it].m_sequencer;
             m_sequencer.port[it].usr_rx_data = m_usr_rx[it].m_sequencer.m_data;
@@ -261,7 +265,6 @@ class env#(
             m_sequencer.port[it].eth_rx_meta = m_eth_rx[it].m_sequencer.m_meta;
             m_sequencer.port[it].eth_tx      = m_eth_tx[it].m_sequencer;
         end
-        m_sequencer.mi = m_mi.m_sequencer;
     endfunction
 endclass
 

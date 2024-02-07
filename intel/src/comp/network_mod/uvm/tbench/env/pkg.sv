@@ -12,12 +12,16 @@ package uvm_network_mod_env;
     `include "uvm_macros.svh"
     import uvm_pkg::*;
 
+    `include "registers.sv"
+    `include "regmodel.sv"
+
     `include "sequencer.sv"
     `include "model.sv"
     `include "scoreboard_cmp.sv"
     `include "scoreboard.sv"
     `include "env.sv"
 
+    `include "reg_sequence.sv"
     `include "sequence_eth.sv"
     `include "sequence.sv"
 endpackage

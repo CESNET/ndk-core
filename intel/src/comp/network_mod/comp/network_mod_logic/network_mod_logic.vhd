@@ -335,6 +335,18 @@ begin
     );
 
     mac_lites_g : for ch in 0 to ETH_PORT_CHAN-1 generate
+        signal rx_core_mfb_sof_tmp  : std_logic_vector(CORE_REGIONS-1 downto 0);
+        signal rx_core_mfb_eof_tmp  : std_logic_vector(CORE_REGIONS-1 downto 0);
+    begin
+
+        process(all)
+        begin
+            -- this fix bug in questasim elsewhere it could be connected directly
+            rx_core_mfb_sof_tmp <= RX_CORE_MFB_SOF(ch);
+            rx_core_mfb_eof_tmp <= RX_CORE_MFB_EOF(ch);
+        end process;
+
+
         tx_mac_lite_i : entity work.TX_MAC_LITE
         generic map(
             RX_REGIONS      => USER_REGIONS    ,
@@ -423,8 +435,8 @@ begin
             TX_RESET        => RESET_USER(0),
 
             RX_MFB_DATA     => RX_CORE_MFB_DATA   (ch),
-            RX_MFB_SOF      => RX_CORE_MFB_SOF    (ch),
-            RX_MFB_EOF      => RX_CORE_MFB_EOF    (ch),
+            RX_MFB_SOF      => rx_core_mfb_sof_tmp,
+            RX_MFB_EOF      => rx_core_mfb_eof_tmp,
             RX_MFB_SOF_POS  => RX_CORE_MFB_SOF_POS(ch),
             RX_MFB_EOF_POS  => RX_CORE_MFB_EOF_POS(ch),
             RX_MFB_ERROR    => RX_CORE_MFB_ERROR  (ch),

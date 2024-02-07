@@ -501,20 +501,6 @@ architecture ETILE of NETWORK_MOD_CORE is
     signal tx_avst_data_arr  : slv_array_t(ETH_PORT_CHAN-1 downto 0)(AVST_DATA_WIDTH -1 downto 0);
     signal tx_avst_empty_arr : slv_array_t(ETH_PORT_CHAN-1 downto 0)(AVST_EMPTY_WIDTH-1 downto 0);
 
-    signal tx_ad_avst_data   : slv_array_t(ETH_PORT_CHAN-1 downto 0)(AVST_DATA_WIDTH -1 downto 0);
-    signal tx_ad_avst_sop    : std_logic_vector(ETH_PORT_CHAN                 -1 downto 0);
-    signal tx_ad_avst_eop    : std_logic_vector(ETH_PORT_CHAN                 -1 downto 0);
-    signal tx_ad_avst_empty  : slv_array_t(ETH_PORT_CHAN-1 downto 0)(AVST_EMPTY_WIDTH-1 downto 0);
-    signal tx_ad_avst_error  : std_logic_vector(ETH_PORT_CHAN                 -1 downto 0);
-    signal tx_ad_avst_valid  : std_logic_vector(ETH_PORT_CHAN                 -1 downto 0);
-
-    signal tx_loop_avst_data   : slv_array_t(ETH_PORT_CHAN-1 downto 0)(AVST_DATA_WIDTH -1 downto 0);
-    signal tx_loop_avst_sop    : std_logic_vector(ETH_PORT_CHAN                 -1 downto 0);
-    signal tx_loop_avst_eop    : std_logic_vector(ETH_PORT_CHAN                 -1 downto 0);
-    signal tx_loop_avst_empty  : slv_array_t(ETH_PORT_CHAN-1 downto 0)(AVST_EMPTY_WIDTH-1 downto 0);
-    signal tx_loop_avst_error  : std_logic_vector(ETH_PORT_CHAN                 -1 downto 0);
-    signal tx_loop_avst_valid  : std_logic_vector(ETH_PORT_CHAN                 -1 downto 0);
-
     signal rx_avst_data_arr  : slv_array_t(ETH_PORT_CHAN-1 downto 0)(AVST_DATA_WIDTH    -1 downto 0);
     signal rx_avst_empty_arr : slv_array_t(ETH_PORT_CHAN-1 downto 0)(AVST_EMPTY_WIDTH   -1 downto 0);
     signal rx_avst_error_arr : slv_array_t(ETH_PORT_CHAN-1 downto 0)(RX_AVST_ERROR_WIDTH-1 downto 0);
@@ -569,7 +555,6 @@ architecture ETILE of NETWORK_MOD_CORE is
     signal xcvr_inf_drd_phy          : slv_array_t     (LANES-1 downto 0)(MI_DATA_WIDTH_PHY-1 downto 0);
     signal xcvr_inf_drd_phy_res      : slv_array_t     (LANES-1 downto 0)(8                -1 downto 0);
     signal xcvr_inf_drd_phy_res_ser  : std_logic_vector(LANES*            8                -1 downto 0);
-    signal xcvr_init_status          : slv_array_t(ETH_PORT_CHAN-1 downto 0)(32-1 downto 0);
     signal init_lane_status          : slv_array_t(LANES-1 downto 0)(32-1 downto 0);
     -- rsfec reconfig interface
     signal rsfec_inf_dwr_phy      : std_logic_vector(MI_DATA_WIDTH_PHY-1 downto 0);
@@ -642,6 +627,7 @@ begin
         signal ia_rd_sel_r  : std_logic_vector(mi_ia_sel'range);
         signal mgmt_pcs_control : std_logic_vector(16-1 downto 0);
 
+        signal xcvr_init_status          : std_logic_vector(32-1 downto 0);
     begin
 
         mgmt_i : entity work.mgmt
@@ -695,7 +681,7 @@ begin
             PMA_RESET     => mgmt_pma_reset(i), --TODO
             PMA_RETUNE    => open,
             PMA_CONTROL   => open,
-            PMA_STATUS    => xcvr_init_status(i),
+            PMA_STATUS    => xcvr_init_status,
             PMA_PTRN_EN   => open,
             PMA_TX_DIS    => open,
             PMA_RX_OK     => (others => rx_pcs_ready(i)), --TODO
@@ -826,9 +812,9 @@ begin
             end case;
 
             if (init_lane_index_vld) then
-                xcvr_init_status(i) <= init_lane_status(0 + i*LANES_PER_CHANNEL);
+                xcvr_init_status <= init_lane_status(0 + i*LANES_PER_CHANNEL);
             else
-                xcvr_init_status(i) <= (others => '0');
+                xcvr_init_status <= (others => '0');
             end if;
         end process;
 
@@ -924,10 +910,6 @@ begin
     eth_port_speed_sel_g : case ETH_PORT_SPEED generate
 
         when 100 =>
-
-            etile_clk_out <= etile_clk_out_vec(0);
-            CLK_ETH       <= etile_clk_out;
-
             -- =========================================================================
             -- E-TILE Ethernet
             -- =========================================================================
@@ -1058,93 +1040,7 @@ begin
 
             ehip_ready(LANES-1 downto 1) <= (others => ehip_ready(0));
 
-            process(etile_clk_out)
-            begin
-                if rising_edge(etile_clk_out) then
-                    if (RESET_ETH = '1') then
-                        RX_LINK_UP <= (others => '0');
-                        TX_LINK_UP <= (others => '0');
-                    else
-                        RX_LINK_UP <= rx_pcs_ready and rx_block_lock and rx_am_lock;
-                        TX_LINK_UP <= tx_lanes_stable;
-                    end if;
-                end if;
-            end process;
-
-            -- =========================================================================
-            -- ADAPTERS
-            -- =========================================================================
-
-            tx_avst_data  <= slv_array_ser(tx_avst_data_arr);
-            tx_avst_empty <= slv_array_ser(tx_avst_empty_arr);
-
-            -- RX adaption -------------------------------------------------------------
-            rx_avst_data_arr  <= slv_array_deser(rx_avst_data , ETH_PORT_CHAN);
-            rx_avst_empty_arr <= slv_array_deser(rx_avst_empty, ETH_PORT_CHAN);
-            rx_avst_error_arr <= slv_array_deser(rx_avst_error, ETH_PORT_CHAN);
-
-            -- TX adaption
-            mfb2avst_i : entity work.TX_MAC_LITE_ADAPTER_AVST_100G
-            generic map(
-                DATA_WIDTH => AVST_DATA_WIDTH,
-                FIFO_DEPTH => MFB2AVST_FIFO_DEPTH,
-                DEVICE     => DEVICE
-            )
-            port map(
-                CLK            => etile_clk_out,
-                RESET          => RESET_ETH    ,
-
-                RX_MFB_DATA    => RX_MFB_DATA   (0),
-                RX_MFB_SOF     => RX_MFB_SOF    (0),
-                RX_MFB_SOF_POS => RX_MFB_SOF_POS(0),
-                RX_MFB_EOF     => RX_MFB_EOF    (0),
-                RX_MFB_EOF_POS => RX_MFB_EOF_POS(0),
-                RX_MFB_SRC_RDY => RX_MFB_SRC_RDY(0),
-                RX_MFB_DST_RDY => RX_MFB_DST_RDY(0),
-
-                TX_AVST_DATA   => tx_ad_avst_data (0),
-                TX_AVST_SOP    => tx_ad_avst_sop  (0),
-                TX_AVST_EOP    => tx_ad_avst_eop  (0),
-                TX_AVST_EMPTY  => tx_ad_avst_empty(0),
-                TX_AVST_ERROR  => tx_ad_avst_error(0),
-                TX_AVST_VALID  => tx_ad_avst_valid(0),
-                TX_AVST_READY  => tx_avst_ready(0)
-            );
-
-            -- RX adaption
-            avst2mfb_i : entity work.ETH_AVST_ADAPTER
-            generic map(
-                DATA_WIDTH     => AVST_DATA_WIDTH,
-                TX_REGION_SIZE => AVST_DATA_WIDTH/64
-            )
-            port map(
-                CLK              => etile_clk_out,
-                RESET            => RESET_ETH    ,
-
-                IN_AVST_DATA     => rx_avst_data_arr (0),
-                IN_AVST_SOP      => rx_avst_sop      (0),
-                IN_AVST_EOP      => rx_avst_eop      (0),
-                IN_AVST_EMPTY    => rx_avst_empty_arr(0),
-                IN_AVST_ERROR    => rx_avst_error_arr(0),
-                IN_AVST_VALID    => rx_avst_valid    (0),
-                IN_RX_PCS_READY  => '0', -- rx_pcs_ready (0)
-                IN_RX_BLOCK_LOCK => '0', -- rx_block_lock(0)
-                IN_RX_AM_LOCK    => '0', -- rx_am_lock   (0)
-
-                OUT_MFB_DATA     => TX_MFB_DATA   (0),
-                OUT_MFB_SOF      => TX_MFB_SOF    (0),
-                OUT_MFB_SOF_POS  => TX_MFB_SOF_POS(0),
-                OUT_MFB_EOF      => TX_MFB_EOF    (0),
-                OUT_MFB_EOF_POS  => TX_MFB_EOF_POS(0),
-                OUT_MFB_ERROR    => TX_MFB_ERROR  (0),
-                OUT_MFB_SRC_RDY  => TX_MFB_SRC_RDY(0),
-                OUT_LINK_UP      => open -- this is done here
-            );
-
         when 25 =>
-
-            etile_clk_out <= etile_clk_out_vec(0);
-            CLK_ETH       <= etile_clk_out;
 
             -- =========================================================================
             -- E-TILE Ethernet
@@ -1277,99 +1173,8 @@ begin
                 o_sl_rx_pause                    => open
             );
 
-            process(etile_clk_out)
-            begin
-                if rising_edge(etile_clk_out) then
-                    if (RESET_ETH = '1') then
-                        RX_LINK_UP <= (others => '0');
-                        TX_LINK_UP <= (others => '0');
-                    else
-                        RX_LINK_UP <= rx_pcs_ready and rx_block_lock;
-                        TX_LINK_UP <= tx_lanes_stable;
-                    end if;
-                end if;
-            end process;
-
-            -- =========================================================================
-            -- ADAPTERS
-            -- =========================================================================
-            -- TX adaption -------------------------------------------------------------
-            tx_adapter_g : for i in ETH_PORT_CHAN-1 downto 0 generate
-
-                mfb2avst_i : entity work.TX_MAC_LITE_ADAPTER_AVST_100G
-                generic map(
-                    DATA_WIDTH => AVST_DATA_WIDTH,
-                    FIFO_DEPTH => MFB2AVST_FIFO_DEPTH,
-                    DEVICE     => DEVICE
-                )
-                port map(
-                    CLK            => etile_clk_out,
-                    RESET          => RESET_ETH    ,
-
-                    RX_MFB_DATA    => RX_MFB_DATA   (i),
-                    RX_MFB_SOF     => RX_MFB_SOF    (i),
-                    RX_MFB_SOF_POS => RX_MFB_SOF_POS(i),
-                    RX_MFB_EOF     => RX_MFB_EOF    (i),
-                    RX_MFB_EOF_POS => RX_MFB_EOF_POS(i),
-                    RX_MFB_SRC_RDY => RX_MFB_SRC_RDY(i),
-                    RX_MFB_DST_RDY => RX_MFB_DST_RDY(i),
-
-                    TX_AVST_DATA   => tx_ad_avst_data (i),
-                    TX_AVST_SOP    => tx_ad_avst_sop  (i),
-                    TX_AVST_EOP    => tx_ad_avst_eop  (i),
-                    TX_AVST_EMPTY  => tx_ad_avst_empty(i),
-                    TX_AVST_ERROR  => tx_ad_avst_error(i),
-                    TX_AVST_VALID  => tx_ad_avst_valid(i),
-                    TX_AVST_READY  => tx_avst_ready   (i)
-                );
-
-            end generate;
-
-            tx_avst_data  <= slv_array_ser(tx_avst_data_arr);
-            tx_avst_empty <= slv_array_ser(tx_avst_empty_arr);
-
-            -- RX adaption -------------------------------------------------------------
-            rx_avst_data_arr  <= slv_array_deser(rx_avst_data , ETH_PORT_CHAN);
-            rx_avst_empty_arr <= slv_array_deser(rx_avst_empty, ETH_PORT_CHAN);
-            rx_avst_error_arr <= slv_array_deser(rx_avst_error, ETH_PORT_CHAN);
-
-            rx_adapter_g : for i in ETH_PORT_CHAN-1 downto 0 generate
-
-                avst2mfb_i : entity work.ETH_AVST_ADAPTER
-                generic map(
-                    DATA_WIDTH     => AVST_DATA_WIDTH,
-                    TX_REGION_SIZE => AVST_DATA_WIDTH/64
-                )
-                port map(
-                    CLK              => etile_clk_out,
-                    RESET            => RESET_ETH    ,
-
-                    IN_AVST_DATA     => rx_avst_data_arr (i),
-                    IN_AVST_SOP      => rx_avst_sop      (i),
-                    IN_AVST_EOP      => rx_avst_eop      (i),
-                    IN_AVST_EMPTY    => rx_avst_empty_arr(i),
-                    IN_AVST_ERROR    => rx_avst_error_arr(i),
-                    IN_AVST_VALID    => rx_avst_valid    (i),
-                    IN_RX_PCS_READY  => '0',
-                    IN_RX_BLOCK_LOCK => '0',
-                    IN_RX_AM_LOCK    => '0',
-
-                    OUT_MFB_DATA     => TX_MFB_DATA   (i),
-                    OUT_MFB_SOF      => TX_MFB_SOF    (i),
-                    OUT_MFB_SOF_POS  => TX_MFB_SOF_POS(i),
-                    OUT_MFB_EOF      => TX_MFB_EOF    (i),
-                    OUT_MFB_EOF_POS  => TX_MFB_EOF_POS(i),
-                    OUT_MFB_ERROR    => TX_MFB_ERROR  (i),
-                    OUT_MFB_SRC_RDY  => TX_MFB_SRC_RDY(i),
-                    OUT_LINK_UP      => open -- this is done here
-                );
-
-            end generate;
 
         when 10 =>
-
-            etile_clk_out <= etile_clk_out_vec(0);
-            CLK_ETH       <= etile_clk_out;
 
             -- =========================================================================
             -- E-TILE Ethernet
@@ -1495,99 +1300,168 @@ begin
                 o_sl_rx_pause                    => open
             );
 
-            process(etile_clk_out)
-            begin
-                if rising_edge(etile_clk_out) then
-                    if (RESET_ETH = '1') then
-                        RX_LINK_UP <= (others => '0');
-                        TX_LINK_UP <= (others => '0');
-                    else
-                        RX_LINK_UP <= rx_pcs_ready and rx_block_lock;
-                        TX_LINK_UP <= tx_lanes_stable;
-                    end if;
-                end if;
-            end process;
-
-            -- =========================================================================
-            -- ADAPTERS
-            -- =========================================================================
-            -- TX adaption
-            tx_adapter_g : for i in ETH_PORT_CHAN-1 downto 0 generate
-
-                mfb2avst_i : entity work.TX_MAC_LITE_ADAPTER_AVST_100G
-                generic map(
-                    DATA_WIDTH => AVST_DATA_WIDTH,
-                    FIFO_DEPTH => MFB2AVST_FIFO_DEPTH,
-                    DEVICE     => DEVICE
-                )
-                port map(
-                    CLK            => etile_clk_out,
-                    RESET          => RESET_ETH    ,
-
-                    RX_MFB_DATA    => RX_MFB_DATA   (i),
-                    RX_MFB_SOF     => RX_MFB_SOF    (i),
-                    RX_MFB_SOF_POS => RX_MFB_SOF_POS(i),
-                    RX_MFB_EOF     => RX_MFB_EOF    (i),
-                    RX_MFB_EOF_POS => RX_MFB_EOF_POS(i),
-                    RX_MFB_SRC_RDY => RX_MFB_SRC_RDY(i),
-                    RX_MFB_DST_RDY => RX_MFB_DST_RDY(i),
-
-                    TX_AVST_DATA   => tx_ad_avst_data (i),
-                    TX_AVST_SOP    => tx_ad_avst_sop  (i),
-                    TX_AVST_EOP    => tx_ad_avst_eop  (i),
-                    TX_AVST_EMPTY  => tx_ad_avst_empty(i),
-                    TX_AVST_ERROR  => tx_ad_avst_error(i),
-                    TX_AVST_VALID  => tx_ad_avst_valid(i),
-                    TX_AVST_READY  => tx_avst_ready   (i)
-                );
-
-            end generate;
-
-            tx_avst_data  <= slv_array_ser(tx_avst_data_arr);
-            tx_avst_empty <= slv_array_ser(tx_avst_empty_arr);
-
-            -- RX adaption
-            rx_avst_data_arr  <= slv_array_deser(rx_avst_data , ETH_PORT_CHAN);
-            rx_avst_empty_arr <= slv_array_deser(rx_avst_empty, ETH_PORT_CHAN);
-            rx_avst_error_arr <= slv_array_deser(rx_avst_error, ETH_PORT_CHAN);
-
-            rx_adapter_g : for i in ETH_PORT_CHAN-1 downto 0 generate
-
-                avst2mfb_i : entity work.ETH_AVST_ADAPTER
-                generic map(
-                    DATA_WIDTH     => AVST_DATA_WIDTH,
-                    TX_REGION_SIZE => AVST_DATA_WIDTH/64
-                )
-                port map(
-                    CLK              => etile_clk_out,
-                    RESET            => RESET_ETH    ,
-
-                    IN_AVST_DATA     => rx_avst_data_arr (i),
-                    IN_AVST_SOP      => rx_avst_sop      (i),
-                    IN_AVST_EOP      => rx_avst_eop      (i),
-                    IN_AVST_EMPTY    => rx_avst_empty_arr(i),
-                    IN_AVST_ERROR    => rx_avst_error_arr(i),
-                    IN_AVST_VALID    => rx_avst_valid    (i),
-                    IN_RX_PCS_READY  => '0',
-                    IN_RX_BLOCK_LOCK => '0',
-                    IN_RX_AM_LOCK    => '0',
-
-                    OUT_MFB_DATA     => TX_MFB_DATA   (i),
-                    OUT_MFB_SOF      => TX_MFB_SOF    (i),
-                    OUT_MFB_SOF_POS  => TX_MFB_SOF_POS(i),
-                    OUT_MFB_EOF      => TX_MFB_EOF    (i),
-                    OUT_MFB_EOF_POS  => TX_MFB_EOF_POS(i),
-                    OUT_MFB_ERROR    => TX_MFB_ERROR  (i),
-                    OUT_MFB_SRC_RDY  => TX_MFB_SRC_RDY(i),
-                    OUT_LINK_UP      => open -- this is done here
-                );
-
-            end generate;
-
         when others =>
             assert (True) report "Unsupported case" severity failure;
 
     end generate;
+
+     -- =========================================================================
+     -- ADAPTERS
+     -- =========================================================================
+     etile_clk_out <= etile_clk_out_vec(0);
+     CLK_ETH       <= etile_clk_out;
+
+     -- TX adaption -------------------------------------------------------------
+     tx_avst_data  <= slv_array_ser(tx_avst_data_arr);
+     tx_avst_empty <= slv_array_ser(tx_avst_empty_arr);
+
+    -- RX adaption -------------------------------------------------------------
+    rx_avst_data_arr  <= slv_array_deser(rx_avst_data , ETH_PORT_CHAN);
+    rx_avst_empty_arr <= slv_array_deser(rx_avst_empty, ETH_PORT_CHAN);
+    rx_avst_error_arr <= slv_array_deser(rx_avst_error, ETH_PORT_CHAN);
+
+    adapter_g : for IT in ETH_PORT_CHAN-1 downto 0 generate
+        signal mfb2avst_rx_mfb_sof : std_logic_vector(1-1 downto 0);
+        signal mfb2avst_rx_mfb_eof : std_logic_vector(1-1 downto 0);
+
+        signal tx_ad_avst_data   : std_logic_vector(AVST_DATA_WIDTH -1 downto 0);
+        signal tx_ad_avst_sop    : std_logic;
+        signal tx_ad_avst_eop    : std_logic;
+        signal tx_ad_avst_empty  : std_logic_vector(AVST_EMPTY_WIDTH-1 downto 0);
+        signal tx_ad_avst_error  : std_logic;
+        signal tx_ad_avst_valid  : std_logic;
+
+        signal tx_loop_avst_data   : std_logic_vector(AVST_DATA_WIDTH -1 downto 0);
+        signal tx_loop_avst_sop    : std_logic;
+        signal tx_loop_avst_eop    : std_logic;
+        signal tx_loop_avst_empty  : std_logic_vector(AVST_EMPTY_WIDTH-1 downto 0);
+        signal tx_loop_avst_error  : std_logic;
+        signal tx_loop_avst_valid  : std_logic;
+    begin
+
+        process(RX_MFB_SOF, RX_MFB_EOF)
+        begin
+            mfb2avst_rx_mfb_sof <= RX_MFB_SOF(IT);
+            mfb2avst_rx_mfb_eof <= RX_MFB_EOF(IT);
+        end process;
+
+        -- TX adaption
+        mfb2avst_i : entity work.TX_MAC_LITE_ADAPTER_AVST_100G
+        generic map(
+            DATA_WIDTH => AVST_DATA_WIDTH,
+            FIFO_DEPTH => MFB2AVST_FIFO_DEPTH,
+            DEVICE     => DEVICE
+        )
+        port map(
+            CLK            => etile_clk_out,
+            RESET          => RESET_ETH    ,
+
+            RX_MFB_DATA    => RX_MFB_DATA   (IT),
+            RX_MFB_SOF     => mfb2avst_rx_mfb_sof,
+            RX_MFB_SOF_POS => RX_MFB_SOF_POS(IT),
+            RX_MFB_EOF     => mfb2avst_rx_mfb_eof,
+            RX_MFB_EOF_POS => RX_MFB_EOF_POS(IT),
+            RX_MFB_SRC_RDY => RX_MFB_SRC_RDY(IT),
+            RX_MFB_DST_RDY => RX_MFB_DST_RDY(IT),
+
+            TX_AVST_DATA   => tx_ad_avst_data,
+            TX_AVST_SOP    => tx_ad_avst_sop,
+            TX_AVST_EOP    => tx_ad_avst_eop,
+            TX_AVST_EMPTY  => tx_ad_avst_empty,
+            TX_AVST_ERROR  => tx_ad_avst_error,
+            TX_AVST_VALID  => tx_ad_avst_valid,
+            TX_AVST_READY  => tx_avst_ready(IT)
+        );
+
+        -- RX adaption
+        avst2mfb_i : entity work.ETH_AVST_ADAPTER
+        generic map(
+            DATA_WIDTH     => AVST_DATA_WIDTH,
+            TX_REGION_SIZE => AVST_DATA_WIDTH/64
+        )
+        port map(
+            CLK              => etile_clk_out,
+            RESET            => RESET_ETH    ,
+
+            IN_AVST_DATA     => rx_avst_data_arr (IT),
+            IN_AVST_SOP      => rx_avst_sop      (IT),
+            IN_AVST_EOP      => rx_avst_eop      (IT),
+            IN_AVST_EMPTY    => rx_avst_empty_arr(IT),
+            IN_AVST_ERROR    => rx_avst_error_arr(IT),
+            IN_AVST_VALID    => rx_avst_valid    (IT),
+            IN_RX_PCS_READY  => '0', -- rx_pcs_ready (0)
+            IN_RX_BLOCK_LOCK => '0', -- rx_block_lock(0)
+            IN_RX_AM_LOCK    => '0', -- rx_am_lock   (0)
+
+            OUT_MFB_DATA     => TX_MFB_DATA   (IT),
+            OUT_MFB_SOF      => TX_MFB_SOF    (IT),
+            OUT_MFB_SOF_POS  => TX_MFB_SOF_POS(IT),
+            OUT_MFB_EOF      => TX_MFB_EOF    (IT),
+            OUT_MFB_EOF_POS  => TX_MFB_EOF_POS(IT),
+            OUT_MFB_ERROR    => TX_MFB_ERROR  (IT),
+            OUT_MFB_SRC_RDY  => TX_MFB_SRC_RDY(IT),
+            OUT_LINK_UP      => open -- this is done here
+        );
+
+
+        repeater_i: entity work.avst_loop
+        generic map (
+            SEGMENTS => AVST_DATA_WIDTH/64
+        )
+        port map (
+            RST              => RESET_ETH,
+            CLK              => etile_clk_out,
+            --
+            IN_AVST_DATA     => rx_avst_data_arr(IT),
+            IN_AVST_SOP      => rx_avst_sop(IT),
+            IN_AVST_EOP      => rx_avst_eop(IT),
+            IN_AVST_EMPTY    => rx_avst_empty_arr(IT),
+            IN_AVST_VALID    => rx_avst_valid(IT),
+            -- OUTPUT AVST INTERFACE (Intel E-Tile Ethernet IP)
+            TX_AVST_DATA     => tx_loop_avst_data,
+            TX_AVST_SOP      => tx_loop_avst_sop,
+            TX_AVST_EOP      => tx_loop_avst_eop,
+            TX_AVST_EMPTY    => tx_loop_avst_empty,
+            TX_AVST_VALID    => tx_loop_avst_valid,
+            TX_AVST_READY    => tx_avst_ready(IT)
+        );
+        tx_loop_avst_error <= '0';
+
+        eth_tx_mux: process(all)
+        begin
+            if sync_repeater_ctrl(IT) = '1' then
+                -- MAC loopback on
+                tx_avst_data_arr(IT)  <= tx_loop_avst_data;
+                tx_avst_sop(IT)       <= tx_loop_avst_sop;
+                tx_avst_eop(IT)       <= tx_loop_avst_eop;
+                tx_avst_empty_arr(IT) <= tx_loop_avst_empty;
+                tx_avst_error(IT)     <= tx_loop_avst_error;
+                tx_avst_valid(IT)     <= tx_loop_avst_valid;
+            else
+                -- MAC loopback off
+                tx_avst_data_arr(IT)  <= tx_ad_avst_data;
+                tx_avst_sop(IT)       <= tx_ad_avst_sop;
+                tx_avst_eop(IT)       <= tx_ad_avst_eop;
+                tx_avst_empty_arr(IT) <= tx_ad_avst_empty;
+                tx_avst_error(IT)     <= tx_ad_avst_error;
+                tx_avst_valid(IT)     <= tx_ad_avst_valid;
+            end if;
+        end process;
+    end generate;
+
+    process(etile_clk_out)
+    begin
+        if rising_edge(etile_clk_out) then
+            if (RESET_ETH = '1') then
+                RX_LINK_UP <= (others => '0');
+                TX_LINK_UP <= (others => '0');
+            else
+                RX_LINK_UP <= rx_pcs_ready and rx_block_lock and rx_am_lock;
+                TX_LINK_UP <= tx_lanes_stable;
+            end if;
+        end if;
+    end process;
+
 
     -- Synchronization of REPEATER_CTRL
     sync_repeater_ctrl_i : entity work.ASYNC_BUS_HANDSHAKE
@@ -1605,53 +1479,5 @@ begin
         BLOAD      => '1',
         BVALID     => open
     );
-
-    mac_loopbacks_g: for i in 0 to ETH_PORT_CHAN-1 generate
-
-        repeater_i: entity work.avst_loop
-        generic map (
-            SEGMENTS => AVST_DATA_WIDTH/64
-        )
-        port map (
-            RST              => RESET_ETH,
-            CLK              => etile_clk_out,
-            --
-            IN_AVST_DATA     => rx_avst_data_arr(i),
-            IN_AVST_SOP      => rx_avst_sop(i),
-            IN_AVST_EOP      => rx_avst_eop(i),
-            IN_AVST_EMPTY    => rx_avst_empty_arr(i),
-            IN_AVST_VALID    => rx_avst_valid(i),
-            -- OUTPUT AVST INTERFACE (Intel E-Tile Ethernet IP)
-            TX_AVST_DATA     => tx_loop_avst_data(i),
-            TX_AVST_SOP      => tx_loop_avst_sop(i),
-            TX_AVST_EOP      => tx_loop_avst_eop(i),
-            TX_AVST_EMPTY    => tx_loop_avst_empty(i),
-            TX_AVST_VALID    => tx_loop_avst_valid(i),
-            TX_AVST_READY    => tx_avst_ready(i)
-        );
-        tx_loop_avst_error(i) <= '0';
-
-        eth_tx_mux: process(all)
-        begin
-            if sync_repeater_ctrl(i) = '1' then
-                -- MAC loopback on
-                tx_avst_data_arr(i)  <= tx_loop_avst_data(i);
-                tx_avst_sop(i)       <= tx_loop_avst_sop(i);
-                tx_avst_eop(i)       <= tx_loop_avst_eop(i);
-                tx_avst_empty_arr(i) <= tx_loop_avst_empty(i);
-                tx_avst_error(i)     <= tx_loop_avst_error(i);
-                tx_avst_valid(i)     <= tx_loop_avst_valid(i);
-            else
-                -- MAC loopback off
-                tx_avst_data_arr(i)  <= tx_ad_avst_data(i);
-                tx_avst_sop(i)       <= tx_ad_avst_sop(i);
-                tx_avst_eop(i)       <= tx_ad_avst_eop(i);
-                tx_avst_empty_arr(i) <= tx_ad_avst_empty(i);
-                tx_avst_error(i)     <= tx_ad_avst_error(i);
-                tx_avst_valid(i)     <= tx_ad_avst_valid(i);
-            end if;
-        end process;
-
-    end generate;
 
 end architecture;

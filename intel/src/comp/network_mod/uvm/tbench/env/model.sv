@@ -17,6 +17,7 @@ class drop_cbs #(REGIONS) extends uvm_event_callback;
     // pre trigger method
     //---------------------------------------
     virtual function bit pre_trigger(uvm_event e, uvm_object data);
+        return 0;
     endfunction
 
     //---------------------------------------

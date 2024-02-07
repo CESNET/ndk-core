@@ -16,7 +16,9 @@ lappend COMPONENTS \
       [ list "SV_LOGIC_VECTOR_MVB"          "$SV_UVM_BASE/logic_vector_mvb"         "FULL"] \
 
 
-lappend COMPONENTS [ list "SV_LOGIC_VECTOR_AVST"    "$SV_UVM_BASE/logic_vector_array_avst" "FULL"] \
+lappend COMPONENTS [ list "SV_LOGIC_VECTOR_AVST"    "$SV_UVM_BASE/logic_vector_array_avst" "FULL"]
+lappend COMPONENTS [ list "RX_MAC_LITE_SV"          "$OFM_PATH/comp/nic/mac_lite/rx_mac_lite/uvm"   "FULL"]
+lappend COMPONENTS [ list "TX_MAC_LITE_SV"          "$OFM_PATH/comp/nic/mac_lite/tx_mac_lite/uvm"   "FULL"]
 
 
 lappend MOD "$ENTITY_BASE/tbench/env/pkg.sv"      \
