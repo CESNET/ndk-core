@@ -18,6 +18,9 @@ set DMA_RX_FRAME_SIZE_MIN 60
 set DMA_TX_FRAME_SIZE_MIN 60
 
 set PCIE_LANES 16
+if {$PCIE_ENDPOINT_MODE == 2} {
+    set PCIE_LANES 8
+}
 
 if {$DMA_TYPE == 4} {
 
@@ -43,10 +46,6 @@ if {$DMA_TYPE == 4} {
         puts "WARNING: Too big width of TX DMA data pointer: $DMA_TX_DATA_PTR_W! Defaulting to 13."
         set DMA_TX_DATA_PTR_W 13
     }
-
-    if {$PCIE_ENDPOINTS == 1 && $PCIE_ENDPOINT_MODE == 2} {
-        set PCIE_LANES 8
-    }
 }
 
 if {$ETH_PORTS == 0} {
@@ -70,7 +69,7 @@ if {$ETH_PORTS <= $PCIE_ENDPOINTS} {
 if { $DMA_TYPE == 4 } {
     if { $PCIE_ENDPOINTS != 1 || $PCIE_ENDPOINT_MODE != 2} {
         error "Incompatible DMA_TYPE: $DMA_TYPE with chosen PCIE_ENDPOINTS: $PCIE_ENDPOINTS\
-                and PCIE_ENDPOINT_MODE: $PCIE_ENDPOINT_MODE!"
+                and PCIE_ENDPOINT_MODE: $PCIE_ENDPOINT_MODE! Try to use PCIE_CONF=1xGen3x8LL."
     }
 
     if { $DMA_TX_FRAME_SIZE_MAX > [expr 2**$DMA_TX_DATA_PTR_W -1] } {
@@ -81,6 +80,11 @@ if { $DMA_TYPE == 4 } {
     if { $DMA_RX_DATA_PTR_W != 16 || $DMA_RX_HDR_PTR_W != 16 || $DMA_TX_DATA_PTR_W != 16} {
         error "This pointer configuration has never been tested on DMA Medusa: RX_DATA_PTR_W: $DMA_RX_DATA_PTR_W,\
                 RX_HDR_PTR_W: $DMA_RX_HDR_PTR_W, TX_DATA_PTR_W: $DMA_TX_DATA_PTR_W!"
+    }
+
+    if { $PCIE_ENDPOINT_MODE == 2} {
+        error "Incompatible DMA_TYPE: $DMA_TYPE with chosen PCIE_ENDPOINT_MODE: $PCIE_ENDPOINT_MODE\
+                and PCIE_LANES: $PCIE_LANES! Try to use PCIE_CONF=1xGen4x16 or PCIE_CONF=1xGen3x16."
     }
 }
 
