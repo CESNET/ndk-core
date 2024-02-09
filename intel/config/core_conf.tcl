@@ -125,5 +125,10 @@ set TSU_FREQUENCY   161132812
 set MEM_PORTS       0
 set HBM_PORTS       0
 
-# Xilinx Virtual Cable: Debug Hub over PCI extended config space (as VSEC), available on UltraScale+.
-set XVC_ENABLE      false
+# ------------------------------------------------------------------------------
+# Enables virtual debugging (Intel SignalTap / Xilinx ILA) without a JTAG cable:
+# ------------------------------------------------------------------------------
+#   -- Xilinx Virtual Cable: Debug Hub over PCI extended config space (as VSEC),
+#      available on Xilinx UltraScale+.
+#   -- Intel JTAG-Over-Protocol IP, available on all supported Intel FPGAs.
+set VIRTUAL_DEBUG_ENABLE false

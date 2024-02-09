@@ -16,7 +16,7 @@ set CORE_ARCHGRP(NET_MOD_ARCH)                  $NET_MOD_ARCH
 set CORE_ARCHGRP(SDM_SYSMON_ARCH)               $SDM_SYSMON_ARCH
 set CORE_ARCHGRP(DMA_TYPE)                      $DMA_TYPE
 set CORE_ARCHGRP(APPLICATION_CORE_ENTITY_ONLY)  false
-set CORE_ARCHGRP(XVC_ENABLE)                    $XVC_ENABLE
+set CORE_ARCHGRP(VIRTUAL_DEBUG_ENABLE)          $VIRTUAL_DEBUG_ENABLE
 
 # Prerequisites for generated VHDL package
 set UCP_PREREQ [list $CARD_CONST $CORE_CONF $CARD_CONF [expr {[info exists APP_CONF] ? $APP_CONF : ""}]]

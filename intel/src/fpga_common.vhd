@@ -698,7 +698,7 @@ begin
 
         PTC_DISABLE         => not PTC_ENABLE,
         DMA_BAR_ENABLE      => (DMA_TYPE = 4),
-        XVC_ENABLE          => XVC_ENABLE,
+        XVC_ENABLE          => VIRTUAL_DEBUG_ENABLE,
         CARD_ID_WIDTH       => FPGA_ID_WIDTH,
         DEVICE              => DEVICE
     )
@@ -1553,6 +1553,7 @@ begin
     generic map (
         MI_ADDR_WIDTH => 32,
         MI_DATA_WIDTH => 32,
+        JOP_ENABLE    => VIRTUAL_DEBUG_ENABLE,
         DEVICE        => DEVICE
     )
     port map (

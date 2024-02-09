@@ -102,9 +102,9 @@ proc dts_build_netcope {} {
         append ret [dts_stratix_adc_sensors $ADDR_SDM_SYSMON]
     }
 
-    global CLOCK_GEN_ARCH
+    global CLOCK_GEN_ARCH VIRTUAL_DEBUG_ENABLE
     # Intel JTAG-over-protocol controller
-    if {$CLOCK_GEN_ARCH == "INTEL"} {
+    if {$CLOCK_GEN_ARCH == "INTEL" && $VIRTUAL_DEBUG_ENABLE} {
         append ret [dts_jtag_op_controller $ADDR_JTAG_IP]
     }
 

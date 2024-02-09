@@ -16,6 +16,8 @@ entity JTAG_OP_CTRL is
         MI_DATA_WIDTH : natural := 32;
         -- MI Metadata word width in bits.
         MI_META_WIDTH : natural := 1;
+        -- Enables JTAG-over-protocol IP.
+        JOP_ENABLE    : boolean := True;
         -- Target device (Intel only).
         DEVICE        : string  := "AGILEX"
     );
