@@ -786,6 +786,7 @@ begin
 
         MI_CLK             => clk_mi,
         MI_RESET           => rst_mi(0),
+
         MI_DWR             => mi_dwr,
         MI_ADDR            => mi_addr,
         MI_BE              => mi_be,
@@ -793,7 +794,16 @@ begin
         MI_WR              => mi_wr,
         MI_DRD             => mi_drd,
         MI_ARDY            => mi_ardy,
-        MI_DRDY            => mi_drdy
+        MI_DRDY            => mi_drdy,
+
+        MI_DBG_DWR         => mi_adc_dwr (MI_ADC_PORT_PCI_DBG),
+        MI_DBG_ADDR        => mi_adc_addr(MI_ADC_PORT_PCI_DBG),
+        MI_DBG_BE          => mi_adc_be  (MI_ADC_PORT_PCI_DBG),
+        MI_DBG_RD          => mi_adc_rd  (MI_ADC_PORT_PCI_DBG),
+        MI_DBG_WR          => mi_adc_wr  (MI_ADC_PORT_PCI_DBG),
+        MI_DBG_DRD         => mi_adc_drd (MI_ADC_PORT_PCI_DBG),
+        MI_DBG_ARDY        => mi_adc_ardy(MI_ADC_PORT_PCI_DBG),
+        MI_DBG_DRDY        => mi_adc_drdy(MI_ADC_PORT_PCI_DBG)
     );
 
     cdc_pcie_up_g: for i in 0 to PCIE_ENDPOINTS-1 generate
@@ -890,11 +900,6 @@ begin
     mi_adc_ardy(MI_ADC_PORT_BOOT) <= BOOT_MI_ARDY;
     mi_adc_drd (MI_ADC_PORT_BOOT) <= BOOT_MI_DRD;
     mi_adc_drdy(MI_ADC_PORT_BOOT) <= BOOT_MI_DRDY;
-
-    -- unused MI ports
-    mi_adc_ardy(MI_ADC_PORT_MSIX) <= '1';
-    mi_adc_drdy(MI_ADC_PORT_MSIX) <= '0';
-    mi_adc_drd (MI_ADC_PORT_MSIX) <= (others => '0');
 
     -- =========================================================================
     --  MI TEST SPACE AND SDM/SYSMON INTERFACE
