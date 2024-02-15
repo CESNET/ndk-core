@@ -53,6 +53,8 @@ entity PCIE_CORE is
         -- =====================================================================
         -- Other configuration
         -- =====================================================================
+        -- MI width - for access to debugging probes
+        MI_WIDTH         : natural := 32;
         -- Enable of XCV IP, for Xilinx only
         XVC_ENABLE       : boolean := false;
         -- Width of CARD/FPGA ID number
@@ -180,6 +182,20 @@ entity PCIE_CORE is
         -- PCIe tag assigned to send transaction
         TAG_ASSIGN          : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(RQ_MFB_REGIONS*8-1 downto 0);
         -- Valid bit for assigned tags
-        TAG_ASSIGN_VLD      : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(RQ_MFB_REGIONS-1 downto 0) := (others => (others => '0'))
+        TAG_ASSIGN_VLD      : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(RQ_MFB_REGIONS-1 downto 0) := (others => (others => '0'));
+
+        -- =====================================================================
+        -- MI interface (for debugging)
+        -- =====================================================================
+        MI_CLK             : in  std_logic;
+        MI_RESET           : in  std_logic;
+        MI_ADDR            : in  std_logic_vector(MI_WIDTH-1 downto 0);
+        MI_DWR             : in  std_logic_vector(MI_WIDTH-1 downto 0);
+        MI_BE              : in  std_logic_vector(MI_WIDTH/8-1 downto 0);
+        MI_RD              : in  std_logic;
+        MI_WR              : in  std_logic;
+        MI_DRD             : out std_logic_vector(MI_WIDTH-1 downto 0);
+        MI_ARDY            : out std_logic;
+        MI_DRDY            : out std_logic
     );
 end entity;
