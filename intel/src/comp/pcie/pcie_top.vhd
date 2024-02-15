@@ -208,18 +208,29 @@ entity PCIE is
         -- =====================================================================
         -- MI32 interfaces (MI_CLK)
         --
-        -- Root of the MI32 bus tree for each PCIe endpoint
+        -- MI - Root of the MI32 bus tree for each PCIe endpoint (connection to the MTC)
+        -- MI_DBG - MI interface to PCIe registers (currently only debug registers)
         -- =====================================================================
         MI_CLK              : in  std_logic;
         MI_RESET            : in  std_logic;
-        MI_DWR              : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(32-1 downto 0);
-        MI_ADDR             : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(32-1 downto 0);
-        MI_BE               : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(32/8-1 downto 0);
+
+        MI_DWR              : out slv_array_t     (PCIE_ENDPOINTS-1 downto 0)(32-1 downto 0);
+        MI_ADDR             : out slv_array_t     (PCIE_ENDPOINTS-1 downto 0)(32-1 downto 0);
+        MI_BE               : out slv_array_t     (PCIE_ENDPOINTS-1 downto 0)(32/8-1 downto 0);
         MI_RD               : out std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
         MI_WR               : out std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
-        MI_DRD              : in  slv_array_t(PCIE_ENDPOINTS-1 downto 0)(32-1 downto 0);
+        MI_DRD              : in  slv_array_t     (PCIE_ENDPOINTS-1 downto 0)(32-1 downto 0);
         MI_ARDY             : in  std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
-        MI_DRDY             : in  std_logic_vector(PCIE_ENDPOINTS-1 downto 0)
+        MI_DRDY             : in  std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+
+        MI_DBG_DWR          : in  std_logic_vector(32-1 downto 0);
+        MI_DBG_ADDR         : in  std_logic_vector(32-1 downto 0);
+        MI_DBG_BE           : in  std_logic_vector(32/8-1 downto 0);
+        MI_DBG_RD           : in  std_logic;
+        MI_DBG_WR           : in  std_logic;
+        MI_DBG_DRD          : out std_logic_vector(32-1 downto 0);
+        MI_DBG_ARDY         : out std_logic;
+        MI_DBG_DRDY         : out std_logic
     );
 end entity;
 
@@ -398,7 +409,18 @@ begin
         RQ_MFB_DST_RDY      => core_rq_mfb_dst_rdy,
 
         TAG_ASSIGN          => core_rq_tag_assign,
-        TAG_ASSIGN_VLD      => core_rq_tag_assign_vld
+        TAG_ASSIGN_VLD      => core_rq_tag_assign_vld,
+
+        MI_CLK              => MI_CLK,
+        MI_RESET            => MI_RESET,
+        MI_ADDR             => MI_DBG_ADDR,
+        MI_DWR              => MI_DBG_DWR,
+        MI_BE               => MI_DBG_BE,
+        MI_RD               => MI_DBG_RD,
+        MI_WR               => MI_DBG_WR,
+        MI_DRD              => MI_DBG_DRD,
+        MI_ARDY             => MI_DBG_ARDY,
+        MI_DRDY             => MI_DBG_DRDY
     );
 
     PCIE_USER_CLK <= pcie_clk;
