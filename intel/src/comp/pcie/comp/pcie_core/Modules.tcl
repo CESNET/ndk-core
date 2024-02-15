@@ -5,9 +5,11 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 # Paths to components
-set ASYNC_RESET_BASE "$OFM_PATH/comp/base/async/reset"
-set PCI_EXT_CAP_BASE "$OFM_PATH/comp/pcie/common"
-set PCIE_COMP_BASE   "$ENTITY_BASE/../"
+set ASYNC_RESET_BASE   "$OFM_PATH/comp/base/async/reset"
+set PCI_EXT_CAP_BASE   "$OFM_PATH/comp/pcie/common"
+set PCIE_COMP_BASE     "$ENTITY_BASE/../"
+set STREAMING_DBG_BASE "$OFM_PATH/comp/debug/streaming_debug"
+set EVENT_COUNTER_BASE "$OFM_PATH/comp/base/misc/event_counter"
 
 # Packages
 lappend PACKAGES "$OFM_PATH/comp/base/pkg/math_pack.vhd"
@@ -15,9 +17,11 @@ lappend PACKAGES "$OFM_PATH/comp/base/pkg/type_pack.vhd"
 lappend PACKAGES "$OFM_PATH/comp/base/pkg/pcie_meta_pack.vhd"
 
 # Components
-lappend COMPONENTS [ list "ASYNC_RESET" $ASYNC_RESET_BASE               "FULL" ]
-lappend COMPONENTS [ list "PCI_EXT_CAP" $PCI_EXT_CAP_BASE               "FULL" ]
-lappend COMPONENTS [ list "PCIE_ADAPTER" "$PCIE_COMP_BASE/pcie_adapter" "FULL" ]
+lappend COMPONENTS [ list "ASYNC_RESET"  $ASYNC_RESET_BASE               "FULL" ]
+lappend COMPONENTS [ list "PCI_EXT_CAP"  $PCI_EXT_CAP_BASE               "FULL" ]
+lappend COMPONENTS [ list "PCIE_ADAPTER" "$PCIE_COMP_BASE/pcie_adapter"  "FULL" ]
+lappend COMPONENTS [ list "DEBUG_PROBE"  $STREAMING_DBG_BASE             "FULL" ]
+lappend COMPONENTS [ list "EVENT_CNT"    $EVENT_COUNTER_BASE             "FULL" ]
 
 lappend MOD "$ENTITY_BASE/pcie_core_ent.vhd"
 
@@ -34,3 +38,5 @@ if {$ARCHGRP == "P_TILE"} {
 } else {
     lappend MOD "$ENTITY_BASE/pcie_core_empty.vhd"
 }
+
+lappend MOD "$ENTITY_BASE/DevTree.tcl"
