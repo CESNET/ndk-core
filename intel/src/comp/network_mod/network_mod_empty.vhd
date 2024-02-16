@@ -26,9 +26,9 @@ begin
     QSFP_I2C_SDA_O  <= (others => '0');
     QSFP_I2C_SDA_OE <= (others => '0');
     QSFP_I2C_DIR    <= (others => '0');
-    QSFP_MODSEL_N   <= (others => '0');
+    QSFP_MODSEL_N   <= (others => '1');
     QSFP_LPMODE     <= (others => '0');
-    QSFP_RESET_N    <= (others => '0');
+    QSFP_RESET_N    <= (others => '1');
 
     -- PORT_ENABLED <= (others => '0');
     ACTIVITY_RX <= (others => '0');

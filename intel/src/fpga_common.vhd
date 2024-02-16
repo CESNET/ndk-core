@@ -8,6 +8,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use ieee.math_real.all;
 use ieee.fixed_pkg.all;
 
 use work.combo_const.all;
@@ -22,10 +23,21 @@ use work.mi_addr_space_pack.all;
 
 entity FPGA_COMMON is
 generic (
-    -- System clock frequency in MHz
-    -- PCIE clock frequency in Mhz if USE_PCIE_CLK is used
-    SYSCLK_FREQ             : natural := 100;
-    -- Switch CLK_GEN ref clock to clk_pci, default SYSCLK 
+    -- System clock period in ns
+    -- PCIE clock period in ns if USE_PCIE_CLK is used
+    SYSCLK_PERIOD   : real    := 10.0;
+    -- Settings of the MMCM
+    -- Multiply factor of main clock (Xilinx: 2-64)
+    PLL_MULT_F      : real    := 12.0;
+    -- Division factor of main clock (Xilinx: 1-106)
+    PLL_MASTER_DIV  : natural := 3;
+    -- Output clock dividers (Xilinx: 1-128)
+    PLL_OUT0_DIV_F  : real    := 3.0;
+    PLL_OUT1_DIV    : natural := 4;
+    PLL_OUT2_DIV    : natural := 6;
+    PLL_OUT3_DIV    : natural := 12;
+
+    -- Switch CLK_GEN ref clock to clk_pci, default SYSCLK
     USE_PCIE_CLK            : boolean := false; 
 
     -- Number of PCIe connectors present on board
@@ -55,7 +67,6 @@ generic (
     DMA_TX_CHANNELS         : natural := 4;
     -- DMA debug parameters
     DMA_400G_DEMO           : boolean := false;
-    DMA_GEN_LOOP_EN         : boolean := false;
 
     -- Ethernet core architecture: E_TILE, F_TILE, CMAC
     ETH_CORE_ARCH           : string := "F_TILE";
@@ -596,8 +607,15 @@ begin
 
     clk_gen_i : entity work.COMMON_CLK_GEN
     generic map(
-        REFCLK_FREQ        => SYSCLK_FREQ,
-        INIT_DONE_AS_RESET => True,
+        REFCLK_PERIOD   => SYSCLK_PERIOD,
+        PLL_MULT_F      => PLL_MULT_F,
+        PLL_MASTER_DIV  => PLL_MASTER_DIV,
+        PLL_OUT0_DIV_F  => PLL_OUT0_DIV_F,
+        PLL_OUT1_DIV    => PLL_OUT1_DIV,
+        PLL_OUT2_DIV    => PLL_OUT2_DIV,
+        PLL_OUT3_DIV    => PLL_OUT3_DIV,
+
+        INIT_DONE_AS_RESET => TRUE,
         DEVICE             => DEVICE
     )
     port map (
@@ -999,8 +1017,8 @@ begin
         TX_SEL_CHANNELS      => minimum(8,DMA_TX_CHANNELS),
         TX_DP_WIDTH          => DMA_TX_DATA_PTR_W         ,
 
-        RX_GEN_EN            => true                      ,
-        TX_GEN_EN            => true                      ,
+        RX_GEN_EN            => RX_GEN_EN                 ,
+        TX_GEN_EN            => TX_GEN_EN                 ,
 
         USR_EQ_DMA           => DMA_USR_EQ_DMA            ,
         CROX_EQ_DMA          => DMA_CROX_EQ_DMA           ,
@@ -1512,40 +1530,47 @@ begin
     -- =========================================================================
     --  TimeStamp Unit
     -- =========================================================================
+    tsu_gen_g: if (TSU_ENABLE) generate
+        tsu_freq <= std_logic_vector(to_unsigned(TSU_FREQUENCY-1, 32)); -- input frequency is from only a single source
 
-    tsu_freq <= std_logic_vector(to_unsigned(TSU_FREQUENCY-1, 32)); -- input frequency is from only a single source
+        tsu_gen_i: entity work.tsu_gen
+        generic map (
+            TS_MULT_SMART_DSP => TS_MULT_SMART_DSP,
+            TS_MULT_USE_DSP   => TS_MULT_USE_DSP,
+            PPS_SEL_WIDTH     => 0,
+            CLK_SEL_WIDTH     => 0
+        )
+        port map (
+            MI_CLK            => clk_mi   ,
+            MI_RESET          => rst_mi(7),
+            MI_DWR            => mi_adc_dwr(MI_ADC_PORT_TSU) ,
+            MI_ADDR           => mi_adc_addr(MI_ADC_PORT_TSU),
+            MI_RD             => mi_adc_rd(MI_ADC_PORT_TSU)  ,
+            MI_WR             => mi_adc_wr(MI_ADC_PORT_TSU)  ,
+            MI_BE             => mi_adc_be(MI_ADC_PORT_TSU)  ,
+            MI_DRD            => mi_adc_drd(MI_ADC_PORT_TSU) ,
+            MI_ARDY           => mi_adc_ardy(MI_ADC_PORT_TSU),
+            MI_DRDY           => mi_adc_drdy(MI_ADC_PORT_TSU),
+            PPS_N             => '0',
+            PPS_SRC           => (others => '0'),
+            PPS_SEL           => open,
+            CLK               => tsu_clk,
+            RESET             => tsu_rst,
+            CLK_FREQ          => tsu_freq,
+            CLK_SRC           => X"0001",
+            CLK_SEL           => open,
+            TS                => open,
+            TS_NS             => tsu_ns,
+            TS_DV             => tsu_dv
+        );
+    else generate
+        mi_adc_ardy(MI_ADC_PORT_TSU) <= mi_adc_rd(MI_ADC_PORT_TSU) or mi_adc_wr(MI_ADC_PORT_TSU);
+        mi_adc_drd(MI_ADC_PORT_TSU) <= (others => '0');
+        mi_adc_drdy(MI_ADC_PORT_TSU) <= mi_adc_rd(MI_ADC_PORT_TSU);
 
-    tsu_gen_i: entity work.tsu_gen
-    generic map (
-        TS_MULT_SMART_DSP => TS_MULT_SMART_DSP,
-        TS_MULT_USE_DSP   => TS_MULT_USE_DSP,
-        PPS_SEL_WIDTH     => 0,
-        CLK_SEL_WIDTH     => 0
-    )
-    port map (
-        MI_CLK            => clk_mi   ,
-        MI_RESET          => rst_mi(7),
-        MI_DWR            => mi_adc_dwr(MI_ADC_PORT_TSU) ,
-        MI_ADDR           => mi_adc_addr(MI_ADC_PORT_TSU),
-        MI_RD             => mi_adc_rd(MI_ADC_PORT_TSU)  ,
-        MI_WR             => mi_adc_wr(MI_ADC_PORT_TSU)  ,
-        MI_BE             => mi_adc_be(MI_ADC_PORT_TSU)  ,
-        MI_DRD            => mi_adc_drd(MI_ADC_PORT_TSU) ,
-        MI_ARDY           => mi_adc_ardy(MI_ADC_PORT_TSU),
-        MI_DRDY           => mi_adc_drdy(MI_ADC_PORT_TSU),
-        PPS_N             => '0',
-        PPS_SRC           => (others => '0'),
-        PPS_SEL           => open,
-        CLK               => tsu_clk,
-        RESET             => tsu_rst,
-        CLK_FREQ          => tsu_freq,
-        CLK_SRC           => X"0001",
-        CLK_SEL           => open,
-        TS                => open,
-        TS_NS             => tsu_ns,
-        TS_DV             => tsu_dv
-    );
-
+        tsu_ns <= (others => '0');
+        tsu_dv <= '0';
+    end generate;
     -- =========================================================================
     --  JTAG-OVER-PROTOCOL CONTROLLER
     -- =========================================================================

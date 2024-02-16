@@ -16,22 +16,27 @@ use work.pcie_meta_pack.all;
 
 architecture CALYPTE of DMA_WRAPPER is
 
+    -- =============================================================================================
+    -- Setup constants
+    -- =============================================================================================
+    constant OUT_PIPE_EN          : boolean := TRUE;
+    constant USER_CLK_SAME_PCIE   : boolean := FALSE;
+
+    constant MFB_LOOPBACK_EN      : boolean := FALSE;
+    constant LATENCY_METER_EN     : boolean := FALSE;
+    constant TX_DMA_DBG_CORE_EN   : boolean := FALSE;
+    constant RX_DMA_DBG_CORE_EN   : boolean := FALSE;
+
+    constant ST_SP_DBG_META_WIDTH : natural := 4;
+
     --==============================================================================================
     --  MI Async and Splitting
     --==============================================================================================
-    constant MI_SPLIT_PORTS : natural := 4;
+    constant MI_SPLIT_PORTS : natural := 2;
     constant MI_SPLIT_BASES : slv_array_t(MI_SPLIT_PORTS-1 downto 0)(MI_WIDTH-1 downto 0) := (
         0 => X"00000000",               -- DMA Controller
-        1 => X"00300000",               -- TSU unit
-        2 => X"00380000",               -- MFB loopback
-        3 => X"003C0000");              -- TX DMA Debug Core
-    constant MI_SPLIT_ADDR_MASK : std_logic_vector(MI_WIDTH -1 downto 0) := X"003C0000";
-
-    constant OUT_PIPE_EN : boolean := TRUE;
-
-    constant TX_DMA_DBG_CORE_EN   : boolean := FALSE;
-    constant DMA_LOOPBACK_EN      : boolean := FALSE;
-    constant ST_SP_DBG_META_WIDTH : natural := 4;
+        1 => X"00300000");              -- DMA Test Core
+    constant MI_SPLIT_ADDR_MASK : std_logic_vector(MI_WIDTH -1 downto 0) := X"00300000";
 
     constant DMA_MFB_REGIONS      : integer := 1;
     constant DMA_MFB_REGION_SIZE  : integer := PCIE_RQ_MFB_REGIONS*4;
@@ -102,7 +107,7 @@ architecture CALYPTE of DMA_WRAPPER is
     signal tx_usr_mfb_dst_rdy_async   : std_logic_vector(DMA_STREAMS-1 downto 0);
 
     --==============================================================================================
-    --  MFB ASFIFOX ---> Loopback Module interface
+    --  MFB ASFIFOX ---> Testing Module interface
     --==============================================================================================
     signal rx_usr_mfb_data_sync      : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*DMA_MFB_REGION_SIZE*DMA_MFB_BLOCK_SIZE*DMA_MFB_ITEM_WIDTH-1 downto 0);
     signal rx_usr_mfb_meta_sync      : slv_array_t(DMA_STREAMS-1 downto 0)(log2(USR_RX_PKT_SIZE_MAX+1)+HDR_META_WIDTH+log2(RX_CHANNELS)             -1 downto 0);
@@ -114,7 +119,7 @@ architecture CALYPTE of DMA_WRAPPER is
     signal rx_usr_mfb_dst_rdy_sync   : std_logic_vector(DMA_STREAMS-1 downto 0);
 
     --==============================================================================================
-    --  Loopback Module ---> MFB ASFIFOX interface
+    --  Testing Module ---> MFB ASFIFOX interface
     --==============================================================================================
     signal tx_usr_mfb_data_sync      : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*DMA_MFB_REGION_SIZE*DMA_MFB_BLOCK_SIZE*DMA_MFB_ITEM_WIDTH-1 downto 0);
     signal tx_usr_mfb_meta_sync      : slv_array_t(DMA_STREAMS-1 downto 0)(log2(USR_TX_PKT_SIZE_MAX+1)+HDR_META_WIDTH+log2(TX_CHANNELS)             -1 downto 0);
@@ -126,48 +131,34 @@ architecture CALYPTE of DMA_WRAPPER is
     signal tx_usr_mfb_dst_rdy_sync   : std_logic_vector(DMA_STREAMS-1 downto 0);
 
     --==============================================================================================
-    --  Loopback ---> DMA Module interface
+    --  Testing Module ---> DMA Module interface
     --==============================================================================================
-    signal rx_usr_mfb_meta_len       : slv_array_t(DMA_STREAMS-1 downto 0)(log2(USR_RX_PKT_SIZE_MAX+1)-1 downto 0);
-    signal rx_usr_mfb_meta_hdr_meta  : slv_array_t(DMA_STREAMS-1 downto 0)(HDR_META_WIDTH             -1 downto 0);
-    signal rx_usr_mfb_meta_channel   : slv_array_t(DMA_STREAMS-1 downto 0)(log2(RX_CHANNELS)          -1 downto 0);
+    signal rx_usr_mfb_meta_size_tst      : slv_array_t(DMA_STREAMS-1 downto 0)(log2(USR_RX_PKT_SIZE_MAX+1)-1 downto 0);
+    signal rx_usr_mfb_meta_hdr_meta_tst  : slv_array_t(DMA_STREAMS-1 downto 0)(HDR_META_WIDTH             -1 downto 0);
+    signal rx_usr_mfb_meta_channel_tst   : slv_array_t(DMA_STREAMS-1 downto 0)(log2(RX_CHANNELS)          -1 downto 0);
 
-    signal rx_usr_mfb_data_lbk      : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*DMA_MFB_REGION_SIZE*DMA_MFB_BLOCK_SIZE*DMA_MFB_ITEM_WIDTH-1 downto 0);
-    signal rx_usr_mfb_meta_lbk      : slv_array_t(DMA_STREAMS-1 downto 0)(log2(USR_RX_PKT_SIZE_MAX+1)+HDR_META_WIDTH+log2(RX_CHANNELS)             -1 downto 0);
-    signal rx_usr_mfb_sof_lbk       : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS                                                          -1 downto 0);
-    signal rx_usr_mfb_eof_lbk       : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS                                                          -1 downto 0);
-    signal rx_usr_mfb_sof_pos_lbk   : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*max(1,log2(DMA_MFB_REGION_SIZE))                         -1 downto 0);
-    signal rx_usr_mfb_eof_pos_lbk   : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*max(1,log2(DMA_MFB_REGION_SIZE*DMA_MFB_BLOCK_SIZE))      -1 downto 0);
-    signal rx_usr_mfb_src_rdy_lbk   : std_logic_vector(DMA_STREAMS-1 downto 0);
-    signal rx_usr_mfb_dst_rdy_lbk   : std_logic_vector(DMA_STREAMS-1 downto 0);
-
-    --==============================================================================================
-    --  DMA Module --->  Debug Core interface
-    --==============================================================================================
-    signal force_reset_dbg              : std_logic_vector(DMA_STREAMS-1 downto 0);
-    signal tx_usr_mfb_meta_len_dbg      : slv_array_t(DMA_STREAMS-1 downto 0)(log2(USR_TX_PKT_SIZE_MAX+1)-1 downto 0);
-    signal tx_usr_mfb_meta_hdr_meta_dbg : slv_array_t(DMA_STREAMS-1 downto 0)(HDR_META_WIDTH             -1 downto 0);
-    signal tx_usr_mfb_meta_channel_dbg  : slv_array_t(DMA_STREAMS-1 downto 0)(log2(TX_CHANNELS)          -1 downto 0);
-
-    signal tx_usr_mfb_data_dbg          : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*DMA_MFB_REGION_SIZE*DMA_MFB_BLOCK_SIZE*DMA_MFB_ITEM_WIDTH-1 downto 0);
-    signal tx_usr_mfb_sof_dbg           : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS                                                          -1 downto 0);
-    signal tx_usr_mfb_eof_dbg           : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS                                                          -1 downto 0);
-    signal tx_usr_mfb_sof_pos_dbg       : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*max(1,log2(DMA_MFB_REGION_SIZE))                         -1 downto 0);
-    signal tx_usr_mfb_eof_pos_dbg       : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*max(1,log2(DMA_MFB_REGION_SIZE*DMA_MFB_BLOCK_SIZE))      -1 downto 0);
-    signal tx_usr_mfb_src_rdy_dbg       : std_logic_vector(DMA_STREAMS-1 downto 0);
-    signal tx_usr_mfb_dst_rdy_dbg       : std_logic_vector(DMA_STREAMS-1 downto 0);
+    signal rx_usr_mfb_data_tst      : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*DMA_MFB_REGION_SIZE*DMA_MFB_BLOCK_SIZE*DMA_MFB_ITEM_WIDTH-1 downto 0);
+    signal rx_usr_mfb_sof_tst       : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS                                                          -1 downto 0);
+    signal rx_usr_mfb_eof_tst       : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS                                                          -1 downto 0);
+    signal rx_usr_mfb_sof_pos_tst   : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*max(1,log2(DMA_MFB_REGION_SIZE))                         -1 downto 0);
+    signal rx_usr_mfb_eof_pos_tst   : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*max(1,log2(DMA_MFB_REGION_SIZE*DMA_MFB_BLOCK_SIZE))      -1 downto 0);
+    signal rx_usr_mfb_src_rdy_tst   : std_logic_vector(DMA_STREAMS-1 downto 0);
+    signal rx_usr_mfb_dst_rdy_tst   : std_logic_vector(DMA_STREAMS-1 downto 0);
 
     --==============================================================================================
-    --  Debug Core --->  Loopback interface
+    --  DMA Module --->  Testing Module interface
     --==============================================================================================
-    signal tx_usr_mfb_data_lbk      : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*DMA_MFB_REGION_SIZE*DMA_MFB_BLOCK_SIZE*DMA_MFB_ITEM_WIDTH-1 downto 0);
-    signal tx_usr_mfb_meta_lbk      : slv_array_t(DMA_STREAMS-1 downto 0)(log2(USR_TX_PKT_SIZE_MAX+1)+HDR_META_WIDTH+log2(TX_CHANNELS)             -1 downto 0);
-    signal tx_usr_mfb_sof_lbk       : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS                                                          -1 downto 0);
-    signal tx_usr_mfb_eof_lbk       : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS                                                          -1 downto 0);
-    signal tx_usr_mfb_sof_pos_lbk   : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*max(1,log2(DMA_MFB_REGION_SIZE))                         -1 downto 0);
-    signal tx_usr_mfb_eof_pos_lbk   : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*max(1,log2(DMA_MFB_REGION_SIZE*DMA_MFB_BLOCK_SIZE))      -1 downto 0);
-    signal tx_usr_mfb_src_rdy_lbk   : std_logic_vector(DMA_STREAMS-1 downto 0);
-    signal tx_usr_mfb_dst_rdy_lbk   : std_logic_vector(DMA_STREAMS-1 downto 0);
+    signal tx_usr_mfb_meta_size_tst     : slv_array_t(DMA_STREAMS-1 downto 0)(log2(USR_TX_PKT_SIZE_MAX+1)-1 downto 0);
+    signal tx_usr_mfb_meta_hdr_meta_tst : slv_array_t(DMA_STREAMS-1 downto 0)(HDR_META_WIDTH             -1 downto 0);
+    signal tx_usr_mfb_meta_channel_tst  : slv_array_t(DMA_STREAMS-1 downto 0)(log2(TX_CHANNELS)          -1 downto 0);
+
+    signal tx_usr_mfb_data_tst          : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*DMA_MFB_REGION_SIZE*DMA_MFB_BLOCK_SIZE*DMA_MFB_ITEM_WIDTH-1 downto 0);
+    signal tx_usr_mfb_sof_tst           : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS                                                          -1 downto 0);
+    signal tx_usr_mfb_eof_tst           : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS                                                          -1 downto 0);
+    signal tx_usr_mfb_sof_pos_tst       : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*max(1,log2(DMA_MFB_REGION_SIZE))                         -1 downto 0);
+    signal tx_usr_mfb_eof_pos_tst       : slv_array_t(DMA_STREAMS-1 downto 0)(DMA_MFB_REGIONS*max(1,log2(DMA_MFB_REGION_SIZE*DMA_MFB_BLOCK_SIZE))      -1 downto 0);
+    signal tx_usr_mfb_src_rdy_tst       : std_logic_vector(DMA_STREAMS-1 downto 0);
+    signal tx_usr_mfb_dst_rdy_tst       : std_logic_vector(DMA_STREAMS-1 downto 0);
 
     -- =============================================================================================
     -- Piped PCIE interfaces
@@ -209,9 +200,9 @@ architecture CALYPTE of DMA_WRAPPER is
     -- =============================================================================================
     -- Debugging signals
     -- =============================================================================================
-    signal st_sp_dbg_chan : slv_array_t(DMA_STREAMS -1 downto 0)(log2(TX_CHANNELS) -1 downto 0);
-    signal st_sp_dbg_meta : slv_array_t(DMA_STREAMS -1 downto 0)(ST_SP_DBG_META_WIDTH -1 downto 0);
-
+    signal st_sp_dbg_chan  : slv_array_t(DMA_STREAMS -1 downto 0)(log2(TX_CHANNELS) -1 downto 0);
+    signal st_sp_dbg_meta  : slv_array_t(DMA_STREAMS -1 downto 0)(ST_SP_DBG_META_WIDTH -1 downto 0);
+    signal force_reset_dbg : std_logic_vector(DMA_STREAMS-1 downto 0);
 begin
 
     assert (DMA_STREAMS = DMA_ENDPOINTS and DMA_STREAMS = PCIE_ENDPOINTS)
@@ -223,7 +214,9 @@ begin
         --==========================================================================================
         --  MI Splitting and CDC
         --==========================================================================================
-        -- splitting the MI bus for the DMA Calypte module and the TSU unit
+        -- splitting the MI bus for the DMA Calypte and TX Testing core.
+        -- The Splitter only makes sense when TX direction is enabled, while at that case, both, the
+        -- MFB_LOOPBACK and the TX_DEBUG_CORE can be enabled.
         mi_gen_spl_i : entity work.MI_SPLITTER_PLUS_GEN
             generic map(
                 ADDR_WIDTH   => MI_WIDTH,
@@ -464,100 +457,229 @@ begin
         --==========================================================================================
         -- Asynchronous FIFOX components
         --==========================================================================================
-        usr_rx_mfb_fifox_i : entity work.MFB_ASFIFOX
+        usr_mfb_asfifox_p: if (not USER_CLK_SAME_PCIE) generate
+            usr_rx_mfb_asfifox_g: if (RX_GEN_EN) generate
+                usr_rx_mfb_asfifox_i : entity work.MFB_ASFIFOX
+                    generic map (
+                        MFB_REGIONS         => DMA_MFB_REGIONS,
+                        MFB_REG_SIZE        => DMA_MFB_REGION_SIZE,
+                        MFB_BLOCK_SIZE      => DMA_MFB_BLOCK_SIZE,
+                        MFB_ITEM_WIDTH      => DMA_MFB_ITEM_WIDTH,
+                        FIFO_ITEMS          => 512,
+                        RAM_TYPE            => "BRAM",
+                        FWFT_MODE           => TRUE,
+                        OUTPUT_REG          => FALSE,
+                        METADATA_WIDTH      => log2(USR_RX_PKT_SIZE_MAX + 1) + HDR_META_WIDTH + log2(RX_CHANNELS),
+                        DEVICE              => DEVICE,
+                        ALMOST_FULL_OFFSET  => 2,
+                        ALMOST_EMPTY_OFFSET => 2)
+                    port map (
+                        RX_CLK   => USR_CLK,
+                        RX_RESET => USR_RESET,
+
+                        RX_DATA    => rx_usr_mfb_data_async(i),
+                        RX_META    => rx_usr_mfb_meta_async(i),
+                        RX_SOF     => rx_usr_mfb_sof_async(i),
+                        RX_EOF     => rx_usr_mfb_eof_async(i),
+                        RX_SOF_POS => rx_usr_mfb_sof_pos_async(i),
+                        RX_EOF_POS => rx_usr_mfb_eof_pos_async(i),
+                        RX_SRC_RDY => rx_usr_mfb_src_rdy_async(i),
+                        RX_DST_RDY => rx_usr_mfb_dst_rdy_async(i),
+                        RX_AFULL   => open,
+                        RX_STATUS  => open,
+
+                        TX_CLK   => PCIE_USR_CLK(i),
+                        TX_RESET => PCIE_USR_RESET(i),
+
+                        TX_DATA    => rx_usr_mfb_data_sync(i),
+                        TX_META    => rx_usr_mfb_meta_sync(i),
+                        TX_SOF     => rx_usr_mfb_sof_sync(i),
+                        TX_EOF     => rx_usr_mfb_eof_sync(i),
+                        TX_SOF_POS => rx_usr_mfb_sof_pos_sync(i),
+                        TX_EOF_POS => rx_usr_mfb_eof_pos_sync(i),
+                        TX_SRC_RDY => rx_usr_mfb_src_rdy_sync(i),
+                        TX_DST_RDY => rx_usr_mfb_dst_rdy_sync(i),
+                        TX_AEMPTY  => open,
+                        TX_STATUS  => open);
+            else generate
+                rx_usr_mfb_data_sync(i)     <= (others => '0');
+                rx_usr_mfb_meta_sync(i)     <= (others => '0');
+                rx_usr_mfb_sof_sync(i)      <= (others => '0');
+                rx_usr_mfb_eof_sync(i)      <= (others => '0');
+                rx_usr_mfb_sof_pos_sync(i)  <= (others => '0');
+                rx_usr_mfb_eof_pos_sync(i)  <= (others => '0');
+                rx_usr_mfb_src_rdy_sync(i)  <= '0';
+                rx_usr_mfb_dst_rdy_async(i) <= '1';
+            end generate;
+
+            usr_tx_mfb_asfifox_g: if (TX_GEN_EN) generate
+                usr_tx_mfb_asfifox_i : entity work.MFB_ASFIFOX
+                    generic map (
+                        MFB_REGIONS         => DMA_MFB_REGIONS,
+                        MFB_REG_SIZE        => DMA_MFB_REGION_SIZE,
+                        MFB_BLOCK_SIZE      => DMA_MFB_BLOCK_SIZE,
+                        MFB_ITEM_WIDTH      => DMA_MFB_ITEM_WIDTH,
+                        FIFO_ITEMS          => 512,
+                        RAM_TYPE            => "BRAM",
+                        FWFT_MODE           => TRUE,
+                        OUTPUT_REG          => FALSE,
+                        METADATA_WIDTH      => log2(USR_TX_PKT_SIZE_MAX + 1) + HDR_META_WIDTH + log2(TX_CHANNELS),
+                        DEVICE              => DEVICE,
+                        ALMOST_FULL_OFFSET  => 2,
+                        ALMOST_EMPTY_OFFSET => 2)
+                    port map (
+                        RX_CLK   => PCIE_USR_CLK(i),
+                        RX_RESET => PCIE_USR_RESET(i),
+
+                        RX_DATA    => tx_usr_mfb_data_sync(i),
+                        RX_META    => tx_usr_mfb_meta_sync(i),
+                        RX_SOF     => tx_usr_mfb_sof_sync(i),
+                        RX_EOF     => tx_usr_mfb_eof_sync(i),
+                        RX_SOF_POS => tx_usr_mfb_sof_pos_sync(i),
+                        RX_EOF_POS => tx_usr_mfb_eof_pos_sync(i),
+                        RX_SRC_RDY => tx_usr_mfb_src_rdy_sync(i),
+                        RX_DST_RDY => tx_usr_mfb_dst_rdy_sync(i),
+                        RX_AFULL   => open,
+                        RX_STATUS  => open,
+
+                        TX_CLK   => USR_CLK,
+                        TX_RESET => USR_RESET,
+
+                        TX_DATA    => tx_usr_mfb_data_async(i),
+                        TX_META    => tx_usr_mfb_meta_async(i),
+                        TX_SOF     => tx_usr_mfb_sof_async(i),
+                        TX_EOF     => tx_usr_mfb_eof_async(i),
+                        TX_SOF_POS => tx_usr_mfb_sof_pos_async(i),
+                        TX_EOF_POS => tx_usr_mfb_eof_pos_async(i),
+                        TX_SRC_RDY => tx_usr_mfb_src_rdy_async(i),
+                        TX_DST_RDY => tx_usr_mfb_dst_rdy_async(i),
+                        TX_AEMPTY  => open,
+                        TX_STATUS  => open);
+            else generate
+                tx_usr_mfb_data_async(i)    <= (others => '0');
+                tx_usr_mfb_meta_async(i)    <= (others => '0');
+                tx_usr_mfb_sof_async(i)     <= (others => '0');
+                tx_usr_mfb_eof_async(i)     <= (others => '0');
+                tx_usr_mfb_sof_pos_async(i) <= (others => '0');
+                tx_usr_mfb_eof_pos_async(i) <= (others => '0');
+                tx_usr_mfb_src_rdy_async(i) <= '0';
+                tx_usr_mfb_dst_rdy_sync(i)  <= '1';
+            end generate;
+
+        else generate
+            rx_usr_mfb_data_sync(i)     <= rx_usr_mfb_data_async(i);
+            rx_usr_mfb_meta_sync(i)     <= rx_usr_mfb_meta_async(i);
+            rx_usr_mfb_sof_sync(i)      <= rx_usr_mfb_sof_async(i);
+            rx_usr_mfb_eof_sync(i)      <= rx_usr_mfb_eof_async(i);
+            rx_usr_mfb_sof_pos_sync(i)  <= rx_usr_mfb_sof_pos_async(i);
+            rx_usr_mfb_eof_pos_sync(i)  <= rx_usr_mfb_eof_pos_async(i);
+            rx_usr_mfb_src_rdy_sync(i)  <= rx_usr_mfb_src_rdy_async(i);
+            rx_usr_mfb_dst_rdy_async(i) <= rx_usr_mfb_dst_rdy_sync(i);
+
+            tx_usr_mfb_data_async(i)    <= tx_usr_mfb_data_sync(i);
+            tx_usr_mfb_meta_async(i)    <= tx_usr_mfb_meta_sync(i);
+            tx_usr_mfb_sof_async(i)     <= tx_usr_mfb_sof_sync(i);
+            tx_usr_mfb_eof_async(i)     <= tx_usr_mfb_eof_sync(i);
+            tx_usr_mfb_sof_pos_async(i) <= tx_usr_mfb_sof_pos_sync(i);
+            tx_usr_mfb_eof_pos_async(i) <= tx_usr_mfb_eof_pos_sync(i);
+            tx_usr_mfb_src_rdy_async(i) <= tx_usr_mfb_src_rdy_sync(i);
+            tx_usr_mfb_dst_rdy_sync(i)  <= tx_usr_mfb_dst_rdy_async(i);
+        end generate;
+
+        -- =========================================================================================
+        -- Testing Core
+        -- =========================================================================================
+        dma_test_core_i : entity work.DMA_TEST_CORE
             generic map (
-                MFB_REGIONS         => DMA_MFB_REGIONS,
-                MFB_REG_SIZE        => DMA_MFB_REGION_SIZE,
-                MFB_BLOCK_SIZE      => DMA_MFB_BLOCK_SIZE,
-                MFB_ITEM_WIDTH      => DMA_MFB_ITEM_WIDTH,
-                FIFO_ITEMS          => 512,
-                RAM_TYPE            => "BRAM",
-                FWFT_MODE           => TRUE,
-                OUTPUT_REG          => FALSE,
-                METADATA_WIDTH      => log2(USR_RX_PKT_SIZE_MAX + 1) + HDR_META_WIDTH + log2(RX_CHANNELS),
-                DEVICE              => DEVICE,
-                ALMOST_FULL_OFFSET  => 2,
-                ALMOST_EMPTY_OFFSET => 2)
+                DEVICE             => DEVICE,
+
+                MFB_REGIONS       => DMA_MFB_REGIONS,
+                MFB_REGION_SIZE   => DMA_MFB_REGION_SIZE,
+                MFB_BLOCK_SIZE    => DMA_MFB_BLOCK_SIZE,
+                MFB_ITEM_WIDTH    => DMA_MFB_ITEM_WIDTH,
+
+                HDR_META_WIDTH    => HDR_META_WIDTH,
+
+                RX_CHANNELS        => RX_CHANNELS,
+                TX_CHANNELS        => TX_CHANNELS,
+
+                USR_RX_PKT_SIZE_MAX    => USR_RX_PKT_SIZE_MAX,
+                USR_TX_PKT_SIZE_MAX    => USR_TX_PKT_SIZE_MAX,
+
+                MFB_LOOPBACK_EN    => MFB_LOOPBACK_EN,
+                LATENCY_METER_EN   => LATENCY_METER_EN,
+                TX_DMA_DBG_CORE_EN => TX_DMA_DBG_CORE_EN,
+                RX_DMA_DBG_CORE_EN => RX_DMA_DBG_CORE_EN,
+
+                ST_SP_DBG_SIGNAL_W => ST_SP_DBG_META_WIDTH,
+                MI_WIDTH           => MI_WIDTH
+                )
             port map (
-                RX_CLK   => USR_CLK,
-                RX_RESET => USR_RESET,
+                CLK                => PCIE_USR_CLK(i),
+                RESET              => PCIE_USR_RESET(i),
 
-                RX_DATA    => rx_usr_mfb_data_async(i),
-                RX_META    => rx_usr_mfb_meta_async(i),
-                RX_SOF     => rx_usr_mfb_sof_async(i),
-                RX_EOF     => rx_usr_mfb_eof_async(i),
-                RX_SOF_POS => rx_usr_mfb_sof_pos_async(i),
-                RX_EOF_POS => rx_usr_mfb_eof_pos_async(i),
-                RX_SRC_RDY => rx_usr_mfb_src_rdy_async(i),
-                RX_DST_RDY => rx_usr_mfb_dst_rdy_async(i),
-                RX_AFULL   => open,
-                RX_STATUS  => open,
+                ST_SP_DBG_CHAN     => st_sp_dbg_chan(i),
+                ST_SP_DBG_META     => st_sp_dbg_meta(i),
+                FORCE_RESET        => force_reset_dbg(i),
 
-                TX_CLK   => PCIE_USR_CLK(i),
-                TX_RESET => PCIE_USR_RESET(i),
+                RX_MFB_DATA_IN     => rx_usr_mfb_data_sync(i),
+                RX_MFB_META_IN     => rx_usr_mfb_meta_sync(i),
+                RX_MFB_SOF_IN      => rx_usr_mfb_sof_sync(i),
+                RX_MFB_EOF_IN      => rx_usr_mfb_eof_sync(i),
+                RX_MFB_SOF_POS_IN  => rx_usr_mfb_sof_pos_sync(i),
+                RX_MFB_EOF_POS_IN  => rx_usr_mfb_eof_pos_sync(i),
+                RX_MFB_SRC_RDY_IN  => rx_usr_mfb_src_rdy_sync(i),
+                RX_MFB_DST_RDY_IN  => rx_usr_mfb_dst_rdy_sync(i),
 
-                TX_DATA    => rx_usr_mfb_data_sync(i),
-                TX_META    => rx_usr_mfb_meta_sync(i),
-                TX_SOF     => rx_usr_mfb_sof_sync(i),
-                TX_EOF     => rx_usr_mfb_eof_sync(i),
-                TX_SOF_POS => rx_usr_mfb_sof_pos_sync(i),
-                TX_EOF_POS => rx_usr_mfb_eof_pos_sync(i),
-                TX_SRC_RDY => rx_usr_mfb_src_rdy_sync(i),
-                TX_DST_RDY => rx_usr_mfb_dst_rdy_sync(i),
-                TX_AEMPTY  => open,
-                TX_STATUS  => open);
+                RX_MFB_META_PKT_SIZE_OUT => rx_usr_mfb_meta_size_tst(i),
+                RX_MFB_META_HDR_META_OUT => rx_usr_mfb_meta_hdr_meta_tst(i),
+                RX_MFB_META_CHAN_OUT     => rx_usr_mfb_meta_channel_tst(i),
 
-        usr_tx_mfb_fifox_i : entity work.MFB_ASFIFOX
-            generic map (
-                MFB_REGIONS         => DMA_MFB_REGIONS,
-                MFB_REG_SIZE        => DMA_MFB_REGION_SIZE,
-                MFB_BLOCK_SIZE      => DMA_MFB_BLOCK_SIZE,
-                MFB_ITEM_WIDTH      => DMA_MFB_ITEM_WIDTH,
-                FIFO_ITEMS          => 512,
-                RAM_TYPE            => "BRAM",
-                FWFT_MODE           => TRUE,
-                OUTPUT_REG          => FALSE,
-                METADATA_WIDTH      => log2(USR_TX_PKT_SIZE_MAX + 1) + HDR_META_WIDTH + log2(TX_CHANNELS),
-                DEVICE              => DEVICE,
-                ALMOST_FULL_OFFSET  => 2,
-                ALMOST_EMPTY_OFFSET => 2)
-            port map (
+                RX_MFB_DATA_OUT    => rx_usr_mfb_data_tst(i),
+                RX_MFB_SOF_OUT     => rx_usr_mfb_sof_tst(i),
+                RX_MFB_EOF_OUT     => rx_usr_mfb_eof_tst(i),
+                RX_MFB_SOF_POS_OUT => rx_usr_mfb_sof_pos_tst(i),
+                RX_MFB_EOF_POS_OUT => rx_usr_mfb_eof_pos_tst(i),
+                RX_MFB_SRC_RDY_OUT => rx_usr_mfb_src_rdy_tst(i),
+                RX_MFB_DST_RDY_OUT => rx_usr_mfb_dst_rdy_tst(i),
 
-                RX_CLK   => PCIE_USR_CLK(i),
-                RX_RESET => PCIE_USR_RESET(i),
+                TX_MFB_DATA_OUT    => tx_usr_mfb_data_sync(i),
+                TX_MFB_META_OUT    => tx_usr_mfb_meta_sync(i),
+                TX_MFB_SOF_OUT     => tx_usr_mfb_sof_sync(i),
+                TX_MFB_EOF_OUT     => tx_usr_mfb_eof_sync(i),
+                TX_MFB_SOF_POS_OUT => tx_usr_mfb_sof_pos_sync(i),
+                TX_MFB_EOF_POS_OUT => tx_usr_mfb_eof_pos_sync(i),
+                TX_MFB_SRC_RDY_OUT => tx_usr_mfb_src_rdy_sync(i),
+                TX_MFB_DST_RDY_OUT => tx_usr_mfb_dst_rdy_sync(i),
 
-                RX_DATA    => tx_usr_mfb_data_sync(i),
-                RX_META    => tx_usr_mfb_meta_sync(i),
-                RX_SOF     => tx_usr_mfb_sof_sync(i),
-                RX_EOF     => tx_usr_mfb_eof_sync(i),
-                RX_SOF_POS => tx_usr_mfb_sof_pos_sync(i),
-                RX_EOF_POS => tx_usr_mfb_eof_pos_sync(i),
-                RX_SRC_RDY => tx_usr_mfb_src_rdy_sync(i),
-                RX_DST_RDY => tx_usr_mfb_dst_rdy_sync(i),
-                RX_AFULL   => open,
-                RX_STATUS  => open,
+                TX_MFB_META_PKT_SIZE_IN => tx_usr_mfb_meta_size_tst(i),
+                TX_MFB_META_HDR_META_IN => tx_usr_mfb_meta_hdr_meta_tst(i),
+                TX_MFB_META_CHAN_IN     => tx_usr_mfb_meta_channel_tst(i),
 
-                TX_CLK   => USR_CLK,
-                TX_RESET => USR_RESET,
+                TX_MFB_DATA_IN     => tx_usr_mfb_data_tst(i),
+                TX_MFB_SOF_IN      => tx_usr_mfb_sof_tst(i),
+                TX_MFB_EOF_IN      => tx_usr_mfb_eof_tst(i),
+                TX_MFB_SOF_POS_IN  => tx_usr_mfb_sof_pos_tst(i),
+                TX_MFB_EOF_POS_IN  => tx_usr_mfb_eof_pos_tst(i),
+                TX_MFB_SRC_RDY_IN  => tx_usr_mfb_src_rdy_tst(i),
+                TX_MFB_DST_RDY_IN  => tx_usr_mfb_dst_rdy_tst(i),
 
-                TX_DATA    => tx_usr_mfb_data_async(i),
-                TX_META    => tx_usr_mfb_meta_async(i),
-                TX_SOF     => tx_usr_mfb_sof_async(i),
-                TX_EOF     => tx_usr_mfb_eof_async(i),
-                TX_SOF_POS => tx_usr_mfb_sof_pos_async(i),
-                TX_EOF_POS => tx_usr_mfb_eof_pos_async(i),
-                TX_SRC_RDY => tx_usr_mfb_src_rdy_async(i),
-                TX_DST_RDY => tx_usr_mfb_dst_rdy_async(i),
-                TX_AEMPTY  => open,
-                TX_STATUS  => open);
-    end generate;
+                MI_CLK             => MI_CLK,
+                MI_RESET           => MI_RESET,
 
-    --==============================================================================================
-    --  DMA Calypte Module
-    --==============================================================================================
-    dma_calypte_g : for i in 0 to DMA_STREAMS-1 generate
-    begin
+                MI_ADDR            => mi_dmagen_addr(i)(1),
+                MI_DWR             => mi_dmagen_dwr(i)(1),
+                MI_BE              => mi_dmagen_be(i)(1),
+                MI_RD              => mi_dmagen_rd(i)(1),
+                MI_WR              => mi_dmagen_wr(i)(1),
+                MI_ARDY            => mi_dmagen_ardy(i)(1),
+                MI_DRD             => mi_dmagen_drd(i)(1),
+                MI_DRDY            => mi_dmagen_drdy(i)(1)
+                );
 
+        --==============================================================================================
+        --  DMA Calypte Module
+        --==============================================================================================
         dma_calypte_i : entity work.DMA_CALYPTE
             generic map(
                 DEVICE => DEVICE,
@@ -604,29 +726,29 @@ begin
                 CLK   => PCIE_USR_CLK(i),
                 RESET => PCIE_USR_RESET(i) or force_reset_dbg(i),
 
-                USR_RX_MFB_META_PKT_SIZE => rx_usr_mfb_meta_len(i),
-                USR_RX_MFB_META_HDR_META => rx_usr_mfb_meta_hdr_meta(i),
-                USR_RX_MFB_META_CHAN     => rx_usr_mfb_meta_channel(i),
+                USR_RX_MFB_META_PKT_SIZE => rx_usr_mfb_meta_size_tst(i),
+                USR_RX_MFB_META_HDR_META => rx_usr_mfb_meta_hdr_meta_tst(i),
+                USR_RX_MFB_META_CHAN     => rx_usr_mfb_meta_channel_tst(i),
 
-                USR_RX_MFB_DATA    => rx_usr_mfb_data_lbk(i),
-                USR_RX_MFB_SOF     => rx_usr_mfb_sof_lbk(i),
-                USR_RX_MFB_EOF     => rx_usr_mfb_eof_lbk(i),
-                USR_RX_MFB_SOF_POS => rx_usr_mfb_sof_pos_lbk(i),
-                USR_RX_MFB_EOF_POS => rx_usr_mfb_eof_pos_lbk(i),
-                USR_RX_MFB_SRC_RDY => rx_usr_mfb_src_rdy_lbk(i),
-                USR_RX_MFB_DST_RDY => rx_usr_mfb_dst_rdy_lbk(i),
+                USR_RX_MFB_DATA    => rx_usr_mfb_data_tst(i),
+                USR_RX_MFB_SOF     => rx_usr_mfb_sof_tst(i),
+                USR_RX_MFB_EOF     => rx_usr_mfb_eof_tst(i),
+                USR_RX_MFB_SOF_POS => rx_usr_mfb_sof_pos_tst(i),
+                USR_RX_MFB_EOF_POS => rx_usr_mfb_eof_pos_tst(i),
+                USR_RX_MFB_SRC_RDY => rx_usr_mfb_src_rdy_tst(i),
+                USR_RX_MFB_DST_RDY => rx_usr_mfb_dst_rdy_tst(i),
 
-                USR_TX_MFB_META_PKT_SIZE => tx_usr_mfb_meta_len_dbg(i),
-                USR_TX_MFB_META_HDR_META => tx_usr_mfb_meta_hdr_meta_dbg(i),
-                USR_TX_MFB_META_CHAN     => tx_usr_mfb_meta_channel_dbg(i),
+                USR_TX_MFB_META_PKT_SIZE => tx_usr_mfb_meta_size_tst(i),
+                USR_TX_MFB_META_HDR_META => tx_usr_mfb_meta_hdr_meta_tst(i),
+                USR_TX_MFB_META_CHAN     => tx_usr_mfb_meta_channel_tst(i),
 
-                USR_TX_MFB_DATA    => tx_usr_mfb_data_dbg(i),
-                USR_TX_MFB_SOF     => tx_usr_mfb_sof_dbg(i),
-                USR_TX_MFB_EOF     => tx_usr_mfb_eof_dbg(i),
-                USR_TX_MFB_SOF_POS => tx_usr_mfb_sof_pos_dbg(i),
-                USR_TX_MFB_EOF_POS => tx_usr_mfb_eof_pos_dbg(i),
-                USR_TX_MFB_SRC_RDY => tx_usr_mfb_src_rdy_dbg(i),
-                USR_TX_MFB_DST_RDY => tx_usr_mfb_dst_rdy_dbg(i),
+                USR_TX_MFB_DATA    => tx_usr_mfb_data_tst(i),
+                USR_TX_MFB_SOF     => tx_usr_mfb_sof_tst(i),
+                USR_TX_MFB_EOF     => tx_usr_mfb_eof_tst(i),
+                USR_TX_MFB_SOF_POS => tx_usr_mfb_sof_pos_tst(i),
+                USR_TX_MFB_EOF_POS => tx_usr_mfb_eof_pos_tst(i),
+                USR_TX_MFB_SRC_RDY => tx_usr_mfb_src_rdy_tst(i),
+                USR_TX_MFB_DST_RDY => tx_usr_mfb_dst_rdy_tst(i),
 
                 ST_SP_DBG_CHAN => st_sp_dbg_chan(i),
                 ST_SP_DBG_META => st_sp_dbg_meta(i),
@@ -667,155 +789,6 @@ begin
                 MI_ARDY => mi_sync_ardy(i),
                 MI_DRDY => mi_sync_drdy(i));
 
-        rx_usr_mfb_meta_len(i)      <= rx_usr_mfb_meta_lbk(i)(log2(USR_RX_PKT_SIZE_MAX + 1) + log2(RX_CHANNELS) + HDR_META_WIDTH -1 downto log2(RX_CHANNELS) + HDR_META_WIDTH);
-        rx_usr_mfb_meta_hdr_meta(i) <= rx_usr_mfb_meta_lbk(i)(HDR_META_WIDTH + log2(RX_CHANNELS) -1 downto log2(RX_CHANNELS));
-        rx_usr_mfb_meta_channel(i)  <= rx_usr_mfb_meta_lbk(i)(log2(RX_CHANNELS) -1 downto 0);
-
-        debug_core_g: if (TX_DMA_DBG_CORE_EN) generate
-            tx_dma_debug_core_i: entity work.TX_DMA_DEBUG_CORE
-                generic map (
-                    DEVICE          => DEVICE,
-
-                    MFB_REGIONS     => DMA_MFB_REGIONS,
-                    MFB_REGION_SIZE => DMA_MFB_REGION_SIZE,
-                    MFB_BLOCK_SIZE  => DMA_MFB_BLOCK_SIZE,
-                    MFB_ITEM_WIDTH  => DMA_MFB_ITEM_WIDTH,
-
-                    DMA_META_WIDTH  => HDR_META_WIDTH,
-                    PKT_SIZE_MAX    => USR_TX_PKT_SIZE_MAX,
-                    CHANNELS        => TX_CHANNELS,
-
-                    DBG_CNTRS_WIDTH => 64,
-                    ST_SP_DBG_SIGNAL_W => ST_SP_DBG_META_WIDTH,
-
-                    MI_WIDTH        => MI_WIDTH)
-                port map (
-                    CLK                  => PCIE_USR_CLK(i),
-                    RESET                => PCIE_USR_RESET(i),
-
-                    FORCE_RESET          => force_reset_dbg(i),
-                    ST_SP_DBG_CHAN       => st_sp_dbg_chan(i),
-                    ST_SP_DBG_META       => st_sp_dbg_meta(i),
-
-                    RX_MFB_META_PKT_SIZE => tx_usr_mfb_meta_len_dbg(i),
-                    RX_MFB_META_CHAN     => tx_usr_mfb_meta_channel_dbg(i),
-                    RX_MFB_META_HDR_META => tx_usr_mfb_meta_hdr_meta_dbg(i),
-
-                    RX_MFB_DATA          => tx_usr_mfb_data_dbg(i),
-                    RX_MFB_SOF_POS       => tx_usr_mfb_sof_pos_dbg(i),
-                    RX_MFB_EOF_POS       => tx_usr_mfb_eof_pos_dbg(i),
-                    RX_MFB_SOF           => tx_usr_mfb_sof_dbg(i),
-                    RX_MFB_EOF           => tx_usr_mfb_eof_dbg(i),
-                    RX_MFB_SRC_RDY       => tx_usr_mfb_src_rdy_dbg(i),
-                    RX_MFB_DST_RDY       => tx_usr_mfb_dst_rdy_dbg(i),
-
-                    TX_MFB_DATA          => tx_usr_mfb_data_lbk(i),
-                    TX_MFB_META          => tx_usr_mfb_meta_lbk(i),
-                    TX_MFB_SOF_POS       => tx_usr_mfb_sof_pos_lbk(i),
-                    TX_MFB_EOF_POS       => tx_usr_mfb_eof_pos_lbk(i),
-                    TX_MFB_SOF           => tx_usr_mfb_sof_lbk(i),
-                    TX_MFB_EOF           => tx_usr_mfb_eof_lbk(i),
-                    TX_MFB_SRC_RDY       => tx_usr_mfb_src_rdy_lbk(i),
-                    TX_MFB_DST_RDY       => tx_usr_mfb_dst_rdy_lbk(i),
-
-                    MI_CLK               => MI_CLK,
-                    MI_RESET             => MI_RESET,
-
-                    MI_ADDR              => mi_dmagen_addr(i)(3),
-                    MI_DWR               => mi_dmagen_dwr(i)(3),
-                    MI_BE                => mi_dmagen_be(i)(3),
-                    MI_RD                => mi_dmagen_rd(i)(3),
-                    MI_WR                => mi_dmagen_wr(i)(3),
-                    MI_DRD               => mi_dmagen_drd(i)(3),
-                    MI_ARDY              => mi_dmagen_ardy(i)(3),
-                    MI_DRDY              => mi_dmagen_drdy(i)(3));
-        else generate
-            tx_usr_mfb_meta_lbk(i)(log2(TX_CHANNELS) -1 downto 0)                                  <= tx_usr_mfb_meta_channel_dbg(i);
-            tx_usr_mfb_meta_lbk(i)(HDR_META_WIDTH + log2(TX_CHANNELS) -1 downto log2(TX_CHANNELS)) <= tx_usr_mfb_meta_hdr_meta_dbg(i);
-            tx_usr_mfb_meta_lbk(i)(log2(USR_TX_PKT_SIZE_MAX+1) + HDR_META_WIDTH + log2(TX_CHANNELS) -1 downto HDR_META_WIDTH + log2(TX_CHANNELS)) <= tx_usr_mfb_meta_len_dbg(i);
-
-            tx_usr_mfb_data_lbk(i)    <= tx_usr_mfb_data_dbg(i);
-            tx_usr_mfb_sof_pos_lbk(i) <= tx_usr_mfb_sof_pos_dbg(i);
-            tx_usr_mfb_eof_pos_lbk(i) <= tx_usr_mfb_eof_pos_dbg(i);
-            tx_usr_mfb_sof_lbk(i)     <= tx_usr_mfb_sof_dbg(i);
-            tx_usr_mfb_eof_lbk(i)     <= tx_usr_mfb_eof_dbg(i);
-            tx_usr_mfb_src_rdy_lbk(i) <= tx_usr_mfb_src_rdy_dbg(i);
-            tx_usr_mfb_dst_rdy_dbg(i) <= tx_usr_mfb_dst_rdy_lbk(i);
-
-            force_reset_dbg(i) <= '0';
-
-            mi_dmagen_ardy(i)(3) <= mi_dmagen_rd(i)(3) or mi_dmagen_wr(i)(3);
-            mi_dmagen_drd(i)(3)  <= (others => '0');
-            mi_dmagen_drdy(i)(3) <= mi_dmagen_rd(i)(3);
-        end generate;
-
-        mfb_loopback_i : entity work.MFB_LOOPBACK
-            generic map (
-                REGIONS       => DMA_MFB_REGIONS,
-                REGION_SIZE   => DMA_MFB_REGION_SIZE,
-                BLOCK_SIZE    => DMA_MFB_BLOCK_SIZE,
-                ITEM_WIDTH    => DMA_MFB_ITEM_WIDTH,
-                META_WIDTH    => log2(maximum(TX_CHANNELS,RX_CHANNELS)) + log2(maximum(USR_RX_PKT_SIZE_MAX,USR_TX_PKT_SIZE_MAX)+1) + HDR_META_WIDTH,
-
-                FAKE_LOOPBACK => not DMA_LOOPBACK_EN,
-                SAME_CLK      => FALSE)
-            port map (
-                MI_CLK             => MI_CLK,
-                MI_RESET           => MI_RESET,
-
-                MI_DWR             => mi_dmagen_dwr(i)(2),
-                MI_ADDR            => mi_dmagen_addr(i)(2),
-                MI_RD              => mi_dmagen_rd(i)(2),
-                MI_WR              => mi_dmagen_wr(i)(2),
-                MI_ARDY            => mi_dmagen_ardy(i)(2),
-                MI_DRD             => mi_dmagen_drd(i)(2),
-                MI_DRDY            => mi_dmagen_drdy(i)(2),
-
-                CLK                => PCIE_USR_CLK(i),
-                RESET              => PCIE_USR_RESET(i),
-
-                RX_MFB_DATA_IN     => rx_usr_mfb_data_sync(i),
-                RX_MFB_META_IN     => rx_usr_mfb_meta_sync(i),
-                RX_MFB_SOF_IN      => rx_usr_mfb_sof_sync(i),
-                RX_MFB_EOF_IN      => rx_usr_mfb_eof_sync(i),
-                RX_MFB_SOF_POS_IN  => rx_usr_mfb_sof_pos_sync(i),
-                RX_MFB_EOF_POS_IN  => rx_usr_mfb_eof_pos_sync(i),
-                RX_MFB_SRC_RDY_IN  => rx_usr_mfb_src_rdy_sync(i),
-                RX_MFB_DST_RDY_IN  => rx_usr_mfb_dst_rdy_sync(i),
-
-                RX_MFB_DATA_OUT    => rx_usr_mfb_data_lbk(i),
-                RX_MFB_META_OUT    => rx_usr_mfb_meta_lbk(i),
-                RX_MFB_SOF_OUT     => rx_usr_mfb_sof_lbk(i),
-                RX_MFB_EOF_OUT     => rx_usr_mfb_eof_lbk(i),
-                RX_MFB_SOF_POS_OUT => rx_usr_mfb_sof_pos_lbk(i),
-                RX_MFB_EOF_POS_OUT => rx_usr_mfb_eof_pos_lbk(i),
-                RX_MFB_SRC_RDY_OUT => rx_usr_mfb_src_rdy_lbk(i),
-                RX_MFB_DST_RDY_OUT => rx_usr_mfb_dst_rdy_lbk(i),
-
-                TX_MFB_DATA_OUT    => tx_usr_mfb_data_sync(i),
-                TX_MFB_META_OUT    => tx_usr_mfb_meta_sync(i),
-                TX_MFB_SOF_OUT     => tx_usr_mfb_sof_sync(i),
-                TX_MFB_EOF_OUT     => tx_usr_mfb_eof_sync(i),
-                TX_MFB_SOF_POS_OUT => tx_usr_mfb_sof_pos_sync(i),
-                TX_MFB_EOF_POS_OUT => tx_usr_mfb_eof_pos_sync(i),
-                TX_MFB_SRC_RDY_OUT => tx_usr_mfb_src_rdy_sync(i),
-                TX_MFB_DST_RDY_OUT => tx_usr_mfb_dst_rdy_sync(i),
-
-                TX_MFB_DATA_IN     => tx_usr_mfb_data_lbk(i),
-                TX_MFB_META_IN     => tx_usr_mfb_meta_lbk(i),
-                TX_MFB_SOF_IN      => tx_usr_mfb_sof_lbk(i),
-                TX_MFB_EOF_IN      => tx_usr_mfb_eof_lbk(i),
-                TX_MFB_SOF_POS_IN  => tx_usr_mfb_sof_pos_lbk(i),
-                TX_MFB_EOF_POS_IN  => tx_usr_mfb_eof_pos_lbk(i),
-                TX_MFB_SRC_RDY_IN  => tx_usr_mfb_src_rdy_lbk(i),
-                TX_MFB_DST_RDY_IN  => tx_usr_mfb_dst_rdy_lbk(i));
-
-    end generate;
-
-    -- =============================================================================================
-    -- Generating output pipes to PCIe interface
-    -- =============================================================================================
-    pipes_g: for i in 0 to (PCIE_ENDPOINTS -1) generate
         pcie_rq_mfb_pipe_i : entity work.MFB_PIPE
             generic map (
                 REGIONS     => PCIE_RQ_MFB_REGIONS,
@@ -824,7 +797,7 @@ begin
                 ITEM_WIDTH  => PCIE_RQ_MFB_ITEM_WIDTH,
 
                 META_WIDTH  => PCIE_RQ_META_WIDTH,
-                FAKE_PIPE   => not OUT_PIPE_EN,
+                FAKE_PIPE   => (not OUT_PIPE_EN) or (not RX_GEN_EN),
                 USE_DST_RDY => TRUE,
                 PIPE_TYPE   => "REG",
                 DEVICE      => DEVICE)
@@ -858,7 +831,7 @@ begin
                 ITEM_WIDTH  => PCIE_CC_MFB_ITEM_WIDTH,
 
                 META_WIDTH  => PCIE_CC_META_WIDTH,
-                FAKE_PIPE   => not OUT_PIPE_EN,
+                FAKE_PIPE   => (not OUT_PIPE_EN) or (not TX_GEN_EN),
                 USE_DST_RDY => TRUE,
                 PIPE_TYPE   => "REG",
                 DEVICE      => DEVICE)
@@ -892,7 +865,7 @@ begin
                 ITEM_WIDTH  => PCIE_CQ_MFB_ITEM_WIDTH,
 
                 META_WIDTH  => PCIE_CQ_META_WIDTH,
-                FAKE_PIPE   => not OUT_PIPE_EN,
+                FAKE_PIPE   => (not OUT_PIPE_EN) or (not TX_GEN_EN),
                 USE_DST_RDY => TRUE,
                 PIPE_TYPE   => "REG",
                 DEVICE      => DEVICE)

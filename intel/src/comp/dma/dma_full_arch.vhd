@@ -363,37 +363,43 @@ begin
         tx_usr_mfb_dst_rdy_int <= (others => '1');
     end generate;
 
-    mi_splitter_gls_i : entity work.MI_SPLITTER_PLUS_GEN
-        generic map(
-            ADDR_WIDTH => 32,
-            DATA_WIDTH => 32,
-            META_WIDTH => 0,
-            PORTS      => DMA_STREAMS,
-            ADDR_BASE  => gls_mi_addr_base_f,
-            DEVICE     => DEVICE
-            )
-        port map(
-            CLK   => MI_CLK,
-            RESET => MI_RESET,
+    gls_mi_split_g: if (GEN_LOOP_EN or DMA_400G_DEMO) generate
+        mi_splitter_gls_i : entity work.MI_SPLITTER_PLUS_GEN
+            generic map(
+                ADDR_WIDTH => 32,
+                DATA_WIDTH => 32,
+                META_WIDTH => 0,
+                PORTS      => DMA_STREAMS,
+                ADDR_BASE  => gls_mi_addr_base_f,
+                DEVICE     => DEVICE
+                )
+            port map(
+                CLK   => MI_CLK,
+                RESET => MI_RESET,
 
-            RX_DWR  => GEN_LOOP_MI_DWR,
-            RX_ADDR => GEN_LOOP_MI_ADDR,
-            RX_BE   => GEN_LOOP_MI_BE,
-            RX_RD   => GEN_LOOP_MI_RD,
-            RX_WR   => GEN_LOOP_MI_WR,
-            RX_ARDY => GEN_LOOP_MI_ARDY,
-            RX_DRD  => GEN_LOOP_MI_DRD,
-            RX_DRDY => GEN_LOOP_MI_DRDY,
+                RX_DWR  => GEN_LOOP_MI_DWR,
+                RX_ADDR => GEN_LOOP_MI_ADDR,
+                RX_BE   => GEN_LOOP_MI_BE,
+                RX_RD   => GEN_LOOP_MI_RD,
+                RX_WR   => GEN_LOOP_MI_WR,
+                RX_ARDY => GEN_LOOP_MI_ARDY,
+                RX_DRD  => GEN_LOOP_MI_DRD,
+                RX_DRDY => GEN_LOOP_MI_DRDY,
 
-            TX_DWR  => gls_mi_dwr,
-            TX_ADDR => gls_mi_addr,
-            TX_BE   => gls_mi_be,
-            TX_RD   => gls_mi_rd,
-            TX_WR   => gls_mi_wr,
-            TX_ARDY => gls_mi_ardy,
-            TX_DRD  => gls_mi_drd,
-            TX_DRDY => gls_mi_drdy
-            );
+                TX_DWR  => gls_mi_dwr,
+                TX_ADDR => gls_mi_addr,
+                TX_BE   => gls_mi_be,
+                TX_RD   => gls_mi_rd,
+                TX_WR   => gls_mi_wr,
+                TX_ARDY => gls_mi_ardy,
+                TX_DRD  => gls_mi_drd,
+                TX_DRDY => gls_mi_drdy
+                );
+    else generate
+        GEN_LOOP_MI_ARDY <= GEN_LOOP_MI_RD or GEN_LOOP_MI_WR;
+        GEN_LOOP_MI_DRD  <= x"0000DEAD";
+        GEN_LOOP_MI_DRDY <= GEN_LOOP_MI_RD;
+    end generate;
 
     gls_g : for i in 0 to DMA_STREAMS-1 generate
         gls_en_g : if (GEN_LOOP_EN or DMA_400G_DEMO) generate
@@ -521,11 +527,6 @@ begin
             tx_usr_mfb_eof_pos_int(i)   <= dma_tx_usr_mfb_eof_pos(i);
             tx_usr_mfb_src_rdy_int(i)   <= dma_tx_usr_mfb_src_rdy(i);
             dma_tx_usr_mfb_dst_rdy(i)   <= tx_usr_mfb_dst_rdy_int(i);
-
-            gls_mi_ardy(i) <= '1';
-            gls_mi_drd(i)  <= (others => '0');
-            gls_mi_drdy(i) <= '0';
-
         end generate;
     end generate;
 

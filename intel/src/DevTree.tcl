@@ -21,6 +21,7 @@ proc dts_build_netcope {} {
     # Top level Device tree file
     # =========================================================================
     set    ret ""
+    set    mi_idx 0
 
     global CARD_NAME DT_PROJECT_TEXT PROJECT_VARIANT PROJECT_VERSION
 
@@ -36,7 +37,7 @@ proc dts_build_netcope {} {
     }
 
     # Create MI bus node
-    append ret "mi0: mi_bus0 {"
+    append ret "mi$mi_idx: mi_bus$mi_idx {"
     append ret "#address-cells = <1>;"
     append ret "#size-cells = <1>;"
 
@@ -79,7 +80,7 @@ proc dts_build_netcope {} {
     # DMA module
     global DMA_TYPE DMA_RX_CHANNELS DMA_TX_CHANNELS PCIE_ENDPOINTS DMA_RX_FRAME_SIZE_MAX DMA_TX_FRAME_SIZE_MAX DMA_RX_FRAME_SIZE_MIN DMA_TX_FRAME_SIZE_MIN
     if {$DMA_TYPE != 0} {
-        append ret [dts_dmamod_open $ADDR_DMA_MOD $DMA_TYPE [expr $DMA_RX_CHANNELS / $PCIE_ENDPOINTS] [expr $DMA_TX_CHANNELS / $PCIE_ENDPOINTS] "0" $DMA_RX_FRAME_SIZE_MAX $DMA_TX_FRAME_SIZE_MAX $DMA_RX_FRAME_SIZE_MIN $DMA_TX_FRAME_SIZE_MIN]
+        append ret [dts_dmamod_open $ADDR_DMA_MOD $DMA_TYPE [expr $DMA_RX_CHANNELS / $PCIE_ENDPOINTS] [expr $DMA_TX_CHANNELS / $PCIE_ENDPOINTS] $mi_idx $DMA_RX_FRAME_SIZE_MAX $DMA_TX_FRAME_SIZE_MAX $DMA_RX_FRAME_SIZE_MIN $DMA_TX_FRAME_SIZE_MIN]
     }
 
     # Network module
@@ -137,9 +138,11 @@ proc dts_build_netcope {} {
 
     append ret "};"
 
+    set mi_idx [incr mi_idx]
+
     # Creating separate space for MI bus when DMA Calypte are used, the core uses additional BAR for its function
-    if {$DMA_TYPE == 4} {
-        append ret "mi1: mi_bus1 {"
+    if {$DMA_TYPE == 4 && $DMA_TX_CHANNELS > 0} {
+        append ret "mi$mi_idx: mi_bus$mi_idx {"
         append ret "#address-cells = <1>;"
         append ret "#size-cells = <1>;"
 
@@ -147,6 +150,8 @@ proc dts_build_netcope {} {
         append ret "resource = \"PCI0,BAR2\";"
         append ret "width = <0x20>;"
         append ret "map-as-wc;"
+
+        set mi_idx [incr mi_idx]
 
         # -------------------------------------------------
         # These two widths are changeable
@@ -189,7 +194,7 @@ proc dts_build_netcope {} {
         append ret "};"
     }
 
-    for {set i 1} {$i < $PCIE_ENDPOINTS} {incr i} {
+    for {set i $mi_idx} {$i < $PCIE_ENDPOINTS} {incr i} {
         # Create MI bus node
         append ret "mi$i: mi_bus$i {"
         append ret "#address-cells = <1>;"

@@ -13,7 +13,9 @@
 set BUILD_TIME [format "%d" [clock seconds]]
 set BUILD_UID  [format "%d" [exec id -u]]
 
+# ------------------------------------------------------------------------------
 # Fixed DMA parameters
+# ------------------------------------------------------------------------------
 set DMA_RX_FRAME_SIZE_MIN 60
 set DMA_TX_FRAME_SIZE_MIN 60
 
@@ -67,7 +69,8 @@ if {$ETH_PORTS <= $PCIE_ENDPOINTS} {
 }
 
 if { $DMA_TYPE == 4 } {
-    if { $PCIE_ENDPOINTS != 1 || $PCIE_ENDPOINT_MODE != 2} {
+    if {!(($PCIE_ENDPOINTS == 1 && $PCIE_GEN == 3 && $PCIE_ENDPOINT_MODE == 0) ||
+          ($PCIE_ENDPOINTS == 1 && $PCIE_GEN == 3 && $PCIE_ENDPOINT_MODE == 2)) } {
         error "Incompatible DMA_TYPE: $DMA_TYPE with chosen PCIE_ENDPOINTS: $PCIE_ENDPOINTS\
                 and PCIE_ENDPOINT_MODE: $PCIE_ENDPOINT_MODE! Try to use PCIE_CONF=1xGen3x8LL."
     }
@@ -90,7 +93,7 @@ if { $DMA_TYPE == 4 } {
 
 VhdlPkgProjectText $PROJECT_NAME
 
-VhdlPkgStr BOARD         $CARD_NAME
+VhdlPkgStr CARD_NAME     $CARD_NAME
 VhdlPkgStr PCIE_MOD_ARCH $PCIE_MOD_ARCH
 VhdlPkgStr NET_MOD_ARCH  $NET_MOD_ARCH
 
@@ -111,6 +114,46 @@ if {$ETH_PORTS == 0} {
     VhdlPkgIntArr ETH_PORT_TX_MTU $ETH_PORTS
 }
 
+# ------------------------------------------------------------------------------
+# DMA Channel calculation
+# ------------------------------------------------------------------------------
+# NOTE: This does not apply when the configured amount of channels is greater
+# than 0 on BOTH directions (RX and TX).
+
+# When disabling one of the DMA directions, the amount of channels shall be set
+# to 0 in TCL scripts which also correctly generates Device Tree. However, the
+# 0 amount of channels would cause problems in the VHDL design regarding signal
+# width mismatches. Therefore, when one direction is disabled, the number of
+# channels on this one is set to the amount of channels on the enabled
+# direction. This ensures matching signal widths in the VHDL design.
+#
+# When both of the directions are disabled Then each direction is configured
+# containing 2 channels which is the minimum currently allowed. Either way, when
+# configuriong one direction with 0 channels available, then the corresponding
+# DMA controller is not initialized in the design.
+
+VhdlPkgBool RX_GEN_EN [expr {$DMA_RX_CHANNELS > 0 ? true : false}]
+VhdlPkgBool TX_GEN_EN [expr {$DMA_TX_CHANNELS > 0 ? true : false}]
+
+set dma_tx_chans_int $DMA_TX_CHANNELS
+set dma_rx_chans_int $DMA_RX_CHANNELS
+
+if {$DMA_RX_CHANNELS == 0} {
+    if {$DMA_TX_CHANNELS == 0} {
+        set dma_rx_chans_int 2
+    } else {
+        set dma_rx_chans_int $DMA_TX_CHANNELS
+    }
+}
+
+if {$DMA_TX_CHANNELS == 0} {
+    if {$DMA_RX_CHANNELS == 0} {
+        set dma_tx_chans_int 2
+    } else {
+        set dma_tx_chans_int $DMA_RX_CHANNELS
+    }
+}
+# ------------------------------------------------------------------------------
 
 VhdlPkgInt  PCIE_LANES         $PCIE_LANES
 VhdlPkgInt  PCIE_GEN           $PCIE_GEN
@@ -118,8 +161,8 @@ VhdlPkgInt  PCIE_ENDPOINTS     $PCIE_ENDPOINTS
 VhdlPkgInt  PCIE_ENDPOINT_MODE $PCIE_ENDPOINT_MODE
 
 VhdlPkgInt  DMA_TYPE              $DMA_TYPE
-VhdlPkgInt  DMA_RX_CHANNELS       $DMA_RX_CHANNELS
-VhdlPkgInt  DMA_TX_CHANNELS       $DMA_TX_CHANNELS
+VhdlPkgInt  DMA_RX_CHANNELS       $dma_rx_chans_int
+VhdlPkgInt  DMA_TX_CHANNELS       $dma_tx_chans_int
 VhdlPkgInt  DMA_RX_FRAME_SIZE_MAX $DMA_RX_FRAME_SIZE_MAX
 VhdlPkgInt  DMA_TX_FRAME_SIZE_MAX $DMA_TX_FRAME_SIZE_MAX
 #VhdlPkgInt  DMA_RX_FRAME_SIZE_MIN $DMA_RX_FRAME_SIZE_MIN
@@ -128,6 +171,8 @@ VhdlPkgBool DMA_RX_BLOCKING_MODE $DMA_RX_BLOCKING_MODE
 VhdlPkgInt  DMA_RX_DATA_PTR_W    $DMA_RX_DATA_PTR_W
 VhdlPkgInt  DMA_RX_HDR_PTR_W     $DMA_RX_HDR_PTR_W
 VhdlPkgInt  DMA_TX_DATA_PTR_W    $DMA_TX_DATA_PTR_W
+
+VhdlPkgBool DMA_GEN_LOOP_EN      $DMA_GEN_LOOP_EN
 
 # Other parameters
 VhdlPkgBool TSU_ENABLE    $TSU_ENABLE
