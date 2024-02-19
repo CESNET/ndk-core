@@ -11,6 +11,96 @@ use IEEE.numeric_std.all;
 use work.math_pack.all;
 use work.type_pack.all;
 
+
+-- ============================================================================
+--                                Description
+-- ============================================================================
+
+-- This is the specific wrapper around the Intel PCIe IP core P-Tile.
+-- It contains a number of debug components.
+-- Streaming Debug Probes monitor SRC and DST RDY signals and and Event Counters monitor the number of available PCIe credits for each Hard IP core.
+-- They are controlled over the MI interface.
+--
+-- **MI address space**
+--
+-- .. Warning::
+--
+--     For the 1x16 variant, each Streaming Debug Master has two connected Slave probes, because the IP core has two AVST buses (with a common DST RDY).
+--     In that case, the address range in the table above for the Streaming Debug Master is doubled.
+--     That means all other ranges are shifted by the new offset (2 x 0x40).
+--
+-- +----------------+----------------+------------------------------------------------------------------------------------------------+
+-- | Hard IP | Component                                                                                            | Address range   |
+-- +=========+======================================================================================================+=================+
+-- |         | Streaming Debug (Master with one or two Probe(s))                                                    |   0x00 - 0x3F   |
+-- +         +------------------------------------------------------------------------------------------------------+-----------------+
+-- |         |                                                               | Monitored range of credits: 0-7      |   0x40 - 0x4F   |
+-- +         |                                                               +--------------------------------------+-----------------+
+-- |         |                                                               | Monitored range of credits: 8-31     |   0x50 - 0x5F   |
+-- +         | Event Counter(s) - signal: PCIe credits of Posted HEADERS     +--------------------------------------+-----------------+
+-- |         |                                                               | Monitored range of credits: 32-127   |   0x60 - 0x6F   |
+-- +         |                                                               +--------------------------------------+-----------------+
+-- |         |                                                               | Monitored range of credits: 128-255  |   0x70 - 0x7F   |
+-- +         +------------------------------------------------------------------------------------------------------+-----------------+
+-- |         |                                                               | Monitored range of credits: 0-7      |   0x80 - 0x8F   |
+-- +         |                                                               +--------------------------------------+-----------------+
+-- |         |                                                               | Monitored range of credits: 8-31     |   0x90 - 0x9F   |
+-- +         | Event Counter(s) - signal: PCIe credits of Posted DATA        +--------------------------------------+-----------------+
+-- |         |                                                               | Monitored range of credits: 32-127   |   0xA0 - 0xAF   |
+-- +         |                                                               +--------------------------------------+-----------------+
+-- |         |                                                               | Monitored range of credits: 128-4095 |   0xB0 - 0xBF   |
+-- +    0    +------------------------------------------------------------------------------------------------------+-----------------+
+-- |         |                                                               | Monitored range of credits: 0-7      |   0xC0 - 0xCF   |
+-- +         |                                                               +--------------------------------------+-----------------+
+-- |         |                                                               | Monitored range of credits: 8-31     |   0xD0 - 0xDF   |
+-- +         | Event Counter(s) - signal: PCIe credits of Non-Posted HEADERS +--------------------------------------+-----------------+
+-- |         |                                                               | Monitored range of credits: 32-127   |   0xE0 - 0xEF   |
+-- +         |                                                               +--------------------------------------+-----------------+
+-- |         |                                                               | Monitored range of credits: 128-255  |   0xF0 - 0xFF   |
+-- +         +------------------------------------------------------------------------------------------------------+-----------------+
+-- |         |                                                               | Monitored range of credits: 0-7      |   0x100 - 0x10F |
+-- +         |                                                               +--------------------------------------+-----------------+
+-- |         |                                                               | Monitored range of credits: 8-31     |   0x110 - 0x11F |
+-- +         | Event Counter(s) - signal: PCIe credits of Non-Posted DATA    +--------------------------------------+-----------------+
+-- |         |                                                               | Monitored range of credits: 32-127   |   0x120 - 0x12F |
+-- +         |                                                               +--------------------------------------+-----------------+
+-- |         |                                                               | Monitored range of credits: 128-4095 |   0x130 - 0x13F |
+-- +---------+------------------------------------------------------------------------------------------------------+-----------------+
+-- |         | Streaming Debug (Master with one or two Probe(s))                                                    |   0x140 - 0x17F |
+-- +         +------------------------------------------------------------------------------------------------------+-----------------+
+-- |         |                                                               | Monitored range of credits: 0-7      |   0x180 - 0x18F |
+-- +         |                                                               +--------------------------------------+-----------------+
+-- |         |                                                               | Monitored range of credits: 8-31     |   0x190 - 0x19F |
+-- +         | Event Counter(s) - signal: PCIe credits of Posted HEADERS     +--------------------------------------+-----------------+
+-- |         |                                                               | Monitored range of credits: 32-127   |   0x1A0 - 0x1AF |
+-- +         |                                                               +--------------------------------------+-----------------+
+-- |         |                                                               | Monitored range of credits: 128-255  |   0x1B0 - 0x1BF |
+-- +         +------------------------------------------------------------------------------------------------------+-----------------+
+-- |         |                                                               | Monitored range of credits: 0-7      |   0x1C0 - 0x1CF |
+-- +         |                                                               +--------------------------------------+-----------------+
+-- |         |                                                               | Monitored range of credits: 8-31     |   0x1D0 - 0x1DF |
+-- +         | Event Counter(s) - signal: PCIe credits of Posted DATA        +--------------------------------------+-----------------+
+-- |         |                                                               | Monitored range of credits: 32-127   |   0x1E0 - 0x1EF |
+-- +         |                                                               +--------------------------------------+-----------------+
+-- |         |                                                               | Monitored range of credits: 128-4095 |   0x1F0 - 0x1FF |
+-- +    1    +------------------------------------------------------------------------------------------------------+-----------------+
+-- |         |                                                               | Monitored range of credits: 0-7      |   0x200 - 0x20F |
+-- +         |                                                               +--------------------------------------+-----------------+
+-- |         |                                                               | Monitored range of credits: 8-31     |   0x210 - 0x21F |
+-- +         | Event Counter(s) - signal: PCIe credits of Non-Posted HEADERS +--------------------------------------+-----------------+
+-- |         |                                                               | Monitored range of credits: 32-127   |   0x220 - 0x22F |
+-- +         |                                                               +--------------------------------------+-----------------+
+-- |         |                                                               | Monitored range of credits: 128-255  |   0x230 - 0x23F |
+-- +         +------------------------------------------------------------------------------------------------------+-----------------+
+-- |         |                                                               | Monitored range of credits: 0-7      |   0x240 - 0x24F |
+-- +         |                                                               +--------------------------------------+-----------------+
+-- |         |                                                               | Monitored range of credits: 8-31     |   0x250 - 0x25F |
+-- +         | Event Counter(s) - signal: PCIe credits of Non-Posted DATA    +--------------------------------------+-----------------+
+-- |         |                                                               | Monitored range of credits: 32-127   |   0x260 - 0x26F |
+-- +         |                                                               +--------------------------------------+-----------------+
+-- |         |                                                               | Monitored range of credits: 128-4095 |   0x270 - 0x27F |
+-- +---------+------------------------------------------------------------------------------------------------------+-----------------+
+--
 architecture PTILE of PCIE_CORE is
 
     component ptile_pcie_1x16 is
@@ -299,6 +389,57 @@ architecture PTILE of PCIE_CORE is
     constant VSEC_BASE_ADDRESS : integer := 16#D00#;
     constant PCIE_EPS_INST     : natural := tsel(ENDPOINT_MODE=0,PCIE_CONS,2*PCIE_CONS);
 
+    -- Number of watched signals.
+    constant DBG_EVENT_SIGNALS       : natural := 4;
+    -- Number of ranges (watched events) per each signal.
+    -- Currently, there are 4 ranges for each of the signals.
+    constant DBG_EVENT_RANGES        : i_array_t(DBG_EVENT_SIGNALS-1 downto 0) := (others => 4);
+    -- Total number of watched events (all ranges for all signals).
+    constant DBG_EVENTS              : natural := sum(DBG_EVENT_RANGES);
+    -- Address offset for each Event Counter.
+    constant DBG_EVENT_OFFSET        : natural := 16#10#;
+    constant DBG_MAX_INTERVAL_CYCLES : natural := 2**24-1;
+    constant DBG_MAX_INTERVALS       : natural := 1024;
+    constant DBG_MI_INTERVAL_ADDR    : std_logic_vector(MI_WIDTH-1 downto 0) := std_logic_vector(to_unsigned(0 , MI_WIDTH));
+    constant DBG_MI_EVENTS_ADDR      : std_logic_vector(MI_WIDTH-1 downto 0) := std_logic_vector(to_unsigned(4 , MI_WIDTH));
+    constant DBG_MI_CAPTURE_EN_ADDR  : std_logic_vector(MI_WIDTH-1 downto 0) := std_logic_vector(to_unsigned(8 , MI_WIDTH));
+    constant DBG_MI_CAPTURE_RD_ADDR  : std_logic_vector(MI_WIDTH-1 downto 0) := std_logic_vector(to_unsigned(12, MI_WIDTH));
+    constant DBG_MI_ADDR_MASK        : std_logic_vector(MI_WIDTH-1 downto 0) := (3 downto 2 => '1', others => '0');
+    -- Number of Streaming Debug Probes per each PCIe Endpoint.
+    -- Need 2 for 1x16 a there are two independent AVST buses.
+    constant DBG_PROBES              : natural := tsel(ENDPOINT_MODE=0,2,1);
+    -- Address offset for each Streaming Debug Probe.
+    constant DBG_PROBE_OFFSET        : natural := 16#40#;
+    -- Address offset of all Debug Probes per Endpoint.
+    constant DBG_PROBES_OFFSET       : natural := DBG_PROBES*DBG_PROBE_OFFSET;
+    -- Array of names (4-letter IDs) of Streaming Debug Probes
+    -- This constant contains just the names of Probes of a single Streaming Debug Master.
+    -- 2 Probes for 1x16 mode (there are 2 Avalon streams for one Endpoint).
+    constant DBG_PROBE_STR           : string := tsel(ENDPOINT_MODE=0,"PRQ0PRQ1","PRQ0"); -- (PRQ0 = PCIe RQ 0)
+    -- Address offset for each Endpoint (containing the Debug Probes and Event Counters).
+    constant ENDPT_OFFSET            : natural := DBG_PROBES*DBG_PROBE_OFFSET + DBG_EVENTS*DBG_EVENT_OFFSET;
+
+    -- Address bases for Endpoints
+    function mi_addr_base_endpts_f return slv_array_t is
+        variable mi_addr_base : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(MI_WIDTH-1 downto 0);
+    begin
+        for pe in 0 to PCIE_ENDPOINTS-1 loop
+            mi_addr_base(pe) := std_logic_vector(to_unsigned(pe*ENDPT_OFFSET, MI_WIDTH));
+        end loop;
+        return mi_addr_base;
+    end function;
+
+    -- Address bases for all Debug Probes and Event Counters in a single Endpoint
+    function mi_addr_base_dbg_f return slv_array_t is
+        variable mi_addr_base : slv_array_t(1+DBG_EVENTS-1 downto 0)(MI_WIDTH-1 downto 0);
+    begin
+        mi_addr_base(0) := (others => '0');
+        for e in 0 to DBG_EVENTS-1 loop
+            mi_addr_base(e+1) := std_logic_vector(to_unsigned(DBG_PROBES_OFFSET + e*DBG_EVENT_OFFSET, MI_WIDTH));
+        end loop;
+        return mi_addr_base;
+    end function;
+
     signal pcie_reset_status_n      : std_logic_vector(PCIE_EPS_INST-1 downto 0);
     signal pcie_reset_status        : std_logic_vector(PCIE_EPS_INST-1 downto 0);
     signal pcie_clk                 : std_logic_vector(PCIE_EPS_INST-1 downto 0);
@@ -358,6 +499,67 @@ architecture PTILE of PCIE_CORE is
     signal cfg_ext_read_data        : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(31 downto 0);
     signal cfg_ext_read_dv          : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
 
+    --==============================================================================================
+    -- Other debug signals
+    --==============================================================================================
+    signal mi_split_dwr         : slv_array_t     (PCIE_ENDPOINTS-1 downto 0)(MI_WIDTH-1 downto 0);
+    signal mi_split_addr        : slv_array_t     (PCIE_ENDPOINTS-1 downto 0)(MI_WIDTH-1 downto 0);
+    signal mi_split_be          : slv_array_t     (PCIE_ENDPOINTS-1 downto 0)(MI_WIDTH/8-1 downto 0);
+    signal mi_split_rd          : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal mi_split_wr          : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal mi_split_ardy        : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal mi_split_drd         : slv_array_t     (PCIE_ENDPOINTS-1 downto 0)(MI_WIDTH-1 downto 0);
+    signal mi_split_drdy        : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+
+    signal mi_sync_dwr          : slv_array_t     (PCIE_ENDPOINTS-1 downto 0)(MI_WIDTH-1 downto 0);
+    signal mi_sync_addr         : slv_array_t     (PCIE_ENDPOINTS-1 downto 0)(MI_WIDTH-1 downto 0);
+    signal mi_sync_be           : slv_array_t     (PCIE_ENDPOINTS-1 downto 0)(MI_WIDTH/8-1 downto 0);
+    signal mi_sync_rd           : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal mi_sync_wr           : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal mi_sync_ardy         : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal mi_sync_drd          : slv_array_t     (PCIE_ENDPOINTS-1 downto 0)(MI_WIDTH-1 downto 0);
+    signal mi_sync_drdy         : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+
+    signal mi_split_dbg_dwr     : slv_array_2d_t(PCIE_ENDPOINTS-1 downto 0)(1+DBG_EVENTS-1 downto 0)(MI_WIDTH-1 downto 0);
+    signal mi_split_dbg_addr    : slv_array_2d_t(PCIE_ENDPOINTS-1 downto 0)(1+DBG_EVENTS-1 downto 0)(MI_WIDTH-1 downto 0);
+    signal mi_split_dbg_be      : slv_array_2d_t(PCIE_ENDPOINTS-1 downto 0)(1+DBG_EVENTS-1 downto 0)(MI_WIDTH/8-1 downto 0);
+    signal mi_split_dbg_rd      : slv_array_t   (PCIE_ENDPOINTS-1 downto 0)(1+DBG_EVENTS-1 downto 0);
+    signal mi_split_dbg_wr      : slv_array_t   (PCIE_ENDPOINTS-1 downto 0)(1+DBG_EVENTS-1 downto 0);
+    signal mi_split_dbg_ardy    : slv_array_t   (PCIE_ENDPOINTS-1 downto 0)(1+DBG_EVENTS-1 downto 0);
+    signal mi_split_dbg_drd     : slv_array_2d_t(PCIE_ENDPOINTS-1 downto 0)(1+DBG_EVENTS-1 downto 0)(MI_WIDTH-1 downto 0);
+    signal mi_split_dbg_drdy    : slv_array_t   (PCIE_ENDPOINTS-1 downto 0)(1+DBG_EVENTS-1 downto 0);
+
+    signal dp_out_src_rdy       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(DBG_PROBES-1 downto 0);
+    signal dp_out_dst_rdy       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(DBG_PROBES-1 downto 0);
+
+    -- Watched signals:
+    -- 4 signals, each with 4 ranges => 4 bits for each watched signal
+    -- Any changes and addition of other signals must be also reflected in constants (DBG_EVENT_SIGNALS, DBG_EVENT_RANGES)
+    signal eve_ph               : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(4-1 downto 0);
+    signal eve_pd               : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(4-1 downto 0);
+    signal eve_nph              : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(4-1 downto 0);
+    signal eve_npd              : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(4-1 downto 0);
+
+    signal eve_ph_reg           : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(4-1 downto 0);
+    signal eve_pd_reg           : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(4-1 downto 0);
+    signal eve_nph_reg          : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(4-1 downto 0);
+    signal eve_npd_reg          : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(4-1 downto 0);
+
+    signal eve_all_reg          : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(DBG_EVENTS-1 downto 0);
+
+    signal dbg_credits_ph       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(11 downto 0);
+    signal dbg_credits_nph      : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(11 downto 0);
+    signal dbg_credits_pd       : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(15 downto 0);
+    signal dbg_credits_npd      : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(15 downto 0);
+
+    signal dbg_credits_ph_vld   : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal dbg_credits_nph_vld  : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal dbg_credits_pd_vld   : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+    signal dbg_credits_npd_vld  : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+
+    signal pcie_dbg_credits     : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(15 downto 0);
+    signal pcie_dbg_credits_sel : slv_array_t(PCIE_ENDPOINTS-1 downto 0)( 2 downto 0);
+
 begin
 
     -- =========================================================================
@@ -388,8 +590,8 @@ begin
                 p0_tx_st_hdr_i               => pcie_avst_up_hdr(i),                 --     p0_tx_st_misc.tx_st_hdr
                 p0_tx_st_tlp_prfx_i          => pcie_avst_up_prefix(i),              --                  .tx_st_tlp_prfx
                 p0_tx_par_err_o              => open,                           --                  .tx_par_err
-                p0_tx_cdts_limit_o           => open,                           --        p0_tx_cred.tx_cdts_type
-                p0_tx_cdts_limit_tdm_idx_o   => open,                           --                  .tx_data_cdts_consumed
+                p0_tx_cdts_limit_o           => pcie_dbg_credits(i*2),                           --        p0_tx_cred.tx_cdts_type
+                p0_tx_cdts_limit_tdm_idx_o   => pcie_dbg_credits_sel(i*2),                           --                  .tx_data_cdts_consumed
                 p0_tl_cfg_func_o             => pcie_cfg_func(i),               --      p0_config_tl.tl_cfg_func
                 p0_tl_cfg_add_o              => pcie_cfg_addr(i),               --                  .tl_cfg_add
                 p0_tl_cfg_ctl_o              => pcie_cfg_data(i),               --                  .tl_cfg_ctl
@@ -514,8 +716,8 @@ begin
                 p0_tx_st_hdr_i               => pcie_avst_up_hdr(i*2),                 --     p0_tx_st_misc.tx_st_hdr
                 p0_tx_st_tlp_prfx_i          => pcie_avst_up_prefix(i*2),              --                  .tx_st_tlp_prfx
                 p0_tx_par_err_o              => open,                           --                  .tx_par_err
-                p0_tx_cdts_limit_o           => open,                           --        p0_tx_cred.tx_cdts_type
-                p0_tx_cdts_limit_tdm_idx_o   => open,                           --                  .tx_data_cdts_consumed
+                p0_tx_cdts_limit_o           => pcie_dbg_credits(i*2),                           --        p0_tx_cred.tx_cdts_type
+                p0_tx_cdts_limit_tdm_idx_o   => pcie_dbg_credits_sel(i*2),                           --                  .tx_data_cdts_consumed
                 p0_tl_cfg_func_o             => pcie_cfg_func(i*2),               --      p0_config_tl.tl_cfg_func
                 p0_tl_cfg_add_o              => pcie_cfg_addr(i*2),               --                  .tl_cfg_add
                 p0_tl_cfg_ctl_o              => pcie_cfg_data(i*2),               --                  .tl_cfg_ctl
@@ -560,8 +762,8 @@ begin
                 p1_tx_st_hdr_i               => pcie_avst_up_hdr(i*2+1),                 --     p0_tx_st_misc.tx_st_hdr
                 p1_tx_st_tlp_prfx_i          => pcie_avst_up_prefix(i*2+1),              --                  .tx_st_tlp_prfx
                 p1_tx_par_err_o              => open,                           --                  .tx_par_err
-                p1_tx_cdts_limit_o           => open,                           --        p0_tx_cred.tx_cdts_type
-                p1_tx_cdts_limit_tdm_idx_o   => open,                           --                  .tx_data_cdts_consumed
+                p1_tx_cdts_limit_o           => pcie_dbg_credits(i*2+1),                           --        p0_tx_cred.tx_cdts_type
+                p1_tx_cdts_limit_tdm_idx_o   => pcie_dbg_credits_sel(i*2+1),                           --                  .tx_data_cdts_consumed
                 p1_tl_cfg_func_o             => pcie_cfg_func(i*2+1),               --      p0_config_tl.tl_cfg_func
                 p1_tl_cfg_add_o              => pcie_cfg_addr(i*2+1),               --                  .tl_cfg_add
                 p1_tl_cfg_ctl_o              => pcie_cfg_data(i*2+1),               --                  .tl_cfg_ctl
@@ -925,6 +1127,275 @@ begin
             CFG_EXT_READ_DATA      => cfg_ext_read_data(i),
             CFG_EXT_READ_DV        => cfg_ext_read_dv(i)
         );
+    end generate;
+
+    -- =========================================================================
+    --  DEBUG logic
+    -- =========================================================================
+
+    mi_splitter_endpts_i : entity work.MI_SPLITTER_PLUS_GEN
+    generic map(
+        ADDR_WIDTH => MI_WIDTH             ,
+        DATA_WIDTH => MI_WIDTH             ,
+        PORTS      => PCIE_ENDPOINTS       ,
+        ADDR_BASE  => mi_addr_base_endpts_f,
+        PIPE_OUT   => (others => false)    ,
+        DEVICE     => DEVICE
+    )
+    port map(
+        CLK     => MI_CLK       ,
+        RESET   => MI_RESET     ,
+
+        RX_DWR  => MI_DWR       ,
+        RX_ADDR => MI_ADDR      ,
+        RX_BE   => MI_BE        ,
+        RX_RD   => MI_RD        ,
+        RX_WR   => MI_WR        ,
+        RX_ARDY => MI_ARDY      ,
+        RX_DRD  => MI_DRD       ,
+        RX_DRDY => MI_DRDY      ,
+
+        TX_DWR  => mi_split_dwr ,
+        TX_ADDR => mi_split_addr,
+        TX_BE   => mi_split_be  ,
+        TX_RD   => mi_split_rd  ,
+        TX_WR   => mi_split_wr  ,
+        TX_ARDY => mi_split_ardy,
+        TX_DRD  => mi_split_drd ,
+        TX_DRDY => mi_split_drdy
+    );
+
+    pcie_endpoints_dbg_g : for pe in 0 to PCIE_ENDPOINTS-1 generate
+
+        -- ----------
+        --  MI Async
+        -- ----------
+        mi_async_i : entity work.MI_ASYNC
+        generic map(
+            DEVICE => DEVICE
+        )
+        port map(
+            CLK_M     => MI_CLK,
+            RESET_M   => MI_RESET,
+            MI_M_DWR  => mi_split_dwr (pe)   ,
+            MI_M_ADDR => mi_split_addr(pe)   ,
+            MI_M_RD   => mi_split_rd  (pe)   ,
+            MI_M_WR   => mi_split_wr  (pe)   ,
+            MI_M_BE   => mi_split_be  (pe)   ,
+            MI_M_DRD  => mi_split_drd (pe)   ,
+            MI_M_ARDY => mi_split_ardy(pe)   ,
+            MI_M_DRDY => mi_split_drdy(pe)   ,
+            
+            CLK_S     => pcie_clk     (pe)   ,
+            RESET_S   => pcie_rst     (pe)(0),
+            MI_S_DWR  => mi_sync_dwr  (pe)   ,
+            MI_S_ADDR => mi_sync_addr (pe)   ,
+            MI_S_RD   => mi_sync_rd   (pe)   ,
+            MI_S_WR   => mi_sync_wr   (pe)   ,
+            MI_S_BE   => mi_sync_be   (pe)   ,
+            MI_S_DRD  => mi_sync_drd  (pe)   ,
+            MI_S_ARDY => mi_sync_ardy (pe)   ,
+            MI_S_DRDY => mi_sync_drdy (pe)
+        );
+
+        -- ----------------------------------------------------
+        --  MI Splitter for all MI interfaces in each Endpoint
+        -- ----------------------------------------------------
+        mi_splitter_debug_i : entity work.MI_SPLITTER_PLUS_GEN
+        generic map(
+            ADDR_WIDTH => MI_WIDTH          ,
+            DATA_WIDTH => MI_WIDTH          ,
+            PORTS      => 1+DBG_EVENTS      ,
+            ADDR_BASE  => mi_addr_base_dbg_f,
+            PIPE_OUT   => (others => false) ,
+            DEVICE     => DEVICE
+        )
+        port map(
+            CLK     => pcie_clk         (pe)   ,
+            RESET   => pcie_rst         (pe)(0),
+
+            RX_DWR  => mi_sync_dwr      (pe)   ,
+            RX_ADDR => mi_sync_addr     (pe)   ,
+            RX_BE   => mi_sync_be       (pe)   ,
+            RX_RD   => mi_sync_rd       (pe)   ,
+            RX_WR   => mi_sync_wr       (pe)   ,
+            RX_ARDY => mi_sync_ardy     (pe)   ,
+            RX_DRD  => mi_sync_drd      (pe)   ,
+            RX_DRDY => mi_sync_drdy     (pe)   ,
+
+            TX_DWR  => mi_split_dbg_dwr (pe)   ,
+            TX_ADDR => mi_split_dbg_addr(pe)   ,
+            TX_BE   => mi_split_dbg_be  (pe)   ,
+            TX_RD   => mi_split_dbg_rd  (pe)   ,
+            TX_WR   => mi_split_dbg_wr  (pe)   ,
+            TX_ARDY => mi_split_dbg_ardy(pe)   ,
+            TX_DRD  => mi_split_dbg_drd (pe)   ,
+            TX_DRDY => mi_split_dbg_drdy(pe)
+        );
+
+        -- -----------------------------------------------
+        --  Streaming Debug Master for each PCIe Endpoint
+        -- -----------------------------------------------
+        debug_master_i : entity work.STREAMING_DEBUG_MASTER
+        generic map(
+            CONNECTED_PROBES   => DBG_PROBES              ,
+            REGIONS            => RQ_MFB_REGIONS          ,
+            DEBUG_ENABLED      => true                    ,
+            PROBE_ENABLED      => (1 to DBG_PROBES => 'E'),
+            COUNTER_WORD       => (1 to DBG_PROBES => 'E'),
+            COUNTER_WAIT       => (1 to DBG_PROBES => 'E'),
+            COUNTER_DST_HOLD   => (1 to DBG_PROBES => 'E'),
+            COUNTER_SRC_HOLD   => (1 to DBG_PROBES => 'E'),
+            COUNTER_SOP        => (1 to DBG_PROBES => 'D'), -- disabled
+            COUNTER_EOP        => (1 to DBG_PROBES => 'D'), -- disabled
+            BUS_CONTROL        => (1 to DBG_PROBES => 'D'), -- disabled
+            PROBE_NAMES        => DBG_PROBE_STR           ,
+            DEBUG_REG          => true
+        )
+        port map(
+            CLK           => pcie_clk         (pe)   ,
+            RESET         => pcie_rst         (pe)(0),
+
+            MI_DWR        => mi_split_dbg_dwr (pe)(0),
+            MI_ADDR       => mi_split_dbg_addr(pe)(0),
+            MI_RD         => mi_split_dbg_rd  (pe)(0),
+            MI_WR         => mi_split_dbg_wr  (pe)(0),
+            MI_BE         => mi_split_dbg_be  (pe)(0),
+            MI_DRD        => mi_split_dbg_drd (pe)(0),
+            MI_ARDY       => mi_split_dbg_ardy(pe)(0),
+            MI_DRDY       => mi_split_dbg_drdy(pe)(0),
+
+            DEBUG_BLOCK   => open                    ,
+            DEBUG_DROP    => open                    ,
+            DEBUG_SOP     => (others => '0')         ,
+            DEBUG_EOP     => (others => '0')         ,
+            DEBUG_SRC_RDY => dp_out_src_rdy   (pe)   ,
+            DEBUG_DST_RDY => dp_out_dst_rdy   (pe)
+        );
+
+        debug_probes_g : for dp in 0 to DBG_PROBES-1 generate
+            debug_probe_i : entity work.STREAMING_DEBUG_PROBE_MFB
+            generic map(
+                REGIONS => RQ_MFB_REGIONS -- CC or RQ?
+            )
+            port map(
+                RX_SOF         => (others => '0')           , -- SOP counters are unecessary => disabled in the Master Probe
+                RX_EOF         => (others => '0')           , -- EOP counters are unecessary => disabled in the Master Probe
+                RX_SRC_RDY     => pcie_avst_up_valid(pe)(dp),
+                RX_DST_RDY     => open                      ,
+
+                TX_SOF         => open                      ,
+                TX_EOF         => open                      ,
+                TX_SRC_RDY     => open                      ,
+                TX_DST_RDY     => pcie_avst_up_ready(pe)    , -- PCIe 1x16 has 2 buses with a common DST RDY
+
+                DEBUG_BLOCK    => '0'                       ,
+                DEBUG_DROP     => '0'                       ,
+                DEBUG_SOF      => open                      ,
+                DEBUG_EOF      => open                      ,
+                DEBUG_SRC_RDY  => dp_out_src_rdy    (pe)(dp),
+                DEBUG_DST_RDY  => dp_out_dst_rdy    (pe)(dp)
+            );
+        end generate;
+
+        -- ----------------
+        --  Event Counters
+        -- ----------------
+        eve_cnt_g : for de in 0 to DBG_EVENTS-1 generate
+            eve_cnt_i : entity work.EVENT_COUNTER_MI_WRAPPER
+            generic map(
+                MAX_INTERVAL_CYCLES   => DBG_MAX_INTERVAL_CYCLES,
+                MAX_CONCURRENT_EVENTS => 1                      ,
+                CAPTURE_EN            => True                   ,
+                CAPTURE_FIFO_ITEMS    => DBG_MAX_INTERVALS      ,
+                MI_WIDTH              => MI_WIDTH               ,
+                MI_INTERVAL_ADDR      => DBG_MI_INTERVAL_ADDR   ,
+                MI_EVENTS_ADDR        => DBG_MI_EVENTS_ADDR     ,
+                MI_CPT_EN_ADDR        => DBG_MI_CAPTURE_EN_ADDR ,
+                MI_CPT_RD_ADDR        => DBG_MI_CAPTURE_RD_ADDR ,
+                MI_ADDR_MASK          => DBG_MI_ADDR_MASK
+            )
+            port map(
+                CLK       => pcie_clk         (pe)      ,
+                RESET     => pcie_rst         (pe)(0)   ,
+
+                MI_DWR    => mi_split_dbg_dwr (pe)(de+1),
+                MI_ADDR   => mi_split_dbg_addr(pe)(de+1),
+                MI_RD     => mi_split_dbg_rd  (pe)(de+1),
+                MI_WR     => mi_split_dbg_wr  (pe)(de+1),
+                MI_ARDY   => mi_split_dbg_ardy(pe)(de+1),
+                MI_DRDY   => mi_split_dbg_drdy(pe)(de+1),
+                MI_DRD    => mi_split_dbg_drd (pe)(de+1),
+
+                EVENT_CNT => (others => '1')            ,
+                EVENT_VLD => eve_all_reg      (pe)(de)
+            );
+        end generate;
+
+        -- The connection of the four watched signals
+        eve_all_reg(pe)(1*4-1 downto 0*4) <= eve_ph_reg (pe); -- Posted Headers
+        eve_all_reg(pe)(2*4-1 downto 1*4) <= eve_pd_reg (pe); -- Posted Data
+        eve_all_reg(pe)(3*4-1 downto 2*4) <= eve_nph_reg(pe); -- Non-Posted Headers
+        eve_all_reg(pe)(4*4-1 downto 3*4) <= eve_npd_reg(pe); -- Non-Posted Data
+
+        -- Posted Headers
+        process (pcie_clk(pe))
+        begin
+            if (rising_edge(pcie_clk(pe))) then
+                eve_ph(pe)(0)  <= dbg_credits_ph_vld(pe) when (unsigned(dbg_credits_ph(pe)) >= 0 ) and (unsigned(dbg_credits_ph(pe)) <= 7  ) else '0'; -- 0-7    available Descriptors
+                eve_ph(pe)(1)  <= dbg_credits_ph_vld(pe) when (unsigned(dbg_credits_ph(pe)) >= 8 ) and (unsigned(dbg_credits_ph(pe)) <= 31 ) else '0'; -- 8-31   available Descriptors
+                eve_ph(pe)(2)  <= dbg_credits_ph_vld(pe) when (unsigned(dbg_credits_ph(pe)) >= 32) and (unsigned(dbg_credits_ph(pe)) <= 127) else '0'; -- 32-127 available Descriptors
+                eve_ph(pe)(3)  <= dbg_credits_ph_vld(pe) and (or dbg_credits_ph(pe)(11 downto 7));                                                     -- 127+   available Descriptors
+                eve_ph_reg(pe) <= eve_ph(pe);
+            end if;
+        end process;
+
+        -- Non-Posted Headers
+        process (pcie_clk(pe))
+        begin
+            if (rising_edge(pcie_clk(pe))) then
+                eve_nph(pe)(0)  <= dbg_credits_nph_vld(pe) when (unsigned(dbg_credits_nph(pe)) >= 0 ) and (unsigned(dbg_credits_nph(pe)) <= 7  ) else '0'; -- 0-7    available Descriptors
+                eve_nph(pe)(1)  <= dbg_credits_nph_vld(pe) when (unsigned(dbg_credits_nph(pe)) >= 8 ) and (unsigned(dbg_credits_nph(pe)) <= 31 ) else '0'; -- 8-31   available Descriptors
+                eve_nph(pe)(2)  <= dbg_credits_nph_vld(pe) when (unsigned(dbg_credits_nph(pe)) >= 32) and (unsigned(dbg_credits_nph(pe)) <= 127) else '0'; -- 32-127 available Descriptors
+                eve_nph(pe)(3)  <= dbg_credits_nph_vld(pe) and (or dbg_credits_nph(pe)(11 downto 7));                                                      -- 127+   available Descriptors
+                eve_nph_reg(pe) <= eve_nph(pe);
+            end if;
+        end process;
+
+        -- Posted Data
+        process (pcie_clk(pe))
+        begin
+            if (rising_edge(pcie_clk(pe))) then
+                eve_pd(pe)(0)  <= dbg_credits_pd_vld(pe) when (unsigned(dbg_credits_pd(pe)) >= 0 ) and (unsigned(dbg_credits_pd(pe)) <= 7  ) else '0'; -- 0-7    available Descriptors
+                eve_pd(pe)(1)  <= dbg_credits_pd_vld(pe) when (unsigned(dbg_credits_pd(pe)) >= 8 ) and (unsigned(dbg_credits_pd(pe)) <= 31 ) else '0'; -- 8-31   available Descriptors
+                eve_pd(pe)(2)  <= dbg_credits_pd_vld(pe) when (unsigned(dbg_credits_pd(pe)) >= 32) and (unsigned(dbg_credits_pd(pe)) <= 127) else '0'; -- 32-127 available Descriptors
+                eve_pd(pe)(3)  <= dbg_credits_pd_vld(pe) and (or dbg_credits_pd(pe)(15 downto 7));                                                     -- 127+   available Descriptors
+                eve_pd_reg(pe) <= eve_pd(pe);
+            end if;
+        end process;
+
+        -- Non-Posted Data
+        process (pcie_clk(pe))
+        begin
+            if (rising_edge(pcie_clk(pe))) then
+                eve_npd(pe)(0)  <= dbg_credits_npd_vld(pe) when (unsigned(dbg_credits_npd(pe)) >= 0 ) and (unsigned(dbg_credits_npd(pe)) <= 7  ) else '0'; -- 0-7    available Descriptors
+                eve_npd(pe)(1)  <= dbg_credits_npd_vld(pe) when (unsigned(dbg_credits_npd(pe)) >= 8 ) and (unsigned(dbg_credits_npd(pe)) <= 31 ) else '0'; -- 8-31   available Descriptors
+                eve_npd(pe)(2)  <= dbg_credits_npd_vld(pe) when (unsigned(dbg_credits_npd(pe)) >= 32) and (unsigned(dbg_credits_npd(pe)) <= 127) else '0'; -- 32-127 available Descriptors
+                eve_npd(pe)(3)  <= dbg_credits_npd_vld(pe) and (or dbg_credits_npd(pe)(15 downto 7));                                                      -- 127+   available Descriptors
+                eve_npd_reg(pe) <= eve_npd(pe);
+            end if;
+        end process;
+
+        dbg_credits_ph (pe) <= pcie_dbg_credits(pe)(11 downto 0); -- "When the traffic type is header credit, only the LSB 12 bits are valid" - Intel doc
+        dbg_credits_nph(pe) <= pcie_dbg_credits(pe)(11 downto 0); -- "When the traffic type is header credit, only the LSB 12 bits are valid" - Intel doc
+        dbg_credits_pd (pe) <= pcie_dbg_credits(pe);
+        dbg_credits_npd(pe) <= pcie_dbg_credits(pe);
+
+        dbg_credits_ph_vld (pe) <= '1' when (pcie_dbg_credits_sel(pe) = "000") else '0'; --     Posted header credit limit
+        dbg_credits_nph_vld(pe) <= '1' when (pcie_dbg_credits_sel(pe) = "001") else '0'; -- Non-Posted header credit limit
+        dbg_credits_pd_vld (pe) <= '1' when (pcie_dbg_credits_sel(pe) = "100") else '0'; --     Posted data   credit limit
+        dbg_credits_npd_vld(pe) <= '1' when (pcie_dbg_credits_sel(pe) = "101") else '0'; -- Non-Posted data   credit limit
+
     end generate;
 
 end architecture;
