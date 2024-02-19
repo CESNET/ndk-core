@@ -126,8 +126,7 @@ begin
         end process;
 
         -- chip_id reading: next state logic
-        chip_id_n_state_logic_p: process (p_state, p_state_reg, mc_drd_vld, mc_drd, mc_drd_reg, res_fill_vld,
-            res_fill_vld_reg, res_header_err, res_header_err_reg, res_fill_reg_vld, retry_stop)
+        chip_id_n_state_logic_p: process (all)
         begin
             n_state <= p_state;
             case p_state is
@@ -235,7 +234,7 @@ begin
         end process;
 
         -- chip_id reading: state signals
-        chip_id_signals_logic_p: process(p_state, p_state_reg, n_state, mc_drd_vld)
+        chip_id_signals_logic_p: process(all)
         begin
             mc_offset     <= (others => '0');
             mc_wr         <= '0';
