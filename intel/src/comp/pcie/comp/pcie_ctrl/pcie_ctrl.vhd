@@ -271,6 +271,25 @@ architecture FULL of PCIE_CTRL is
 
     constant CC_MFB_MERGER_CNT_MAX : natural := 4;
 
+    -- Number of Streaming Debug Probes for each Master.
+    constant DBG_PROBES            : natural := 1;
+    -- Address offset for each Streaming Debug Probe.
+    constant DBG_PROBE_OFFSET      : natural := 16#40#;
+    -- Address offset of all Debug Probes per Endpoint.
+    constant DBG_PROBES_OFFSET     : natural := DBG_PROBES*DBG_PROBE_OFFSET;
+    -- Name(s) (4-letter IDs) of Streaming Debug Probes.
+    -- DRQ0 = DMA RQ 0
+    constant DBG_PROBE_STR         : string := "DRQ0";
+
+    function mi_addr_base_f return slv_array_t is
+        variable mi_addr_base : slv_array_t(DMA_PORTS-1 downto 0)(31 downto 0);
+    begin
+        for dp in 0 to DMA_PORTS-1 loop
+            mi_addr_base(dp) := std_logic_vector(to_unsigned(dp*DBG_PROBES_OFFSET, 32));
+        end loop;
+        return mi_addr_base;
+    end function;
+
     signal mtc_cq_mfb_data        : std_logic_vector(CQ_MFB_REGIONS*CQ_MFB_REGION_SIZE*CQ_MFB_BLOCK_SIZE*CQ_MFB_ITEM_WIDTH-1 downto 0);
     signal mtc_cq_mfb_meta        : std_logic_vector(CQ_MFB_REGIONS*PCIE_CQ_META_WIDTH-1 downto 0);
     signal mtc_cq_mfb_sof         : std_logic_vector(CQ_MFB_REGIONS-1 downto 0);
@@ -333,6 +352,30 @@ architecture FULL of PCIE_CTRL is
     signal mi_sync_drd            : std_logic_vector(31 downto 0);
     signal mi_sync_ardy           : std_logic;
     signal mi_sync_drdy           : std_logic;
+
+    --==============================================================================================
+    -- Debug signals
+    --==============================================================================================
+    signal mi_split_dbg_dwr       : slv_array_t     (DMA_PORTS-1 downto 0)(31 downto 0);
+    signal mi_split_dbg_addr      : slv_array_t     (DMA_PORTS-1 downto 0)(31 downto 0);
+    signal mi_split_dbg_be        : slv_array_t     (DMA_PORTS-1 downto 0)(3 downto 0);
+    signal mi_split_dbg_rd        : std_logic_vector(DMA_PORTS-1 downto 0);
+    signal mi_split_dbg_wr        : std_logic_vector(DMA_PORTS-1 downto 0);
+    signal mi_split_dbg_ardy      : std_logic_vector(DMA_PORTS-1 downto 0);
+    signal mi_split_dbg_drd       : slv_array_t     (DMA_PORTS-1 downto 0)(31 downto 0);
+    signal mi_split_dbg_drdy      : std_logic_vector(DMA_PORTS-1 downto 0);
+
+    signal mi_sync_dbg_dwr        : slv_array_t     (DMA_PORTS-1 downto 0)(31 downto 0);
+    signal mi_sync_dbg_addr       : slv_array_t     (DMA_PORTS-1 downto 0)(31 downto 0);
+    signal mi_sync_dbg_be         : slv_array_t     (DMA_PORTS-1 downto 0)(3 downto 0);
+    signal mi_sync_dbg_rd         : std_logic_vector(DMA_PORTS-1 downto 0);
+    signal mi_sync_dbg_wr         : std_logic_vector(DMA_PORTS-1 downto 0);
+    signal mi_sync_dbg_ardy       : std_logic_vector(DMA_PORTS-1 downto 0);
+    signal mi_sync_dbg_drd        : slv_array_t     (DMA_PORTS-1 downto 0)(31 downto 0);
+    signal mi_sync_dbg_drdy       : std_logic_vector(DMA_PORTS-1 downto 0);
+
+    signal dp_out_src_rdy         : slv_array_t(DMA_PORTS-1 downto 0)(DBG_PROBES-1 downto 0);
+    signal dp_out_dst_rdy         : slv_array_t(DMA_PORTS-1 downto 0)(DBG_PROBES-1 downto 0);
 
 begin
 
@@ -777,5 +820,136 @@ begin
         OUT_ARDY => MI_ARDY,
         OUT_DRDY => MI_DRDY
     );
+
+    -- =========================================================================
+    --  DEBUG logic
+    -- =========================================================================
+
+    mi_splitter_endpts_i : entity work.MI_SPLITTER_PLUS_GEN
+    generic map(
+        ADDR_WIDTH => 32               ,
+        DATA_WIDTH => 32               ,
+        PORTS      => DMA_PORTS        ,
+        ADDR_BASE  => mi_addr_base_f   ,
+        PIPE_OUT   => (others => false),
+        DEVICE     => DEVICE
+    )
+    port map(
+        CLK     => MI_CLK,
+        RESET   => MI_RESET,
+
+        RX_DWR  => MI_DBG_DWR       ,
+        RX_ADDR => MI_DBG_ADDR      ,
+        RX_BE   => MI_DBG_BE        ,
+        RX_RD   => MI_DBG_RD        ,
+        RX_WR   => MI_DBG_WR        ,
+        RX_ARDY => MI_DBG_ARDY      ,
+        RX_DRD  => MI_DBG_DRD       ,
+        RX_DRDY => MI_DBG_DRDY      ,
+
+        TX_DWR  => mi_split_dbg_dwr ,
+        TX_ADDR => mi_split_dbg_addr,
+        TX_BE   => mi_split_dbg_be  ,
+        TX_RD   => mi_split_dbg_rd  ,
+        TX_WR   => mi_split_dbg_wr  ,
+        TX_ARDY => mi_split_dbg_ardy,
+        TX_DRD  => mi_split_dbg_drd ,
+        TX_DRDY => mi_split_dbg_drdy
+    );
+
+    dma_ports_dbg_g : for dp in 0 to DMA_PORTS-1 generate
+
+        mi_async_dbg_i : entity work.MI_ASYNC
+        generic map(
+            DEVICE => DEVICE
+        )
+        port map(
+            CLK_M     => MI_CLK               ,
+            RESET_M   => MI_RESET             ,
+            MI_M_DWR  => mi_split_dbg_dwr (dp),
+            MI_M_ADDR => mi_split_dbg_addr(dp),
+            MI_M_RD   => mi_split_dbg_rd  (dp),
+            MI_M_WR   => mi_split_dbg_wr  (dp),
+            MI_M_BE   => mi_split_dbg_be  (dp),
+            MI_M_DRD  => mi_split_dbg_drd (dp),
+            MI_M_ARDY => mi_split_dbg_ardy(dp),
+            MI_M_DRDY => mi_split_dbg_drdy(dp),
+
+            CLK_S     => DMA_CLK              ,
+            RESET_S   => DMA_RESET            ,
+            MI_S_DWR  => mi_sync_dbg_dwr  (dp),
+            MI_S_ADDR => mi_sync_dbg_addr (dp),
+            MI_S_RD   => mi_sync_dbg_rd   (dp),
+            MI_S_WR   => mi_sync_dbg_wr   (dp),
+            MI_S_BE   => mi_sync_dbg_be   (dp),
+            MI_S_DRD  => mi_sync_dbg_drd  (dp),
+            MI_S_ARDY => mi_sync_dbg_ardy (dp),
+            MI_S_DRDY => mi_sync_dbg_drdy (dp)
+        );
+
+        -- -----------------------------------
+        --  Streaming Debug Master + Probe(s)
+        -- -----------------------------------
+        debug_master_i : entity work.STREAMING_DEBUG_MASTER
+        generic map(
+            CONNECTED_PROBES   => DBG_PROBES              ,
+            REGIONS            => RQ_MFB_REGIONS          ,
+            DEBUG_ENABLED      => true                    ,
+            PROBE_ENABLED      => (1 to DBG_PROBES => 'E'),
+            COUNTER_WORD       => (1 to DBG_PROBES => 'E'),
+            COUNTER_WAIT       => (1 to DBG_PROBES => 'E'),
+            COUNTER_DST_HOLD   => (1 to DBG_PROBES => 'E'),
+            COUNTER_SRC_HOLD   => (1 to DBG_PROBES => 'E'),
+            COUNTER_SOP        => (1 to DBG_PROBES => 'D'), -- disabled
+            COUNTER_EOP        => (1 to DBG_PROBES => 'D'), -- disabled
+            BUS_CONTROL        => (1 to DBG_PROBES => 'D'), -- disabled
+            PROBE_NAMES        => DBG_PROBE_STR           ,
+            DEBUG_REG          => true
+        )
+        port map(
+            CLK           => DMA_CLK,
+            RESET         => DMA_RESET,
+
+            MI_DWR        => mi_sync_dbg_dwr (dp),
+            MI_ADDR       => mi_sync_dbg_addr(dp),
+            MI_RD         => mi_sync_dbg_rd  (dp),
+            MI_WR         => mi_sync_dbg_wr  (dp),
+            MI_BE         => mi_sync_dbg_be  (dp),
+            MI_DRD        => mi_sync_dbg_drd (dp),
+            MI_ARDY       => mi_sync_dbg_ardy(dp),
+            MI_DRDY       => mi_sync_dbg_drdy(dp),
+
+            DEBUG_BLOCK   => open                ,
+            DEBUG_DROP    => open                ,
+            DEBUG_SOP     => (others => '0')     ,
+            DEBUG_EOP     => (others => '0')     ,
+            DEBUG_SRC_RDY => dp_out_src_rdy  (dp),
+            DEBUG_DST_RDY => dp_out_dst_rdy  (dp)
+        );
+
+        debug_probe_i : entity work.STREAMING_DEBUG_PROBE_MFB
+        generic map(
+            REGIONS => RQ_MFB_REGIONS
+        )
+        port map(
+            RX_SOF         => (others => '0')          , -- SOP counters are unecessary => disabled in the Master Probe
+            RX_EOF         => (others => '0')          , -- EOP counters are unecessary => disabled in the Master Probe
+            RX_SRC_RDY     => DMA_RQ_MFB_SRC_RDY(dp)   ,
+            RX_DST_RDY     => open                     ,
+
+            TX_SOF         => open                     ,
+            TX_EOF         => open                     ,
+            TX_SRC_RDY     => open                     ,
+            TX_DST_RDY     => DMA_RQ_MFB_DST_RDY(dp)   ,
+
+            DEBUG_BLOCK    => '0'                      ,
+            DEBUG_DROP     => '0'                      ,
+            DEBUG_SOF      => open                     ,
+            DEBUG_EOF      => open                     ,
+            DEBUG_SRC_RDY  => dp_out_src_rdy    (dp)(0),
+            DEBUG_DST_RDY  => dp_out_dst_rdy    (dp)(0)
+        );
+    end generate;
+    -- ---------------------------------------
 
 end architecture;
