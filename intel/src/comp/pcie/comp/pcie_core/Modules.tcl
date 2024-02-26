@@ -11,11 +11,13 @@ set PCIE_COMP_BASE     "$ENTITY_BASE/../"
 set STREAMING_DBG_BASE "$OFM_PATH/comp/debug/streaming_debug"
 set EVENT_COUNTER_BASE "$OFM_PATH/comp/base/misc/event_counter"
 set MI_SPLITTER_BASE   "$OFM_PATH/comp/mi_tools/splitter_plus_gen"
+set INTEL_BASE         "$ENTITY_BASE/../../../../.."
 
 # Packages
 lappend PACKAGES "$OFM_PATH/comp/base/pkg/math_pack.vhd"
 lappend PACKAGES "$OFM_PATH/comp/base/pkg/type_pack.vhd"
 lappend PACKAGES "$OFM_PATH/comp/base/pkg/pcie_meta_pack.vhd"
+lappend PACKAGES "$INTEL_BASE/config/core_const.vhd"
 
 # Components
 lappend COMPONENTS [ list "ASYNC_RESET"  $ASYNC_RESET_BASE               "FULL" ]

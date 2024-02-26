@@ -8,6 +8,8 @@ library IEEE;
 use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all;
 
+use work.combo_user_const.all;
+
 use work.math_pack.all;
 use work.type_pack.all;
 
@@ -110,6 +112,7 @@ architecture USP of PCIE_CORE is
     constant AXI_RQUSER_WIDTH  : natural := tsel((ENDPOINT_MODE = 0), 137, 62);
     constant AXI_RCUSER_WIDTH  : natural := tsel((ENDPOINT_MODE = 0), 161, 75);
 
+    constant DBG_ENABLE              : boolean := PCIE_CORE_DEBUG_ENABLE;
     -- Number of watched signals.
     constant DBG_EVENT_SIGNALS       : natural := 4;
     -- Number of ranges (watched events) per each signal.
@@ -1210,257 +1213,261 @@ begin
     --  DEBUG logic
     -- =========================================================================
 
-    mi_splitter_endpts_i : entity work.MI_SPLITTER_PLUS_GEN
-    generic map(
-        ADDR_WIDTH => MI_WIDTH             ,
-        DATA_WIDTH => MI_WIDTH             ,
-        PORTS      => PCIE_ENDPOINTS       ,
-        ADDR_BASE  => mi_addr_base_endpts_f,
-        PIPE_OUT   => (others => false)    ,
-        DEVICE     => DEVICE
-    )
-    port map(
-        CLK     => MI_CLK       ,
-        RESET   => MI_RESET     ,
+    debug_logic_g : if DBG_ENABLE generate
 
-        RX_DWR  => MI_DWR       ,
-        RX_ADDR => MI_ADDR      ,
-        RX_BE   => MI_BE        ,
-        RX_RD   => MI_RD        ,
-        RX_WR   => MI_WR        ,
-        RX_ARDY => MI_ARDY      ,
-        RX_DRD  => MI_DRD       ,
-        RX_DRDY => MI_DRDY      ,
-
-        TX_DWR  => mi_split_dwr ,
-        TX_ADDR => mi_split_addr,
-        TX_BE   => mi_split_be  ,
-        TX_RD   => mi_split_rd  ,
-        TX_WR   => mi_split_wr  ,
-        TX_ARDY => mi_split_ardy,
-        TX_DRD  => mi_split_drd ,
-        TX_DRDY => mi_split_drdy
-    );
-
-    pcie_endpoints_dbg_g : for pe in 0 to PCIE_ENDPOINTS-1 generate
-
-        -- ----------
-        --  MI Async
-        -- ----------
-        mi_async_i : entity work.MI_ASYNC
+        mi_splitter_endpts_i : entity work.MI_SPLITTER_PLUS_GEN
         generic map(
-            DEVICE => DEVICE
-        )
-        port map(
-            CLK_M     => MI_CLK,
-            RESET_M   => MI_RESET,
-            MI_M_DWR  => mi_split_dwr (pe),
-            MI_M_ADDR => mi_split_addr(pe),
-            MI_M_RD   => mi_split_rd  (pe),
-            MI_M_WR   => mi_split_wr  (pe),
-            MI_M_BE   => mi_split_be  (pe),
-            MI_M_DRD  => mi_split_drd (pe),
-            MI_M_ARDY => mi_split_ardy(pe),
-            MI_M_DRDY => mi_split_drdy(pe),
-            
-            CLK_S     => pcie_hip_clk (pe),
-            RESET_S   => pcie_hip_rst (pe),
-            MI_S_DWR  => mi_sync_dwr  (pe),
-            MI_S_ADDR => mi_sync_addr (pe),
-            MI_S_RD   => mi_sync_rd   (pe),
-            MI_S_WR   => mi_sync_wr   (pe),
-            MI_S_BE   => mi_sync_be   (pe),
-            MI_S_DRD  => mi_sync_drd  (pe),
-            MI_S_ARDY => mi_sync_ardy (pe),
-            MI_S_DRDY => mi_sync_drdy (pe)
-        );
-
-        -- ----------------------------------------------------
-        --  MI Splitter for all MI interfaces in each Endpoint
-        -- ----------------------------------------------------
-        mi_splitter_debug_i : entity work.MI_SPLITTER_PLUS_GEN
-        generic map(
-            ADDR_WIDTH => MI_WIDTH          ,
-            DATA_WIDTH => MI_WIDTH          ,
-            PORTS      => 1+DBG_EVENTS      ,
-            ADDR_BASE  => mi_addr_base_dbg_f,
-            PIPE_OUT   => (others => false) ,
+            ADDR_WIDTH => MI_WIDTH             ,
+            DATA_WIDTH => MI_WIDTH             ,
+            PORTS      => PCIE_ENDPOINTS       ,
+            ADDR_BASE  => mi_addr_base_endpts_f,
+            PIPE_OUT   => (others => false)    ,
             DEVICE     => DEVICE
         )
         port map(
-            CLK     => pcie_hip_clk     (pe),
-            RESET   => pcie_hip_rst     (pe),
-    
-            RX_DWR  => mi_sync_dwr      (pe),
-            RX_ADDR => mi_sync_addr     (pe),
-            RX_BE   => mi_sync_be       (pe),
-            RX_RD   => mi_sync_rd       (pe),
-            RX_WR   => mi_sync_wr       (pe),
-            RX_ARDY => mi_sync_ardy     (pe),
-            RX_DRD  => mi_sync_drd      (pe),
-            RX_DRDY => mi_sync_drdy     (pe),
-    
-            TX_DWR  => mi_split_dbg_dwr (pe),
-            TX_ADDR => mi_split_dbg_addr(pe),
-            TX_BE   => mi_split_dbg_be  (pe),
-            TX_RD   => mi_split_dbg_rd  (pe),
-            TX_WR   => mi_split_dbg_wr  (pe),
-            TX_ARDY => mi_split_dbg_ardy(pe),
-            TX_DRD  => mi_split_dbg_drd (pe),
-            TX_DRDY => mi_split_dbg_drdy(pe)
+            CLK     => MI_CLK       ,
+            RESET   => MI_RESET     ,
+
+            RX_DWR  => MI_DWR       ,
+            RX_ADDR => MI_ADDR      ,
+            RX_BE   => MI_BE        ,
+            RX_RD   => MI_RD        ,
+            RX_WR   => MI_WR        ,
+            RX_ARDY => MI_ARDY      ,
+            RX_DRD  => MI_DRD       ,
+            RX_DRDY => MI_DRDY      ,
+
+            TX_DWR  => mi_split_dwr ,
+            TX_ADDR => mi_split_addr,
+            TX_BE   => mi_split_be  ,
+            TX_RD   => mi_split_rd  ,
+            TX_WR   => mi_split_wr  ,
+            TX_ARDY => mi_split_ardy,
+            TX_DRD  => mi_split_drd ,
+            TX_DRDY => mi_split_drdy
         );
 
-        -- -----------------------------------------------
-        --  Streaming Debug Master for each PCIe Endpoint
-        -- -----------------------------------------------
-        debug_master_i : entity work.STREAMING_DEBUG_MASTER
-        generic map(
-            CONNECTED_PROBES   => DBG_PROBES    ,
-            REGIONS            => RQ_MFB_REGIONS,
-            DEBUG_ENABLED      => true          ,
-            PROBE_ENABLED      => "E"           ,
-            COUNTER_WORD       => "E"           ,
-            COUNTER_WAIT       => "E"           ,
-            COUNTER_DST_HOLD   => "E"           ,
-            COUNTER_SRC_HOLD   => "E"           ,
-            COUNTER_SOP        => "D"           , -- disabled
-            COUNTER_EOP        => "D"           , -- disabled
-            BUS_CONTROL        => "D"           , -- disabled
-            PROBE_NAMES        => DBG_PROBE_STR ,
-            DEBUG_REG          => true
-        )
-        port map(
-            CLK           => pcie_hip_clk     (pe)   ,
-            RESET         => pcie_hip_rst     (pe)   ,
+        pcie_endpoints_dbg_g : for pe in 0 to PCIE_ENDPOINTS-1 generate
 
-            MI_DWR        => mi_split_dbg_dwr (pe)(0),
-            MI_ADDR       => mi_split_dbg_addr(pe)(0),
-            MI_RD         => mi_split_dbg_rd  (pe)(0),
-            MI_WR         => mi_split_dbg_wr  (pe)(0),
-            MI_BE         => mi_split_dbg_be  (pe)(0),
-            MI_DRD        => mi_split_dbg_drd (pe)(0),
-            MI_ARDY       => mi_split_dbg_ardy(pe)(0),
-            MI_DRDY       => mi_split_dbg_drdy(pe)(0),
-
-            DEBUG_BLOCK   => open                    ,
-            DEBUG_DROP    => open                    ,
-            DEBUG_SOP     => (others => '0')         ,
-            DEBUG_EOP     => (others => '0')         ,
-            DEBUG_SRC_RDY => debug_src_rdy    (pe)   ,
-            DEBUG_DST_RDY => debug_dst_rdy    (pe)
-        );
-
-        -- PERQ (PCIe Endpoint RQ) - pcie_rq_axi signals
-        debug_probe_i : entity work.STREAMING_DEBUG_PROBE_MFB
-        generic map(
-            REGIONS => RQ_MFB_REGIONS
-        )
-        port map(
-            RX_SOF         => (others => '0')         , -- SOP counters are unecessary => disabled in the Master Probe
-            RX_EOF         => (others => '0')         , -- EOP counters are unecessary => disabled in the Master Probe
-            RX_SRC_RDY     => pcie_rq_axi_valid(pe)   ,
-            RX_DST_RDY     => open                    ,
-
-            TX_SOF         => open                    ,
-            TX_EOF         => open                    ,
-            TX_SRC_RDY     => open                    ,
-            TX_DST_RDY     => pcie_rq_axi_ready(pe)   ,
-
-            DEBUG_BLOCK    => '0'                     ,
-            DEBUG_DROP     => '0'                     ,
-            DEBUG_SOF      => open                    ,
-            DEBUG_EOF      => open                    ,
-            DEBUG_SRC_RDY  => debug_src_rdy    (pe)(0),
-            DEBUG_DST_RDY  => debug_dst_rdy    (pe)(0)
-        );
-
-        -- ----------------
-        --  Event Counters
-        -- ----------------
-        eve_cnt_g : for de in 0 to DBG_EVENTS-1 generate
-            eve_cnt_i : entity work.EVENT_COUNTER_MI_WRAPPER
+            -- ----------
+            --  MI Async
+            -- ----------
+            mi_async_i : entity work.MI_ASYNC
             generic map(
-                MAX_INTERVAL_CYCLES   => DBG_MAX_INTERVAL_CYCLES,
-                MAX_CONCURRENT_EVENTS => 1                      ,
-                CAPTURE_EN            => True                   ,
-                CAPTURE_FIFO_ITEMS    => DBG_MAX_INTERVALS      ,
-                MI_WIDTH              => MI_WIDTH               ,
-                MI_INTERVAL_ADDR      => DBG_MI_INTERVAL_ADDR   ,
-                MI_EVENTS_ADDR        => DBG_MI_EVENTS_ADDR     ,
-                MI_CPT_EN_ADDR        => DBG_MI_CAPTURE_EN_ADDR ,
-                MI_CPT_RD_ADDR        => DBG_MI_CAPTURE_RD_ADDR ,
-                MI_ADDR_MASK          => DBG_MI_ADDR_MASK
+                DEVICE => DEVICE
             )
             port map(
-                CLK       => pcie_hip_clk     (pe)      ,
-                RESET     => pcie_hip_rst     (pe)      ,
+                CLK_M     => MI_CLK,
+                RESET_M   => MI_RESET,
+                MI_M_DWR  => mi_split_dwr (pe),
+                MI_M_ADDR => mi_split_addr(pe),
+                MI_M_RD   => mi_split_rd  (pe),
+                MI_M_WR   => mi_split_wr  (pe),
+                MI_M_BE   => mi_split_be  (pe),
+                MI_M_DRD  => mi_split_drd (pe),
+                MI_M_ARDY => mi_split_ardy(pe),
+                MI_M_DRDY => mi_split_drdy(pe),
 
-                MI_DWR    => mi_split_dbg_dwr (pe)(de+1),
-                MI_ADDR   => mi_split_dbg_addr(pe)(de+1),
-                MI_RD     => mi_split_dbg_rd  (pe)(de+1),
-                MI_WR     => mi_split_dbg_wr  (pe)(de+1),
-                MI_ARDY   => mi_split_dbg_ardy(pe)(de+1),
-                MI_DRDY   => mi_split_dbg_drdy(pe)(de+1),
-                MI_DRD    => mi_split_dbg_drd (pe)(de+1),
-
-                EVENT_CNT => (others => '1')            ,
-                EVENT_VLD => eve_all_reg      (pe)(de)
+                CLK_S     => pcie_hip_clk (pe),
+                RESET_S   => pcie_hip_rst (pe),
+                MI_S_DWR  => mi_sync_dwr  (pe),
+                MI_S_ADDR => mi_sync_addr (pe),
+                MI_S_RD   => mi_sync_rd   (pe),
+                MI_S_WR   => mi_sync_wr   (pe),
+                MI_S_BE   => mi_sync_be   (pe),
+                MI_S_DRD  => mi_sync_drd  (pe),
+                MI_S_ARDY => mi_sync_ardy (pe),
+                MI_S_DRDY => mi_sync_drdy (pe)
             );
+
+            -- ----------------------------------------------------
+            --  MI Splitter for all MI interfaces in each Endpoint
+            -- ----------------------------------------------------
+            mi_splitter_debug_i : entity work.MI_SPLITTER_PLUS_GEN
+            generic map(
+                ADDR_WIDTH => MI_WIDTH          ,
+                DATA_WIDTH => MI_WIDTH          ,
+                PORTS      => 1+DBG_EVENTS      ,
+                ADDR_BASE  => mi_addr_base_dbg_f,
+                PIPE_OUT   => (others => false) ,
+                DEVICE     => DEVICE
+            )
+            port map(
+                CLK     => pcie_hip_clk     (pe),
+                RESET   => pcie_hip_rst     (pe),
+
+                RX_DWR  => mi_sync_dwr      (pe),
+                RX_ADDR => mi_sync_addr     (pe),
+                RX_BE   => mi_sync_be       (pe),
+                RX_RD   => mi_sync_rd       (pe),
+                RX_WR   => mi_sync_wr       (pe),
+                RX_ARDY => mi_sync_ardy     (pe),
+                RX_DRD  => mi_sync_drd      (pe),
+                RX_DRDY => mi_sync_drdy     (pe),
+
+                TX_DWR  => mi_split_dbg_dwr (pe),
+                TX_ADDR => mi_split_dbg_addr(pe),
+                TX_BE   => mi_split_dbg_be  (pe),
+                TX_RD   => mi_split_dbg_rd  (pe),
+                TX_WR   => mi_split_dbg_wr  (pe),
+                TX_ARDY => mi_split_dbg_ardy(pe),
+                TX_DRD  => mi_split_dbg_drd (pe),
+                TX_DRDY => mi_split_dbg_drdy(pe)
+            );
+
+            -- -----------------------------------------------
+            --  Streaming Debug Master for each PCIe Endpoint
+            -- -----------------------------------------------
+            debug_master_i : entity work.STREAMING_DEBUG_MASTER
+            generic map(
+                CONNECTED_PROBES   => DBG_PROBES    ,
+                REGIONS            => RQ_MFB_REGIONS,
+                DEBUG_ENABLED      => true          ,
+                PROBE_ENABLED      => "E"           ,
+                COUNTER_WORD       => "E"           ,
+                COUNTER_WAIT       => "E"           ,
+                COUNTER_DST_HOLD   => "E"           ,
+                COUNTER_SRC_HOLD   => "E"           ,
+                COUNTER_SOP        => "D"           , -- disabled
+                COUNTER_EOP        => "D"           , -- disabled
+                BUS_CONTROL        => "D"           , -- disabled
+                PROBE_NAMES        => DBG_PROBE_STR ,
+                DEBUG_REG          => true
+            )
+            port map(
+                CLK           => pcie_hip_clk     (pe)   ,
+                RESET         => pcie_hip_rst     (pe)   ,
+
+                MI_DWR        => mi_split_dbg_dwr (pe)(0),
+                MI_ADDR       => mi_split_dbg_addr(pe)(0),
+                MI_RD         => mi_split_dbg_rd  (pe)(0),
+                MI_WR         => mi_split_dbg_wr  (pe)(0),
+                MI_BE         => mi_split_dbg_be  (pe)(0),
+                MI_DRD        => mi_split_dbg_drd (pe)(0),
+                MI_ARDY       => mi_split_dbg_ardy(pe)(0),
+                MI_DRDY       => mi_split_dbg_drdy(pe)(0),
+
+                DEBUG_BLOCK   => open                    ,
+                DEBUG_DROP    => open                    ,
+                DEBUG_SOP     => (others => '0')         ,
+                DEBUG_EOP     => (others => '0')         ,
+                DEBUG_SRC_RDY => debug_src_rdy    (pe)   ,
+                DEBUG_DST_RDY => debug_dst_rdy    (pe)
+            );
+
+            -- PERQ (PCIe Endpoint RQ) - pcie_rq_axi signals
+            debug_probe_i : entity work.STREAMING_DEBUG_PROBE_MFB
+            generic map(
+                REGIONS => RQ_MFB_REGIONS
+            )
+            port map(
+                RX_SOF         => (others => '0')         , -- SOP counters are unecessary => disabled in the Master Probe
+                RX_EOF         => (others => '0')         , -- EOP counters are unecessary => disabled in the Master Probe
+                RX_SRC_RDY     => pcie_rq_axi_valid(pe)   ,
+                RX_DST_RDY     => open                    ,
+
+                TX_SOF         => open                    ,
+                TX_EOF         => open                    ,
+                TX_SRC_RDY     => open                    ,
+                TX_DST_RDY     => pcie_rq_axi_ready(pe)   ,
+
+                DEBUG_BLOCK    => '0'                     ,
+                DEBUG_DROP     => '0'                     ,
+                DEBUG_SOF      => open                    ,
+                DEBUG_EOF      => open                    ,
+                DEBUG_SRC_RDY  => debug_src_rdy    (pe)(0),
+                DEBUG_DST_RDY  => debug_dst_rdy    (pe)(0)
+            );
+
+            -- ----------------
+            --  Event Counters
+            -- ----------------
+            eve_cnt_g : for de in 0 to DBG_EVENTS-1 generate
+                eve_cnt_i : entity work.EVENT_COUNTER_MI_WRAPPER
+                generic map(
+                    MAX_INTERVAL_CYCLES   => DBG_MAX_INTERVAL_CYCLES,
+                    MAX_CONCURRENT_EVENTS => 1                      ,
+                    CAPTURE_EN            => True                   ,
+                    CAPTURE_FIFO_ITEMS    => DBG_MAX_INTERVALS      ,
+                    MI_WIDTH              => MI_WIDTH               ,
+                    MI_INTERVAL_ADDR      => DBG_MI_INTERVAL_ADDR   ,
+                    MI_EVENTS_ADDR        => DBG_MI_EVENTS_ADDR     ,
+                    MI_CPT_EN_ADDR        => DBG_MI_CAPTURE_EN_ADDR ,
+                    MI_CPT_RD_ADDR        => DBG_MI_CAPTURE_RD_ADDR ,
+                    MI_ADDR_MASK          => DBG_MI_ADDR_MASK
+                )
+                port map(
+                    CLK       => pcie_hip_clk     (pe)      ,
+                    RESET     => pcie_hip_rst     (pe)      ,
+
+                    MI_DWR    => mi_split_dbg_dwr (pe)(de+1),
+                    MI_ADDR   => mi_split_dbg_addr(pe)(de+1),
+                    MI_RD     => mi_split_dbg_rd  (pe)(de+1),
+                    MI_WR     => mi_split_dbg_wr  (pe)(de+1),
+                    MI_ARDY   => mi_split_dbg_ardy(pe)(de+1),
+                    MI_DRDY   => mi_split_dbg_drdy(pe)(de+1),
+                    MI_DRD    => mi_split_dbg_drd (pe)(de+1),
+
+                    EVENT_CNT => (others => '1')            ,
+                    EVENT_VLD => eve_all_reg      (pe)(de)
+                );
+            end generate;
+
+            -- The connection of the four watched signals
+            eve_all_reg(pe)(1*4-1 downto 0*4) <= eve_ph_reg (pe); -- Posted Headers
+            eve_all_reg(pe)(2*4-1 downto 1*4) <= eve_pd_reg (pe); -- Posted Data
+            eve_all_reg(pe)(3*4-1 downto 2*4) <= eve_nph_reg(pe); -- Non-Posted Headers
+            eve_all_reg(pe)(4*4-1 downto 3*4) <= eve_npd_reg(pe); -- Non-Posted Data
+
+            -- Posted Headers
+            process (pcie_hip_clk(pe))
+            begin
+                if (rising_edge(pcie_hip_clk(pe))) then
+                    eve_ph(pe)(0)  <= '1' when (unsigned(dbg_credits_ph(pe)) >= 0 ) and (unsigned(dbg_credits_ph(pe)) <= 7  ) else '0'; -- 0-7    available Descriptors
+                    eve_ph(pe)(1)  <= '1' when (unsigned(dbg_credits_ph(pe)) >= 8 ) and (unsigned(dbg_credits_ph(pe)) <= 31 ) else '0'; -- 8-31   available Descriptors
+                    eve_ph(pe)(2)  <= '1' when (unsigned(dbg_credits_ph(pe)) >= 32) and (unsigned(dbg_credits_ph(pe)) <= 127) else '0'; -- 32-127 available Descriptors
+                    eve_ph(pe)(3)  <= dbg_credits_ph(pe)(7);                                                                            -- 127+   available Descriptors
+                    eve_ph_reg(pe) <= eve_ph(pe);
+                end if;
+            end process;
+
+            -- Posted Data
+            process (pcie_hip_clk(pe))
+            begin
+                if (rising_edge(pcie_hip_clk(pe))) then
+                    eve_pd(pe)(0)  <= '1' when (unsigned(dbg_credits_pd(pe)) >= 0 ) and (unsigned(dbg_credits_pd(pe)) <= 7  ) else '0'; -- 0-7    available Descriptors
+                    eve_pd(pe)(1)  <= '1' when (unsigned(dbg_credits_pd(pe)) >= 8 ) and (unsigned(dbg_credits_pd(pe)) <= 31 ) else '0'; -- 8-31   available Descriptors
+                    eve_pd(pe)(2)  <= '1' when (unsigned(dbg_credits_pd(pe)) >= 32) and (unsigned(dbg_credits_pd(pe)) <= 127) else '0'; -- 32-127 available Descriptors
+                    eve_pd(pe)(3)  <= or dbg_credits_pd(pe)(dbg_credits_pd'high downto 7);                                              -- 127+   available Descriptors
+                    eve_pd_reg(pe) <= eve_pd(pe);
+                end if;
+            end process;
+
+            -- Non-Posted Headers
+            process (pcie_hip_clk(pe))
+            begin
+                if (rising_edge(pcie_hip_clk(pe))) then
+                    eve_nph(pe)(0)  <= '1' when (unsigned(dbg_credits_nph(pe)) >= 0 ) and (unsigned(dbg_credits_nph(pe)) <= 7  ) else '0'; -- 0-7    available Descriptors
+                    eve_nph(pe)(1)  <= '1' when (unsigned(dbg_credits_nph(pe)) >= 8 ) and (unsigned(dbg_credits_nph(pe)) <= 31 ) else '0'; -- 8-31   available Descriptors
+                    eve_nph(pe)(2)  <= '1' when (unsigned(dbg_credits_nph(pe)) >= 32) and (unsigned(dbg_credits_nph(pe)) <= 127) else '0'; -- 32-127 available Descriptors
+                    eve_nph(pe)(3)  <= dbg_credits_nph(pe)(7);                                                                             -- 127+   available Descriptors
+                    eve_nph_reg(pe) <= eve_nph(pe);
+                end if;
+            end process;
+
+            -- Non-Posted Data
+            process (pcie_hip_clk(pe))
+            begin
+                if (rising_edge(pcie_hip_clk(pe))) then
+                    eve_npd(pe)(0)  <= '1' when (unsigned(dbg_credits_npd(pe)) >= 0 ) and (unsigned(dbg_credits_npd(pe)) <= 7  ) else '0'; -- 0-7    available Descriptors
+                    eve_npd(pe)(1)  <= '1' when (unsigned(dbg_credits_npd(pe)) >= 8 ) and (unsigned(dbg_credits_npd(pe)) <= 31 ) else '0'; -- 8-31   available Descriptors
+                    eve_npd(pe)(2)  <= '1' when (unsigned(dbg_credits_npd(pe)) >= 32) and (unsigned(dbg_credits_npd(pe)) <= 127) else '0'; -- 32-127 available Descriptors
+                    eve_npd(pe)(3)  <= or dbg_credits_npd(pe)(dbg_credits_npd'high downto 7);                                              -- 127+   available Descriptors
+                    eve_npd_reg(pe) <= eve_npd(pe);
+                end if;
+            end process;
+
         end generate;
-
-        -- The connection of the four watched signals
-        eve_all_reg(pe)(1*4-1 downto 0*4) <= eve_ph_reg (pe); -- Posted Headers
-        eve_all_reg(pe)(2*4-1 downto 1*4) <= eve_pd_reg (pe); -- Posted Data
-        eve_all_reg(pe)(3*4-1 downto 2*4) <= eve_nph_reg(pe); -- Non-Posted Headers
-        eve_all_reg(pe)(4*4-1 downto 3*4) <= eve_npd_reg(pe); -- Non-Posted Data
-
-        -- Posted Headers
-        process (pcie_hip_clk(pe))
-        begin
-            if (rising_edge(pcie_hip_clk(pe))) then
-                eve_ph(pe)(0)  <= '1' when (unsigned(dbg_credits_ph(pe)) >= 0 ) and (unsigned(dbg_credits_ph(pe)) <= 7  ) else '0'; -- 0-7    available Descriptors
-                eve_ph(pe)(1)  <= '1' when (unsigned(dbg_credits_ph(pe)) >= 8 ) and (unsigned(dbg_credits_ph(pe)) <= 31 ) else '0'; -- 8-31   available Descriptors
-                eve_ph(pe)(2)  <= '1' when (unsigned(dbg_credits_ph(pe)) >= 32) and (unsigned(dbg_credits_ph(pe)) <= 127) else '0'; -- 32-127 available Descriptors
-                eve_ph(pe)(3)  <= dbg_credits_ph(pe)(7);                                                                            -- 127+   available Descriptors
-                eve_ph_reg(pe) <= eve_ph(pe);
-            end if;
-        end process;
-
-        -- Posted Data
-        process (pcie_hip_clk(pe))
-        begin
-            if (rising_edge(pcie_hip_clk(pe))) then
-                eve_pd(pe)(0)  <= '1' when (unsigned(dbg_credits_pd(pe)) >= 0 ) and (unsigned(dbg_credits_pd(pe)) <= 7  ) else '0'; -- 0-7    available Descriptors
-                eve_pd(pe)(1)  <= '1' when (unsigned(dbg_credits_pd(pe)) >= 8 ) and (unsigned(dbg_credits_pd(pe)) <= 31 ) else '0'; -- 8-31   available Descriptors
-                eve_pd(pe)(2)  <= '1' when (unsigned(dbg_credits_pd(pe)) >= 32) and (unsigned(dbg_credits_pd(pe)) <= 127) else '0'; -- 32-127 available Descriptors
-                eve_pd(pe)(3)  <= or dbg_credits_pd(pe)(dbg_credits_pd'high downto 7);                                              -- 127+   available Descriptors
-                eve_pd_reg(pe) <= eve_pd(pe);
-            end if;
-        end process;
-
-        -- Non-Posted Headers
-        process (pcie_hip_clk(pe))
-        begin
-            if (rising_edge(pcie_hip_clk(pe))) then
-                eve_nph(pe)(0)  <= '1' when (unsigned(dbg_credits_nph(pe)) >= 0 ) and (unsigned(dbg_credits_nph(pe)) <= 7  ) else '0'; -- 0-7    available Descriptors
-                eve_nph(pe)(1)  <= '1' when (unsigned(dbg_credits_nph(pe)) >= 8 ) and (unsigned(dbg_credits_nph(pe)) <= 31 ) else '0'; -- 8-31   available Descriptors
-                eve_nph(pe)(2)  <= '1' when (unsigned(dbg_credits_nph(pe)) >= 32) and (unsigned(dbg_credits_nph(pe)) <= 127) else '0'; -- 32-127 available Descriptors
-                eve_nph(pe)(3)  <= dbg_credits_nph(pe)(7);                                                                             -- 127+   available Descriptors
-                eve_nph_reg(pe) <= eve_nph(pe);
-            end if;
-        end process;
-
-        -- Non-Posted Data
-        process (pcie_hip_clk(pe))
-        begin
-            if (rising_edge(pcie_hip_clk(pe))) then
-                eve_npd(pe)(0)  <= '1' when (unsigned(dbg_credits_npd(pe)) >= 0 ) and (unsigned(dbg_credits_npd(pe)) <= 7  ) else '0'; -- 0-7    available Descriptors
-                eve_npd(pe)(1)  <= '1' when (unsigned(dbg_credits_npd(pe)) >= 8 ) and (unsigned(dbg_credits_npd(pe)) <= 31 ) else '0'; -- 8-31   available Descriptors
-                eve_npd(pe)(2)  <= '1' when (unsigned(dbg_credits_npd(pe)) >= 32) and (unsigned(dbg_credits_npd(pe)) <= 127) else '0'; -- 32-127 available Descriptors
-                eve_npd(pe)(3)  <= or dbg_credits_npd(pe)(dbg_credits_npd'high downto 7);                                              -- 127+   available Descriptors
-                eve_npd_reg(pe) <= eve_npd(pe);
-            end if;
-        end process;
 
     end generate;
 
