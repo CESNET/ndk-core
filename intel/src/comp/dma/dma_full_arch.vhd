@@ -182,7 +182,7 @@ begin
             TX_GEN_EN => TX_GEN_EN,
 
             SPEED_METER_EN  => TRUE,
-            DBG_CNTR_EN     => FALSE,
+            DBG_CNTR_EN     => DBG_CNTR_EN,
             USR_EQ_DMA      => USR_EQ_DMA,
             CROX_EQ_DMA     => CROX_EQ_DMA,
             CROX_DOUBLE_DMA => CROX_DOUBLE_DMA,

@@ -85,6 +85,7 @@ generic(
     RX_GEN_EN            : boolean := true;
     TX_GEN_EN            : boolean := true;
 
+    DBG_CNTR_EN          : boolean := false;
     USR_EQ_DMA           : boolean := false;
     CROX_EQ_DMA          : boolean := false;
     CROX_DOUBLE_DMA      : boolean := true;
