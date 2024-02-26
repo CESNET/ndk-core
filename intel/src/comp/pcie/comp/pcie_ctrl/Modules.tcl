@@ -32,3 +32,4 @@ lappend COMPONENTS [ list "DEBUG_PROBE"  $STREAMIN_DBG_BASE "FULL" ]
 
 # Files
 lappend MOD "$ENTITY_BASE/pcie_ctrl.vhd"
+lappend MOD "$ENTITY_BASE/DevTree.tcl"
