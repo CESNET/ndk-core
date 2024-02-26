@@ -13,12 +13,14 @@ set MI_ASYNC_BASE     "$OFM_PATH/comp/mi_tools/async"
 set MI_PIPE_BASE      "$OFM_PATH/comp/mi_tools/pipe"
 set MI_SPLITTER_BASE  "$OFM_PATH/comp/mi_tools/splitter_plus_gen"
 set STREAMIN_DBG_BASE "$OFM_PATH/comp/debug/streaming_debug"
+set INTEL_BASE        "$ENTITY_BASE/../../../../.."
 
 # Packages
 lappend PACKAGES "$OFM_PATH/comp/base/pkg/math_pack.vhd"
 lappend PACKAGES "$OFM_PATH/comp/base/pkg/type_pack.vhd"
 lappend PACKAGES "$OFM_PATH/comp/base/pkg/dma_bus_pack.vhd"
 lappend PACKAGES "$OFM_PATH/comp/base/pkg/pcie_meta_pack.vhd"
+lappend PACKAGES "$INTEL_BASE/config/core_const.vhd"
 
 # Components
 lappend COMPONENTS [ list "MTC"          $MTC_BASE          "FULL" ]
