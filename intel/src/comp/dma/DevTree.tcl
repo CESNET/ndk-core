@@ -28,10 +28,16 @@ proc dts_dmamod_open {base type rxn txn pcie rx_frame_size_max tx_frame_size_max
     }
 
     # RX DMA Channels
+    global DMA_DEBUG_ENABLE
     for {set i 0} {$i < $rxn} {incr i} {
         if {$type == 3} {
             set    var_base [expr $base + $i * 0x80]
             append ret [dts_dma_medusa_ctrl "ndp" $type "rx" $i $var_base $pcie "dma_params_rx$pcie"]
+            if {$DMA_DEBUG_ENABLE} {
+                append ret [dts_event_counter [expr $base + 0x00010000 + $i * 0x80 + 0x00] "event_counter0_$i" 1]
+                append ret [dts_event_counter [expr $base + 0x00010000 + $i * 0x80 + 0x10] "event_counter1_$i" 1]
+                append ret [dts_event_counter [expr $base + 0x00010000 + $i * 0x80 + 0x20] "event_counter2_$i" 1]
+            }
         } elseif {$type == 4} {
             set    var_base [expr $base + $i * 0x80]
             append ret [dts_dma_calypte_ctrl "rx" $i $var_base $pcie]
