@@ -253,7 +253,17 @@ entity PCIE_CTRL is
         MI_WR               : out std_logic;
         MI_DRD              : in  std_logic_vector(31 downto 0);
         MI_ARDY             : in  std_logic;
-        MI_DRDY             : in  std_logic
+        MI_DRDY             : in  std_logic;
+
+        -- MI debug interface
+        MI_DBG_DWR          : in  std_logic_vector(31 downto 0);
+        MI_DBG_ADDR         : in  std_logic_vector(31 downto 0);
+        MI_DBG_BE           : in  std_logic_vector(3 downto 0);
+        MI_DBG_RD           : in  std_logic;
+        MI_DBG_WR           : in  std_logic;
+        MI_DBG_DRD          : out std_logic_vector(31 downto 0);
+        MI_DBG_ARDY         : out std_logic;
+        MI_DBG_DRDY         : out std_logic
     );
 end entity;
 
