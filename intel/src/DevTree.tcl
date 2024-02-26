@@ -139,6 +139,8 @@ proc dts_build_netcope {} {
     # PCIe Debug
     global PCIE_ENDPOINT_MODE PCIE_MOD_ARCH
     append ret [dts_pcie_core_dbg $ADDR_PCIE_DBG $PCIE_ENDPOINTS $PCIE_ENDPOINT_MODE $PCIE_MOD_ARCH]
+    set pcie_ctrl_base [expr $ADDR_PCIE_DBG + "0x100000"]
+    append ret [dts_pcie_ctrl_dbg $pcie_ctrl_base $PCIE_ENDPOINTS $PCIE_ENDPOINT_MODE $PCIE_MOD_ARCH]
 
     append ret "};"
 
