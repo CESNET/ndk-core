@@ -270,6 +270,8 @@ architecture FULL of FPGA_COMMON is
 
     constant PTC_ENABLE : boolean := (DMA_TYPE = 3);
 
+    constant DMA_DBG_CNTR_EN : boolean := DMA_DEBUG_ENABLE;
+
     -- MVB parameters
     constant MVB_ITEMS          : integer := ETH_MFB_REGION;  -- Number of items (headers) in word - TODO
     constant HDR_META_WIDTH     : integer := 12;
@@ -1025,6 +1027,7 @@ begin
         RX_GEN_EN            => RX_GEN_EN                 ,
         TX_GEN_EN            => TX_GEN_EN                 ,
 
+        DBG_CNTR_EN          => DMA_DBG_CNTR_EN           ,
         USR_EQ_DMA           => DMA_USR_EQ_DMA            ,
         CROX_EQ_DMA          => DMA_CROX_EQ_DMA           ,
         CROX_DOUBLE_DMA      => DMA_CROX_DOUBLE_DMA       ,
