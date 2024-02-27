@@ -203,8 +203,8 @@ class env#(
         super.connect_phase(phase);
 
         for (int unsigned it = 0; it < ETH_PORTS; it++) begin
-            m_eth_rx[it].analysis_port_data.connect(m_scoreboard.eth_rx_data[it].analysis_export);
-            m_eth_rx[it].analysis_port_meta.connect(m_scoreboard.eth_rx_hdr[it].analysis_export);
+            m_eth_rx[it].analysis_port_data.connect(m_scoreboard.eth_rx_data[it]);
+            m_eth_rx[it].analysis_port_meta.connect(m_scoreboard.eth_rx_hdr[it]);
 
             m_eth_tx[it].analysis_port_data.connect(m_scoreboard.eth_tx_data[it]);
             m_eth_tx[it].analysis_port_meta.connect(m_scoreboard.eth_tx_hdr[it]);
