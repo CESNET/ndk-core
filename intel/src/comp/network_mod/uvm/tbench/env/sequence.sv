@@ -25,6 +25,9 @@ class virt_sequence_port#(ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, ITEM_WIDTH, REGION
     protected uvm_common::sequences_cfg_sync#(2) seq_sync_eth_rx;
     protected uvm_common::sequence_cfg_signal seq_sync_end;
 
+    protected uvm_logic_vector_array::config_sequence usr_rx_seq_cfg;
+    protected uvm_logic_vector_array::config_sequence eth_rx_seq_cfg;
+
 
     rand int unsigned transactions_approx;
     constraint c_transactions {
@@ -34,11 +37,18 @@ class virt_sequence_port#(ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, ITEM_WIDTH, REGION
 
     function new(string name = "uvm_network_mod_env::sequence_simple");
         super.new(name);
+        usr_rx_seq_cfg = null;
+        eth_rx_seq_cfg = null;
         seq_sync_end = new();
     endfunction
 
     function int unsigned rx_transaction_count();
         return seq_sync_usr_rx.data.transactions[0] + seq_sync_eth_rx.data.transactions[0];
+    endfunction
+
+    function void packet_size_set(uvm_logic_vector_array::config_sequence usr_rx_seq_cfg, uvm_logic_vector_array::config_sequence eth_rx_seq_cfg);
+        this.usr_rx_seq_cfg = usr_rx_seq_cfg;
+        this.eth_rx_seq_cfg = eth_rx_seq_cfg;
     endfunction
 
     task pre_body();
@@ -324,6 +334,8 @@ class virt_sequence_simple#(ETH_PORTS, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, ITEM_
 
     //uvm_pkg::
     virt_sequence_port#(ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, ITEM_WIDTH, REGIONS, REGION_SIZE, BLOCK_SIZE, ETH_PORT_CHAN[0], MI_DATA_WIDTH, MI_ADDR_WIDTH) port[ETH_PORTS];
+    protected uvm_logic_vector_array::config_sequence usr_rx_seq_cfg[ETH_PORTS];
+    protected uvm_logic_vector_array::config_sequence eth_rx_seq_cfg[ETH_PORTS];
     //MI SEQUENCE
 
     //SYNC END
@@ -356,8 +368,18 @@ class virt_sequence_simple#(ETH_PORTS, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, ITEM_
         tsu_rst    = uvm_reset::sequence_start::type_id::create("tsu_rst"   , p_sequencer.tsu_rst);
         for (int unsigned it = 0; it < ETH_PORTS; it++) begin
             port[it] = virt_sequence_port#(ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, ITEM_WIDTH, REGIONS, REGION_SIZE, BLOCK_SIZE, ETH_PORT_CHAN[0], MI_DATA_WIDTH, MI_ADDR_WIDTH)::type_id::create($sformatf("port_%0d", it), p_sequencer.port[it]);
+            port[it].packet_size_set(usr_rx_seq_cfg[it], eth_rx_seq_cfg[it]);
         end
     endtask
+
+    function void packet_size_set(int unsigned min = 64, int unsigned max = 1500);
+        for (int unsigned it = 0; it < ETH_PORTS; it++) begin
+            usr_rx_seq_cfg[it] = new($sformatf("usr_rx_seq_cfg_%0d", it));
+            usr_rx_seq_cfg[it].array_size_set(min, max);
+            eth_rx_seq_cfg[it] = new($sformatf("eth_rx_seq_cfg_%0d", it));
+            eth_rx_seq_cfg[it].array_size_set(min, max);
+        end
+    endfunction
 
     //function void post_randomize();
     //endfunction
@@ -408,7 +430,7 @@ class virt_sequence_simple#(ETH_PORTS, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, ITEM_
         end
 
         //SEND STOP
-        wait (transactions >= ETH_PORTS*1_000);
+        wait (transactions >= ETH_PORTS*50_000);
         seq_sync_port_end.send_stop();
         for (int unsigned it = 0; it < ETH_PORTS; it++) begin
             wait(port_end[it] == 1);
