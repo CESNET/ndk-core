@@ -176,11 +176,11 @@ class virt_sequence_port#(ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, ITEM_WIDTH, REGION
                 usr_tx_hdr.start(p_sequencer.usr_tx_hdr);
             end
 
-            while (!seq_sync_eth_rx.cfg[1].stopped()) begin
+            while (!seq_sync_eth_rx.cfg[0].stopped()) begin
                 assert(eth_rx_data.randomize());
                 eth_rx_data.start(p_sequencer.eth_rx_data);
             end
-            while (!seq_sync_eth_rx.cfg[0].stopped()) begin
+            while (!seq_sync_eth_rx.cfg[1].stopped()) begin
                 assert(eth_rx_meta.randomize());
                 eth_rx_meta.start(p_sequencer.eth_rx_meta);
             end
