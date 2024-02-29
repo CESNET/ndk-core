@@ -13,6 +13,7 @@ package test;
     import uvm_pkg::*;
 
     `include "base.sv"
+    `include "speed.sv"
 
 endpackage
 `endif

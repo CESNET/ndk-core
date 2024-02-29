@@ -6,18 +6,9 @@
 
 
 class env#(
-    string       ETH_CORE_ARCH    ,
     int unsigned ETH_PORTS        ,
-    int unsigned ETH_PORT_SPEED[ETH_PORTS-1:0],
 
     int unsigned ETH_PORT_CHAN[ETH_PORTS-1:0]    ,
-    int unsigned EHIP_PORT_TYPE[ETH_PORTS-1:0]   ,
-    int unsigned ETH_PORT_RX_MTU[ETH_PORTS-1:0]  ,
-    int unsigned ETH_PORT_TX_MTU[ETH_PORTS-1:0]  ,
-    int unsigned LANES            ,
-    int unsigned QSFP_PORTS       ,
-    int unsigned QSFP_I2C_PORTS   ,
-    int unsigned QSFP_I2C_TRISTATE,
 
     int unsigned ETH_TX_HDR_WIDTH,
     int unsigned ETH_RX_HDR_WIDTH,
@@ -28,29 +19,13 @@ class env#(
     int unsigned ITEM_WIDTH       ,
 
     int unsigned MI_DATA_WIDTH    ,
-    int unsigned MI_ADDR_WIDTH    ,
+    int unsigned MI_ADDR_WIDTH
 
-    int unsigned MI_DATA_WIDTH_PHY,
-    int unsigned MI_ADDR_WIDTH_PHY,
 
-    int unsigned LANE_RX_POLARITY ,
-    int unsigned LANE_TX_POLARITY ,
-    int unsigned RESET_WIDTH      ,
-    string DEVICE           ,
-    string BOARD
 ) extends uvm_env;
     `uvm_component_param_utils(uvm_network_mod_env::env#(
-        ETH_CORE_ARCH    ,
         ETH_PORTS        ,
-        ETH_PORT_SPEED   ,
         ETH_PORT_CHAN    ,
-        EHIP_PORT_TYPE   ,
-        ETH_PORT_RX_MTU  ,
-        ETH_PORT_TX_MTU  ,
-        LANES            ,
-        QSFP_PORTS       ,
-        QSFP_I2C_PORTS   ,
-        QSFP_I2C_TRISTATE,
         ETH_TX_HDR_WIDTH ,
         ETH_RX_HDR_WIDTH ,
         REGIONS          ,
@@ -58,14 +33,7 @@ class env#(
         BLOCK_SIZE       ,
         ITEM_WIDTH       ,
         MI_DATA_WIDTH    ,
-        MI_ADDR_WIDTH    ,
-        MI_DATA_WIDTH_PHY,
-        MI_ADDR_WIDTH_PHY,
-        LANE_RX_POLARITY ,
-        LANE_TX_POLARITY ,
-        RESET_WIDTH      ,
-        DEVICE           ,
-        BOARD
+        MI_ADDR_WIDTH
     ));
 
     sequencer#(ETH_PORTS, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, ITEM_WIDTH, REGIONS, REGION_SIZE, BLOCK_SIZE, ETH_PORT_CHAN, MI_DATA_WIDTH, MI_ADDR_WIDTH) m_sequencer;
@@ -235,8 +203,8 @@ class env#(
         super.connect_phase(phase);
 
         for (int unsigned it = 0; it < ETH_PORTS; it++) begin
-            m_eth_rx[it].analysis_port_data.connect(m_scoreboard.eth_rx_data[it].analysis_export);
-            m_eth_rx[it].analysis_port_meta.connect(m_scoreboard.eth_rx_hdr[it].analysis_export);
+            m_eth_rx[it].analysis_port_data.connect(m_scoreboard.eth_rx_data[it]);
+            m_eth_rx[it].analysis_port_meta.connect(m_scoreboard.eth_rx_hdr[it]);
 
             m_eth_tx[it].analysis_port_data.connect(m_scoreboard.eth_tx_data[it]);
             m_eth_tx[it].analysis_port_meta.connect(m_scoreboard.eth_tx_hdr[it]);

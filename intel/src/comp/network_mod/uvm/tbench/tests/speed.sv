@@ -1,11 +1,10 @@
 //-- base.sv: basig test
-//-- Copyright (C) 2023 CESNET z. s. p. o.
+//-- Copyright (C) 2024 CESNET z. s. p. o.
 //-- Author(s): Radek Iša <isa@cesnet.cz>
 
 //-- SPDX-License-Identifier: BSD-3-Clause
 
-
-class base#(
+class speed#(
     int unsigned ETH_PORTS        ,
     int unsigned ETH_PORT_CHAN[ETH_PORTS-1:0]    ,
     int unsigned ETH_TX_HDR_WIDTH,
@@ -18,9 +17,9 @@ class base#(
 
     int unsigned MI_DATA_WIDTH    ,
     int unsigned MI_ADDR_WIDTH)
-extends uvm_test;
-    typedef uvm_component_registry#(test::base#(ETH_PORTS, ETH_PORT_CHAN, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, REGIONS, REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, MI_DATA_WIDTH, MI_ADDR_WIDTH
-                            ), "test::base") type_id;
+extends base#(ETH_PORTS, ETH_PORT_CHAN, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, REGIONS, REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, MI_DATA_WIDTH, MI_ADDR_WIDTH);
+    typedef uvm_component_registry#(test::speed#(ETH_PORTS, ETH_PORT_CHAN, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, REGIONS, REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, MI_DATA_WIDTH, MI_ADDR_WIDTH
+                            ), "test::speed") type_id;
 
     uvm_network_mod_env::env#(ETH_PORTS, ETH_PORT_CHAN, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, REGIONS, REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, MI_DATA_WIDTH,
                             MI_ADDR_WIDTH) m_env;
@@ -41,6 +40,27 @@ extends uvm_test;
     endfunction
 
     function void build_phase(uvm_phase phase);
+        for (int unsigned it = 0; it < ETH_PORTS; it++) begin
+            //USR
+            uvm_logic_vector_array_mfb::sequence_lib_rx#(REGIONS, REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, ETH_TX_HDR_WIDTH
+                    )::type_id::set_inst_override(uvm_logic_vector_array_mfb::sequence_lib_rx_speed#(REGIONS, REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, ETH_TX_HDR_WIDTH
+                )::get_type(),{this.get_full_name(), $sformatf(".m_env.m_usr_rx_%0d.*", it)});
+
+            uvm_mfb::sequence_lib_tx#(REGIONS, REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, 0)
+                    ::type_id::set_inst_override(uvm_mfb::sequence_lib_tx_speed#(REGIONS, REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, 0)
+                ::get_type(),{this.get_full_name(), $sformatf(".m_env.m_usr_tx_data_%0d.*", it)});
+
+            uvm_mvb::sequence_lib_tx#(REGIONS, ETH_RX_HDR_WIDTH)::type_id::set_inst_override(uvm_mvb::sequence_lib_tx_speed#(REGIONS, ETH_RX_HDR_WIDTH)
+                ::get_type(),{this.get_full_name(), $sformatf(".m_env.m_usr_tx_hdr_%0d.*", it)});
+
+            //ETH
+            uvm_logic_vector_array_avst::sequence_lib_rx#(ETH_PORT_CHAN[0], 1, REGION_SIZE * BLOCK_SIZE, ITEM_WIDTH, 6, 0)
+                    ::type_id::set_inst_override(uvm_logic_vector_array_avst::sequence_lib_rx_speed#(ETH_PORT_CHAN[0], 1, REGION_SIZE * BLOCK_SIZE, ITEM_WIDTH, 6, 0)
+                ::get_type(),{this.get_full_name(), $sformatf(".m_env.m_eth_rx_%0d.*", it)});
+
+            uvm_avst::sequence_lib_tx#(ETH_PORT_CHAN[0], 1, REGION_SIZE * BLOCK_SIZE, ITEM_WIDTH, 1)::type_id::set_inst_override(uvm_avst::sequence_lib_tx_speed#(ETH_PORT_CHAN[0], 1, REGION_SIZE * BLOCK_SIZE, ITEM_WIDTH, 1)
+                ::get_type(),{this.get_full_name(), $sformatf(".m_env.m_eth_tx_%0d.*", it)});
+        end
         m_env = uvm_network_mod_env::env#(ETH_PORTS, ETH_PORT_CHAN, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, REGIONS, REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, MI_DATA_WIDTH,
                             MI_ADDR_WIDTH)::type_id::create("m_env", this);
     endfunction
