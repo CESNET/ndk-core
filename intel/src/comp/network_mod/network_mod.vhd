@@ -47,6 +47,8 @@ architecture FULL of NETWORK_MOD is
                 when 10     => return 1;
                 when others => return 0;
             end case;
+        elsif (ETH_CORE_ARCH = "CESNET_LL10GE") then
+            return 1;
         else
             return 0;
         end if;
