@@ -13,7 +13,7 @@ proc dts_build_netcope {} {
     set ADDR_ETH_MAC    "0x00008000"
     set ADDR_JTAG_IP    "0x00010000"
     set ADDR_DMA_MOD    "0x01000000"
-    #set ADDR_MSIX_MOD   "0x01400000"
+    set ADDR_PCIE_DBG   "0x01400000"
     set ADDR_ETH_PCS    "0x00800000"
     set ADDR_USERAPP    "0x02000000"
 
@@ -134,6 +134,16 @@ proc dts_build_netcope {} {
     for {set i 0} {$i < $DMA_MODULES} {incr i} {
         set    gls_offset [expr $i * 0x200]
         append ret [dts_gen_loop_switch [expr $ADDR_GEN_LOOP + $gls_offset] "dbg_gls$i"]
+    }
+
+    # PCIe Debug
+    global PCIE_CORE_DEBUG_ENABLE PCIE_CTRL_DEBUG_ENABLE PCIE_ENDPOINT_MODE PCIE_MOD_ARCH
+    if {$PCIE_CORE_DEBUG_ENABLE} {
+        append ret [dts_pcie_core_dbg $ADDR_PCIE_DBG $PCIE_ENDPOINTS $PCIE_ENDPOINT_MODE $PCIE_MOD_ARCH]
+    }
+    if {$PCIE_CTRL_DEBUG_ENABLE} {
+        set pcie_ctrl_base [expr $ADDR_PCIE_DBG + "0x100000"]
+        append ret [dts_pcie_ctrl_dbg $pcie_ctrl_base $PCIE_ENDPOINTS $PCIE_ENDPOINT_MODE $PCIE_MOD_ARCH]
     }
 
     append ret "};"

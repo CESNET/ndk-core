@@ -28,7 +28,7 @@ package mi_addr_space_pack is
              7 => X"0001_0000", -- Intel JTAG-over-protocol IP
              8 => X"0080_0000", -- Ethernet PCS/PMA
              9 => X"0100_0000", -- DMA controller
-            10 => X"0140_0000", -- DRAFT: MSIX controller
+            10 => X"0140_0000", -- PCIe Debug space
             11 => X"0200_0000");-- The application
 
     constant MI_ADC_PORT_TEST    : natural := 0;
@@ -41,7 +41,7 @@ package mi_addr_space_pack is
     constant MI_ADC_PORT_JTAG_IP : natural := 7;
     constant MI_ADC_PORT_ETHMOD  : natural := 8;
     constant MI_ADC_PORT_DMA     : natural := 9;
-    constant MI_ADC_PORT_MSIX    : natural := 10;
+    constant MI_ADC_PORT_PCI_DBG : natural := 10;
     constant MI_ADC_PORT_USERAPP : natural := 11;
 
 end package;

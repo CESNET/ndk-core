@@ -208,22 +208,36 @@ entity PCIE is
         -- =====================================================================
         -- MI32 interfaces (MI_CLK)
         --
-        -- Root of the MI32 bus tree for each PCIe endpoint
+        -- MI - Root of the MI32 bus tree for each PCIe endpoint (connection to the MTC)
+        -- MI_DBG - MI interface to PCIe registers (currently only debug registers)
         -- =====================================================================
         MI_CLK              : in  std_logic;
         MI_RESET            : in  std_logic;
-        MI_DWR              : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(32-1 downto 0);
-        MI_ADDR             : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(32-1 downto 0);
-        MI_BE               : out slv_array_t(PCIE_ENDPOINTS-1 downto 0)(32/8-1 downto 0);
+
+        MI_DWR              : out slv_array_t     (PCIE_ENDPOINTS-1 downto 0)(32-1 downto 0);
+        MI_ADDR             : out slv_array_t     (PCIE_ENDPOINTS-1 downto 0)(32-1 downto 0);
+        MI_BE               : out slv_array_t     (PCIE_ENDPOINTS-1 downto 0)(32/8-1 downto 0);
         MI_RD               : out std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
         MI_WR               : out std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
-        MI_DRD              : in  slv_array_t(PCIE_ENDPOINTS-1 downto 0)(32-1 downto 0);
+        MI_DRD              : in  slv_array_t     (PCIE_ENDPOINTS-1 downto 0)(32-1 downto 0);
         MI_ARDY             : in  std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
-        MI_DRDY             : in  std_logic_vector(PCIE_ENDPOINTS-1 downto 0)
+        MI_DRDY             : in  std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
+
+        MI_DBG_DWR          : in  std_logic_vector(32-1 downto 0);
+        MI_DBG_ADDR         : in  std_logic_vector(32-1 downto 0);
+        MI_DBG_BE           : in  std_logic_vector(32/8-1 downto 0);
+        MI_DBG_RD           : in  std_logic;
+        MI_DBG_WR           : in  std_logic;
+        MI_DBG_DRD          : out std_logic_vector(32-1 downto 0);
+        MI_DBG_ARDY         : out std_logic;
+        MI_DBG_DRDY         : out std_logic
     );
 end entity;
 
 architecture FULL of PCIE is
+
+
+    function mi_addr_base_f return slv_array_t;
 
     function core_regions_f(MFB_REGIONS : natural) return natural is
         variable pcie_mfb_regions : natural;
@@ -250,6 +264,24 @@ architecture FULL of PCIE is
     constant CORE_RC_MFB_REGIONS : natural := core_regions_f(RC_MFB_REGIONS);
     constant RESET_WIDTH         : natural := 6;
     constant BAR_APERTURE        : natural := 26;
+
+    -- One PCIe Core and PCIE_ENDPOINTS * PCIe Ctrl
+    constant MI_SPLIT_PORTS        : natural := 1 + PCIE_ENDPOINTS;
+    -- Address offset of the PCIe Ctrl from the base address of the PCIe Core.
+    -- Changes must be also made in the top-level Device Tree (TODO).
+    constant PCIE_CTRL_ADDR_OFFSET : natural := 16#100000#;
+    -- Address offset of each PCIe Endpoint (each one currently contains one debug probe).
+    constant PCIE_ENDPOINT_OFFSET  : natural := 1 * 16#40#;
+
+    function mi_addr_base_f return slv_array_t is
+        variable mi_addr_base : slv_array_t(MI_SPLIT_PORTS-1 downto 0)(32-1 downto 0);
+    begin
+        mi_addr_base(0) := (others => '0');
+        for p in 1 to MI_SPLIT_PORTS-1 loop
+            mi_addr_base(p) := std_logic_vector(to_unsigned(PCIE_CTRL_ADDR_OFFSET + (p-1)*DMA_PORTS_PER_EP*PCIE_ENDPOINT_OFFSET, 32));
+        end loop;
+        return mi_addr_base;
+    end function;
 
     signal pcie_clk                : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
     signal pcie_reset              : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(RESET_WIDTH-1 downto 0);
@@ -295,6 +327,15 @@ architecture FULL of PCIE is
     signal core_rq_tag_assign      : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CORE_RQ_MFB_REGIONS*8-1 downto 0);
     signal core_rq_tag_assign_vld  : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(CORE_RQ_MFB_REGIONS-1 downto 0);
 
+    signal mi_dbg_split_dwr        : slv_array_t     (MI_SPLIT_PORTS-1 downto 0)(32-1 downto 0);
+    signal mi_dbg_split_addr       : slv_array_t     (MI_SPLIT_PORTS-1 downto 0)(32-1 downto 0);
+    signal mi_dbg_split_be         : slv_array_t     (MI_SPLIT_PORTS-1 downto 0)(32/8-1 downto 0);
+    signal mi_dbg_split_rd         : std_logic_vector(MI_SPLIT_PORTS-1 downto 0);
+    signal mi_dbg_split_wr         : std_logic_vector(MI_SPLIT_PORTS-1 downto 0);
+    signal mi_dbg_split_ardy       : std_logic_vector(MI_SPLIT_PORTS-1 downto 0);
+    signal mi_dbg_split_drd        : slv_array_t     (MI_SPLIT_PORTS-1 downto 0)(32-1 downto 0);
+    signal mi_dbg_split_drdy       : std_logic_vector(MI_SPLIT_PORTS-1 downto 0);
+
 begin
 
     assert (CORE_RQ_MFB_REGIONS /= 0) report "PCIE: Unsupported CORE_RQ_MFB_REGIONS configuration!"
@@ -333,6 +374,7 @@ begin
         PCIE_CLKS          => PCIE_CLKS,
         PCIE_CONS          => PCIE_CONS,
         PCIE_LANES         => PCIE_LANES,
+        MI_WIDTH           => 32,
         XVC_ENABLE         => XVC_ENABLE,
         CARD_ID_WIDTH      => CARD_ID_WIDTH,
         RESET_WIDTH        => RESET_WIDTH,
@@ -398,7 +440,18 @@ begin
         RQ_MFB_DST_RDY      => core_rq_mfb_dst_rdy,
 
         TAG_ASSIGN          => core_rq_tag_assign,
-        TAG_ASSIGN_VLD      => core_rq_tag_assign_vld
+        TAG_ASSIGN_VLD      => core_rq_tag_assign_vld,
+
+        MI_CLK              => MI_CLK,
+        MI_RESET            => MI_RESET,
+        MI_ADDR             => mi_dbg_split_addr(0),
+        MI_DWR              => mi_dbg_split_dwr (0),
+        MI_BE               => mi_dbg_split_be  (0),
+        MI_RD               => mi_dbg_split_rd  (0),
+        MI_WR               => mi_dbg_split_wr  (0),
+        MI_DRD              => mi_dbg_split_drd (0),
+        MI_ARDY             => mi_dbg_split_ardy(0),
+        MI_DRDY             => mi_dbg_split_drdy(0)
     );
 
     PCIE_USER_CLK <= pcie_clk;
@@ -556,8 +609,49 @@ begin
             MI_WR               => MI_WR  (i),
             MI_DRD              => MI_DRD (i),
             MI_ARDY             => MI_ARDY(i),
-            MI_DRDY             => MI_DRDY(i)
+            MI_DRDY             => MI_DRDY(i),
+
+            MI_DBG_DWR          => mi_dbg_split_dwr (i+1),
+            MI_DBG_ADDR         => mi_dbg_split_addr(i+1),
+            MI_DBG_BE           => mi_dbg_split_be  (i+1),
+            MI_DBG_RD           => mi_dbg_split_rd  (i+1),
+            MI_DBG_WR           => mi_dbg_split_wr  (i+1),
+            MI_DBG_DRD          => mi_dbg_split_drd (i+1),
+            MI_DBG_ARDY         => mi_dbg_split_ardy(i+1),
+            MI_DBG_DRDY         => mi_dbg_split_drdy(i+1)
         );
     end generate;
+
+    mi_splitter_i : entity work.MI_SPLITTER_PLUS_GEN
+    generic map(
+        ADDR_WIDTH => 32               ,
+        DATA_WIDTH => 32               ,
+        PORTS      => MI_SPLIT_PORTS   ,
+        ADDR_BASE  => mi_addr_base_f   ,
+        PIPE_OUT   => (others => false),
+        DEVICE     => DEVICE
+    )
+    port map(
+        CLK     => MI_CLK           ,
+        RESET   => MI_RESET         ,
+
+        RX_DWR  => MI_DBG_DWR       ,
+        RX_ADDR => MI_DBG_ADDR      ,
+        RX_BE   => MI_DBG_BE        ,
+        RX_RD   => MI_DBG_RD        ,
+        RX_WR   => MI_DBG_WR        ,
+        RX_ARDY => MI_DBG_ARDY      ,
+        RX_DRD  => MI_DBG_DRD       ,
+        RX_DRDY => MI_DBG_DRDY      ,
+
+        TX_DWR  => mi_dbg_split_dwr ,
+        TX_ADDR => mi_dbg_split_addr,
+        TX_BE   => mi_dbg_split_be  ,
+        TX_RD   => mi_dbg_split_rd  ,
+        TX_WR   => mi_dbg_split_wr  ,
+        TX_ARDY => mi_dbg_split_ardy,
+        TX_DRD  => mi_dbg_split_drd ,
+        TX_DRDY => mi_dbg_split_drdy
+    );
 
 end architecture;
