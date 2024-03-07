@@ -16,6 +16,7 @@ set DK_AGI_IP_BASE      "$CARDS_BASE/dk-dev-agi027res/src/ip"
 set AGI_FH400G_IP_BASE  "$CARDS_BASE/agi-fh400g/src/ip"
 set CMAC_IP_BASE        "$CARDS_BASE/fb4cgg3/src/ip"
 set 40GE_BASE           "$OFM_PATH/comp/nic/eth_phy/40ge"
+set LL10GE40GE_BASE     "$OFM_PATH/../modules/hft/comp/net_mod/top"
 
 # Packages
 lappend PACKAGES "$OFM_PATH/comp/base/pkg/math_pack.vhd"
@@ -115,4 +116,13 @@ if { $ARCHGRP == "40GE" } {
     lappend COMPONENTS [list "40GE PCS PMA"    "$40GE_BASE"                "FULL"]
 
     lappend  MOD "$ENTITY_BASE/network_mod_core_40ge.vhd"
+}
+
+if { $ARCHGRP == "CESNET_LL10GE" || $ARCHGRP == "CESNET_LL40GE" } {
+    if { [file exists "$LL10GE40GE_BASE/Modules.tcl"] == 1} {
+        lappend COMPONENTS [list "CESNET_LL10GE40GE" $LL10GE40GE_BASE "FULL"]
+    } else {
+        puts stderr "ERROR: CESNET LL10GE40GE IP not found. This IP is not publicly available and requires an additional license!"
+        exit 1
+    }
 }
