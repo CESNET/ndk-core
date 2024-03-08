@@ -1,6 +1,6 @@
 # Modules.tcl: Components include script
 # Copyright (C) 2021 CESNET z. s. p. o.
-# Author(s): Daniel Kondys <xkondy00@vutbr.cz>
+# Author(s): Daniel Kondys <xkondy00@vutbr.cz>, Jakub Zahora <xzahor06@vutbr.cz>
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
@@ -74,6 +74,19 @@ if { $ARCHGRP == "F_TILE"} {
     lappend MOD "$ENTITY_BASE/ftile_init.vhd"
     lappend MOD "$ENTITY_BASE/macseg_loop.vhd"
     lappend MOD "$ENTITY_BASE/network_mod_core_ftile.vhd"
+    lappend MOD "$ENTITY_BASE/comps/bridge_drp/bridge_drp.vhd"
+    # Basic Ftile IP core components
+    lappend MOD "$ENTITY_BASE/comps/ftile/ftile_1x400g8.vhd"
+    lappend MOD "$ENTITY_BASE/comps/ftile/ftile_2x200g4.vhd"
+    lappend MOD "$ENTITY_BASE/comps/ftile/ftile_4x100g2.vhd"
+    lappend MOD "$ENTITY_BASE/comps/ftile/ftile_2x100g4.vhd"
+    lappend MOD "$ENTITY_BASE/comps/ftile/ftile_8x50g1.vhd"
+    lappend MOD "$ENTITY_BASE/comps/ftile/ftile_2x40g4.vhd"
+    lappend MOD "$ENTITY_BASE/comps/ftile/ftile_8x25g1.vhd"
+    lappend MOD "$ENTITY_BASE/comps/ftile/ftile_8x10g1.vhd"
+    # Multirate Ftile IP core components
+    lappend MOD "$ENTITY_BASE/comps/ftile/ftile_multirate_eth_2x100g4.vhd"
+    lappend MOD "$ENTITY_BASE/comps/ftile/ftile_multirate_eth_8x25g1_8x10g1.vhd"
 }
 
 if { $ARCHGRP == "E_TILE"} {
