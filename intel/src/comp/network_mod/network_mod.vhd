@@ -63,6 +63,7 @@ architecture FULL of NETWORK_MOD is
     constant REGION_SIZE_CORE  : natural := region_size_core_f;
 
     constant ETH_CHANNELS      : integer := ETH_PORT_CHAN(0); -- TODO: support different speeds/number of channels for each port
+    constant ETH_PORT_STREAMS  : natural := ETH_STREAMS/ETH_PORTS;
     --                                      TSU, Network mod core, ETH_CHANNELS x (TX MAC lite, RX MAC lite)
     constant RESET_REPLICAS    : natural := 1  + 1               + ETH_CHANNELS * (1          + 1          );
 
@@ -126,22 +127,28 @@ architecture FULL of NETWORK_MOD is
 
     -- Output of MFB Merger tree (and of the whole Network modul) as an array
     -- MFB signals
-    signal TX_MFB_DATA_arr     : slv_array_t(ETH_PORTS-1 downto 0)(MFB_WIDTH-1 downto 0);
-    signal TX_MFB_SOF_arr      : slv_array_t(ETH_PORTS-1 downto 0)(REGIONS-1 downto 0);
-    signal TX_MFB_EOF_arr      : slv_array_t(ETH_PORTS-1 downto 0)(REGIONS-1 downto 0);
-    signal TX_MFB_SOF_POS_arr  : slv_array_t(ETH_PORTS-1 downto 0)(MFB_SOFP_WIDTH-1 downto 0);
-    signal TX_MFB_EOF_POS_arr  : slv_array_t(ETH_PORTS-1 downto 0)(MFB_EOFP_WIDTH-1 downto 0);
+    signal tx_usr_mfb_data_arr    : slv_array_2d_t(ETH_PORTS-1 downto 0)(ETH_PORT_STREAMS-1 downto 0)(MFB_WIDTH-1 downto 0);
+    signal tx_usr_mfb_sof_arr     : slv_array_2d_t(ETH_PORTS-1 downto 0)(ETH_PORT_STREAMS-1 downto 0)(REGIONS-1 downto 0);
+    signal tx_usr_mfb_eof_arr     : slv_array_2d_t(ETH_PORTS-1 downto 0)(ETH_PORT_STREAMS-1 downto 0)(REGIONS-1 downto 0);
+    signal tx_usr_mfb_sof_pos_arr : slv_array_2d_t(ETH_PORTS-1 downto 0)(ETH_PORT_STREAMS-1 downto 0)(MFB_SOFP_WIDTH-1 downto 0);
+    signal tx_usr_mfb_eof_pos_arr : slv_array_2d_t(ETH_PORTS-1 downto 0)(ETH_PORT_STREAMS-1 downto 0)(MFB_EOFP_WIDTH-1 downto 0);
+    signal tx_usr_mfb_src_rdy_arr : slv_array_t   (ETH_PORTS-1 downto 0)(ETH_PORT_STREAMS-1 downto 0);
+    signal tx_usr_mfb_dst_rdy_arr : slv_array_t   (ETH_PORTS-1 downto 0)(ETH_PORT_STREAMS-1 downto 0);
     -- MVB signals
-    signal TX_MVB_DATA_arr     : slv_array_t(ETH_PORTS-1 downto 0)(REGIONS*ETH_RX_HDR_WIDTH-1 downto 0);
-    signal TX_MVB_VLD_arr      : slv_array_t(ETH_PORTS-1 downto 0)(REGIONS-1 downto 0);
+    signal tx_usr_mvb_data_arr    : slv_array_2d_t(ETH_PORTS-1 downto 0)(ETH_PORT_STREAMS-1 downto 0)(REGIONS*ETH_RX_HDR_WIDTH-1 downto 0);
+    signal tx_usr_mvb_vld_arr     : slv_array_2d_t(ETH_PORTS-1 downto 0)(ETH_PORT_STREAMS-1 downto 0)(REGIONS-1 downto 0);
+    signal tx_usr_mvb_src_rdy_arr : slv_array_t   (ETH_PORTS-1 downto 0)(ETH_PORT_STREAMS-1 downto 0);
+    signal tx_usr_mvb_dst_rdy_arr : slv_array_t   (ETH_PORTS-1 downto 0)(ETH_PORT_STREAMS-1 downto 0);
 
     -- Deserialized input for TX MAC lite(s)
-    signal RX_MFB_DATA_arr      :  slv_array_t(ETH_PORTS-1 downto 0)(MFB_WIDTH-1 downto 0);
-    signal RX_MFB_HDR_arr       :  slv_array_t(ETH_PORTS-1 downto 0)(REGIONS*ETH_TX_HDR_WIDTH-1 downto 0);
-    signal RX_MFB_SOF_arr       :  slv_array_t(ETH_PORTS-1 downto 0)(REGIONS-1 downto 0);
-    signal RX_MFB_EOF_arr       :  slv_array_t(ETH_PORTS-1 downto 0)(REGIONS-1 downto 0);
-    signal RX_MFB_SOF_POS_arr   :  slv_array_t(ETH_PORTS-1 downto 0)(MFB_SOFP_WIDTH-1 downto 0);
-    signal RX_MFB_EOF_POS_arr   :  slv_array_t(ETH_PORTS-1 downto 0)(MFB_EOFP_WIDTH-1 downto 0);
+    signal rx_usr_mfb_data_arr    : slv_array_2d_t(ETH_PORTS-1 downto 0)(ETH_PORT_STREAMS-1 downto 0)(MFB_WIDTH-1 downto 0);
+    signal rx_usr_mfb_hdr_arr     : slv_array_2d_t(ETH_PORTS-1 downto 0)(ETH_PORT_STREAMS-1 downto 0)(REGIONS*ETH_TX_HDR_WIDTH-1 downto 0);
+    signal rx_usr_mfb_sof_arr     : slv_array_2d_t(ETH_PORTS-1 downto 0)(ETH_PORT_STREAMS-1 downto 0)(REGIONS-1 downto 0);
+    signal rx_usr_mfb_eof_arr     : slv_array_2d_t(ETH_PORTS-1 downto 0)(ETH_PORT_STREAMS-1 downto 0)(REGIONS-1 downto 0);
+    signal rx_usr_mfb_sof_pos_arr : slv_array_2d_t(ETH_PORTS-1 downto 0)(ETH_PORT_STREAMS-1 downto 0)(MFB_SOFP_WIDTH-1 downto 0);
+    signal rx_usr_mfb_eof_pos_arr : slv_array_2d_t(ETH_PORTS-1 downto 0)(ETH_PORT_STREAMS-1 downto 0)(MFB_EOFP_WIDTH-1 downto 0);
+    signal rx_usr_mfb_src_rdy_arr : slv_array_t   (ETH_PORTS-1 downto 0)(ETH_PORT_STREAMS-1 downto 0);
+    signal rx_usr_mfb_dst_rdy_arr : slv_array_t   (ETH_PORTS-1 downto 0)(ETH_PORT_STREAMS-1 downto 0);
 
     -- Interior signals, Network Module Logic -> Network Module Core
     signal tx_mfb_data_i    : slv_array_2d_t(ETH_PORTS-1 downto 0)(ETH_CHANNELS-1 downto 0)(MFB_WIDTH_CORE-1 downto 0);
@@ -290,12 +297,31 @@ begin
         TX_DRDY    => mi_split_drdy_phy
     );
 
-    RX_MFB_DATA_arr    <= slv_array_downto_deser(RX_MFB_DATA   , ETH_PORTS);
-    RX_MFB_HDR_arr     <= slv_array_downto_deser(RX_MFB_HDR    , ETH_PORTS);
-    RX_MFB_SOF_POS_arr <= slv_array_downto_deser(RX_MFB_SOF_POS, ETH_PORTS);
-    RX_MFB_EOF_POS_arr <= slv_array_downto_deser(RX_MFB_EOF_POS, ETH_PORTS);
-    RX_MFB_SOF_arr     <= slv_array_downto_deser(RX_MFB_SOF    , ETH_PORTS);
-    RX_MFB_EOF_arr     <= slv_array_downto_deser(RX_MFB_EOF    , ETH_PORTS);
+    -- =========================================================================
+    -- Serialization and deserialization of user MFB+MVB interfaces
+    -- =========================================================================
+
+    rx_usr_mfb_data_arr    <= slv_array_2d_deser(RX_MFB_DATA   , ETH_PORTS, ETH_PORT_STREAMS);
+    rx_usr_mfb_hdr_arr     <= slv_array_2d_deser(RX_MFB_HDR    , ETH_PORTS, ETH_PORT_STREAMS);
+    rx_usr_mfb_sof_pos_arr <= slv_array_2d_deser(RX_MFB_SOF_POS, ETH_PORTS, ETH_PORT_STREAMS);
+    rx_usr_mfb_eof_pos_arr <= slv_array_2d_deser(RX_MFB_EOF_POS, ETH_PORTS, ETH_PORT_STREAMS);
+    rx_usr_mfb_sof_arr     <= slv_array_2d_deser(RX_MFB_SOF    , ETH_PORTS, ETH_PORT_STREAMS);
+    rx_usr_mfb_eof_arr     <= slv_array_2d_deser(RX_MFB_EOF    , ETH_PORTS, ETH_PORT_STREAMS);
+    rx_usr_mfb_src_rdy_arr <= slv_array_deser(RX_MFB_SRC_RDY, ETH_PORTS);
+    RX_MFB_DST_RDY         <= slv_array_ser(rx_usr_mfb_dst_rdy_arr);
+
+    TX_MFB_DATA            <= slv_array_2d_ser(tx_usr_mfb_data_arr);
+    TX_MFB_SOF             <= slv_array_2d_ser(tx_usr_mfb_sof_arr);
+    TX_MFB_EOF             <= slv_array_2d_ser(tx_usr_mfb_eof_arr);
+    TX_MFB_SOF_POS         <= slv_array_2d_ser(tx_usr_mfb_sof_pos_arr);
+    TX_MFB_EOF_POS         <= slv_array_2d_ser(tx_usr_mfb_eof_pos_arr);
+    TX_MFB_SRC_RDY         <= slv_array_ser(tx_usr_mfb_src_rdy_arr);
+    tx_usr_mfb_dst_rdy_arr <= slv_array_deser(TX_MFB_DST_RDY, ETH_PORTS);
+
+    TX_MVB_DATA            <= slv_array_2d_ser(tx_usr_mvb_data_arr);
+    TX_MVB_VLD             <= slv_array_2d_ser(tx_usr_mvb_vld_arr);
+    TX_MVB_SRC_RDY         <= slv_array_ser(tx_usr_mvb_src_rdy_arr);
+    tx_usr_mvb_dst_rdy_arr <= slv_array_deser(TX_MVB_DST_RDY, ETH_PORTS);
 
     eth_core_g : for p in 0 to ETH_PORTS-1 generate
         -- =====================================================================
@@ -304,6 +330,7 @@ begin
         network_mod_logic_i : entity work.NETWORK_MOD_LOGIC
         generic map(
             -- ETH
+            ETH_STREAMS      => ETH_PORT_STREAMS,
             ETH_PORT_CHAN    => ETH_PORT_CHAN(p)  ,
             ETH_PORT_ID      => p                 ,
             ETH_PORT_RX_MTU  => ETH_PORT_RX_MTU(p),
@@ -338,26 +365,26 @@ begin
             TX_LINK_UP          => sig_tx_link_up (p),
 
             -- USER side
-            RX_USER_MFB_DATA    => RX_MFB_DATA_arr   (p),
-            RX_USER_MFB_HDR     => RX_MFB_HDR_arr    (p),
-            RX_USER_MFB_SOF_POS => RX_MFB_SOF_POS_arr(p),
-            RX_USER_MFB_EOF_POS => RX_MFB_EOF_POS_arr(p),
-            RX_USER_MFB_SOF     => RX_MFB_SOF_arr    (p),
-            RX_USER_MFB_EOF     => RX_MFB_EOF_arr    (p),
-            RX_USER_MFB_SRC_RDY => RX_MFB_SRC_RDY    (p),
-            RX_USER_MFB_DST_RDY => RX_MFB_DST_RDY    (p),
+            RX_USER_MFB_DATA    => rx_usr_mfb_data_arr   (p),
+            RX_USER_MFB_HDR     => rx_usr_mfb_hdr_arr    (p),
+            RX_USER_MFB_SOF_POS => rx_usr_mfb_sof_pos_arr(p),
+            RX_USER_MFB_EOF_POS => rx_usr_mfb_eof_pos_arr(p),
+            RX_USER_MFB_SOF     => rx_usr_mfb_sof_arr    (p),
+            RX_USER_MFB_EOF     => rx_usr_mfb_eof_arr    (p),
+            RX_USER_MFB_SRC_RDY => rx_usr_mfb_src_rdy_arr(p),
+            RX_USER_MFB_DST_RDY => rx_usr_mfb_dst_rdy_arr(p),
 
-            TX_USER_MFB_DATA    => TX_MFB_DATA_arr   (p),
-            TX_USER_MFB_SOF_POS => TX_MFB_SOF_POS_arr(p),
-            TX_USER_MFB_EOF_POS => TX_MFB_EOF_POS_arr(p),
-            TX_USER_MFB_SOF     => TX_MFB_SOF_arr    (p),
-            TX_USER_MFB_EOF     => TX_MFB_EOF_arr    (p),
-            TX_USER_MFB_SRC_RDY => TX_MFB_SRC_RDY    (p),
-            TX_USER_MFB_DST_RDY => TX_MFB_DST_RDY    (p),
-            TX_USER_MVB_DATA    => TX_MVB_DATA_arr   (p),
-            TX_USER_MVB_VLD     => TX_MVB_VLD_arr    (p),
-            TX_USER_MVB_SRC_RDY => TX_MVB_SRC_RDY    (p),
-            TX_USER_MVB_DST_RDY => TX_MVB_DST_RDY    (p),
+            TX_USER_MFB_DATA    => tx_usr_mfb_data_arr   (p),
+            TX_USER_MFB_SOF_POS => tx_usr_mfb_sof_pos_arr(p),
+            TX_USER_MFB_EOF_POS => tx_usr_mfb_eof_pos_arr(p),
+            TX_USER_MFB_SOF     => tx_usr_mfb_sof_arr    (p),
+            TX_USER_MFB_EOF     => tx_usr_mfb_eof_arr    (p),
+            TX_USER_MFB_SRC_RDY => tx_usr_mfb_src_rdy_arr(p),
+            TX_USER_MFB_DST_RDY => tx_usr_mfb_dst_rdy_arr(p),
+            TX_USER_MVB_DATA    => tx_usr_mvb_data_arr   (p),
+            TX_USER_MVB_VLD     => tx_usr_mvb_vld_arr    (p),
+            TX_USER_MVB_SRC_RDY => tx_usr_mvb_src_rdy_arr(p),
+            TX_USER_MVB_DST_RDY => tx_usr_mvb_dst_rdy_arr(p),
 
             -- CORE side
             RX_CORE_MFB_DATA    => rx_mfb_data_i   (p),
@@ -458,15 +485,6 @@ begin
             MI_ARDY_PHY     => mi_split_ardy_phy(p),
             MI_DRDY_PHY     => mi_split_drdy_phy(p)
         );
-
-        TX_MFB_DATA    <= slv_array_ser(TX_MFB_DATA_arr);
-        TX_MFB_SOF     <= slv_array_ser(TX_MFB_SOF_arr);
-        TX_MFB_EOF     <= slv_array_ser(TX_MFB_EOF_arr);
-        TX_MFB_SOF_POS <= slv_array_ser(TX_MFB_SOF_POS_arr);
-        TX_MFB_EOF_POS <= slv_array_ser(TX_MFB_EOF_POS_arr);
-
-        TX_MVB_DATA <= slv_array_ser(TX_MVB_DATA_arr);
-        TX_MVB_VLD  <= slv_array_ser(TX_MVB_VLD_arr);
 
         -- =====================================================================
         -- TIMESTAMP ASFIFOX

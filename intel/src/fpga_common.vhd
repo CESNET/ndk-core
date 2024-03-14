@@ -247,12 +247,60 @@ end entity;
 
 architecture FULL of FPGA_COMMON is
 
-    constant HEARTBEAT_CNT_W : natural := 27;
-    constant CLK_COUNT       : natural := 4+ETH_PORTS;
-    constant ETH_CHANNELS    : natural := ETH_PORT_CHAN(0);
-    constant ETH_STREAMS     : natural := ETH_PORTS;
-    constant ETH_MFB_REGION  : natural := tsel(ETH_CORE_ARCH="F_TILE",4,1);
-    constant DMA_STREAMS     : natural := DMA_MODULES;
+    constant HEARTBEAT_CNT_W     : natural := 27;
+    constant CLK_COUNT           : natural := 4+ETH_PORTS;
+
+    -- Number of ETH channels per each ETH port (QSFP)
+    constant ETH_PORT_CHANNELS   : natural := ETH_PORT_CHAN(0);
+    -- Number of ETH channels per each ETH stream (MFB+MVB bus)
+    constant ETH_STREAM_CHANNELS : natural := tsel((ETH_STREAMS_MODE = 1), 1, ETH_PORT_CHANNELS);
+    -- Number of ETH streams
+    constant ETH_STREAMS         : natural := tsel((ETH_STREAMS_MODE = 1), (ETH_PORTS*ETH_PORT_CHANNELS), ETH_PORTS);
+    -- Number of DMA streams
+    constant DMA_STREAMS         : natural := DMA_MODULES;
+
+    function f_get_eth_mfb_regions(P_ETH_STREAMS_MODE : natural) return natural is
+    begin
+        if (P_ETH_STREAMS_MODE = 1) then
+            -- ETH stream = ETH channel
+            if (ETH_PORT_SPEED(0) = 400) then
+                return 4;
+            elsif (ETH_PORT_SPEED(0) = 200) then
+                return 2;
+            else
+                return 1;
+            end if;
+        elsif (ETH_CORE_ARCH = "F_TILE") then
+            -- 400G cards...
+            return 4;
+        else
+            return 1;
+        end if;
+    end function;
+
+    function f_get_eth_mfb_region_size(P_ETH_STREAMS_MODE : natural) return natural is
+    begin
+        if (P_ETH_STREAMS_MODE = 1) then
+            -- ETH stream = ETH channel
+            if (ETH_PORT_SPEED(0) = 10) then
+                return 1;
+            elsif (ETH_PORT_SPEED(0) = 25) then
+                return 2;
+            elsif (ETH_PORT_SPEED(0) = 40 or ETH_PORT_SPEED(0) = 50) then
+                return 4;
+            else
+                return 8;
+            end if;
+        else
+            -- ETH stream = all ETH channels in ETH port
+            return 8;
+        end if;
+    end function;
+
+    constant ETH_MFB_REGIONS     : natural := f_get_eth_mfb_regions(ETH_STREAMS_MODE);
+    constant ETH_MFB_REGION_SIZE : natural := f_get_eth_mfb_region_size(ETH_STREAMS_MODE);
+    constant DMA_MFB_REGIONS     : natural := f_get_eth_mfb_regions(0);
+    constant DMA_MFB_REGION_SIZE : natural := f_get_eth_mfb_region_size(0);
 
     constant PCIE_MPS     : natural := 256;
     constant PCIE_MRRS    : natural := 512;
@@ -272,8 +320,6 @@ architecture FULL of FPGA_COMMON is
 
     constant DMA_DBG_CNTR_EN : boolean := DMA_DEBUG_ENABLE;
 
-    -- MVB parameters
-    constant MVB_ITEMS          : integer := ETH_MFB_REGION;  -- Number of items (headers) in word - TODO
     constant HDR_META_WIDTH     : integer := 12;
 
     -- This function returns appropriate REGION_SIZE parameter value according to set DMA type, and
@@ -335,11 +381,9 @@ architecture FULL of FPGA_COMMON is
         return pcie_mfb_regions;
     end function;
 
-    -- MFB parameters
-    constant MFB_REGIONS      : integer := ETH_MFB_REGION;  -- Number of regions in word - TODO
-    constant MFB_REGION_SIZE  : integer := 8;  -- Number of blocks in region
-    constant MFB_BLOCK_SIZE   : integer := 8;  -- Number of items in block
-    constant MFB_ITEM_WIDTH   : integer := 8;  -- Width of one item in bits
+    -- ETH/DMA MFB parameters
+    constant MFB_BLOCK_SIZE   : natural := 8;  -- Number of items in block
+    constant MFB_ITEM_WIDTH   : natural := 8;  -- Width of one item in bits
 
     -- DMA MVB RQ parameters
     constant DMA_RQ_MVB_ITEMS         : natural := pcie_mfb_regions_calc_f("RQ");
@@ -494,58 +538,58 @@ architecture FULL of FPGA_COMMON is
     signal dma_cc_mfb_src_rdy            : std_logic_vector(DMA_ENDPOINTS-1 downto 0);
     signal dma_cc_mfb_dst_rdy            : std_logic_vector(DMA_ENDPOINTS-1 downto 0);
 
-    signal app_dma_rx_mvb_len            : std_logic_vector(DMA_STREAMS*MVB_ITEMS*log2(DMA_RX_FRAME_SIZE_MAX+1)-1 downto 0);
-    signal app_dma_rx_mvb_hdr_meta       : std_logic_vector(DMA_STREAMS*MVB_ITEMS*HDR_META_WIDTH-1 downto 0);
-    signal app_dma_rx_mvb_channel        : std_logic_vector(DMA_STREAMS*MVB_ITEMS*log2(DMA_RX_CHANNELS)-1 downto 0);
-    signal app_dma_rx_mvb_discard        : std_logic_vector(DMA_STREAMS*MVB_ITEMS-1 downto 0);
-    signal app_dma_rx_mvb_vld            : std_logic_vector(DMA_STREAMS*MVB_ITEMS-1 downto 0);
+    signal app_dma_rx_mvb_len            : std_logic_vector(DMA_STREAMS*DMA_MFB_REGIONS*log2(DMA_RX_FRAME_SIZE_MAX+1)-1 downto 0);
+    signal app_dma_rx_mvb_hdr_meta       : std_logic_vector(DMA_STREAMS*DMA_MFB_REGIONS*HDR_META_WIDTH-1 downto 0);
+    signal app_dma_rx_mvb_channel        : std_logic_vector(DMA_STREAMS*DMA_MFB_REGIONS*log2(DMA_RX_CHANNELS)-1 downto 0);
+    signal app_dma_rx_mvb_discard        : std_logic_vector(DMA_STREAMS*DMA_MFB_REGIONS-1 downto 0);
+    signal app_dma_rx_mvb_vld            : std_logic_vector(DMA_STREAMS*DMA_MFB_REGIONS-1 downto 0);
     signal app_dma_rx_mvb_src_rdy        : std_logic_vector(DMA_STREAMS -1 downto 0);
     signal app_dma_rx_mvb_dst_rdy        : std_logic_vector(DMA_STREAMS -1 downto 0);
 
-    signal app_dma_rx_mfb_data           : std_logic_vector(DMA_STREAMS*MFB_REGIONS*MFB_REGION_SIZE*MFB_BLOCK_SIZE*MFB_ITEM_WIDTH-1 downto 0);
-    signal app_dma_rx_mfb_sof            : std_logic_vector(DMA_STREAMS*MFB_REGIONS-1 downto 0);
-    signal app_dma_rx_mfb_eof            : std_logic_vector(DMA_STREAMS*MFB_REGIONS-1 downto 0);
-    signal app_dma_rx_mfb_sof_pos        : std_logic_vector(DMA_STREAMS*MFB_REGIONS*max(1,log2(MFB_REGION_SIZE))-1 downto 0);
-    signal app_dma_rx_mfb_eof_pos        : std_logic_vector(DMA_STREAMS*MFB_REGIONS*max(1,log2(MFB_REGION_SIZE*MFB_BLOCK_SIZE))-1 downto 0);
+    signal app_dma_rx_mfb_data           : std_logic_vector(DMA_STREAMS*DMA_MFB_REGIONS*DMA_MFB_REGION_SIZE*MFB_BLOCK_SIZE*MFB_ITEM_WIDTH-1 downto 0);
+    signal app_dma_rx_mfb_sof            : std_logic_vector(DMA_STREAMS*DMA_MFB_REGIONS-1 downto 0);
+    signal app_dma_rx_mfb_eof            : std_logic_vector(DMA_STREAMS*DMA_MFB_REGIONS-1 downto 0);
+    signal app_dma_rx_mfb_sof_pos        : std_logic_vector(DMA_STREAMS*DMA_MFB_REGIONS*max(1,log2(DMA_MFB_REGION_SIZE))-1 downto 0);
+    signal app_dma_rx_mfb_eof_pos        : std_logic_vector(DMA_STREAMS*DMA_MFB_REGIONS*max(1,log2(DMA_MFB_REGION_SIZE*MFB_BLOCK_SIZE))-1 downto 0);
     signal app_dma_rx_mfb_src_rdy        : std_logic_vector(DMA_STREAMS -1 downto 0);
     signal app_dma_rx_mfb_dst_rdy        : std_logic_vector(DMA_STREAMS -1 downto 0);
 
-    signal app_dma_tx_mvb_len            : slv_array_t(DMA_STREAMS -1 downto 0)(MVB_ITEMS*log2(DMA_TX_FRAME_SIZE_MAX+1)-1 downto 0);
-    signal app_dma_tx_mvb_hdr_meta       : slv_array_t(DMA_STREAMS -1 downto 0)(MVB_ITEMS*HDR_META_WIDTH-1 downto 0);
-    signal app_dma_tx_mvb_channel        : slv_array_t(DMA_STREAMS -1 downto 0)(MVB_ITEMS*log2(DMA_TX_CHANNELS)-1 downto 0);
-    signal app_dma_tx_mvb_vld            : slv_array_t(DMA_STREAMS -1 downto 0)(MVB_ITEMS-1 downto 0);
+    signal app_dma_tx_mvb_len            : slv_array_t(DMA_STREAMS -1 downto 0)(DMA_MFB_REGIONS*log2(DMA_TX_FRAME_SIZE_MAX+1)-1 downto 0);
+    signal app_dma_tx_mvb_hdr_meta       : slv_array_t(DMA_STREAMS -1 downto 0)(DMA_MFB_REGIONS*HDR_META_WIDTH-1 downto 0);
+    signal app_dma_tx_mvb_channel        : slv_array_t(DMA_STREAMS -1 downto 0)(DMA_MFB_REGIONS*log2(DMA_TX_CHANNELS)-1 downto 0);
+    signal app_dma_tx_mvb_vld            : slv_array_t(DMA_STREAMS -1 downto 0)(DMA_MFB_REGIONS-1 downto 0);
     signal app_dma_tx_mvb_src_rdy        : std_logic_vector(DMA_STREAMS -1 downto 0);
     signal app_dma_tx_mvb_dst_rdy        : std_logic_vector(DMA_STREAMS -1 downto 0);
 
-    signal app_dma_tx_mfb_data           : slv_array_t(DMA_STREAMS -1 downto 0)(MFB_REGIONS*MFB_REGION_SIZE*MFB_BLOCK_SIZE*MFB_ITEM_WIDTH-1 downto 0);
-    signal app_dma_tx_mfb_sof            : slv_array_t(DMA_STREAMS -1 downto 0)(MFB_REGIONS-1 downto 0);
-    signal app_dma_tx_mfb_eof            : slv_array_t(DMA_STREAMS -1 downto 0)(MFB_REGIONS-1 downto 0);
-    signal app_dma_tx_mfb_sof_pos        : slv_array_t(DMA_STREAMS -1 downto 0)(MFB_REGIONS*max(1,log2(MFB_REGION_SIZE))-1 downto 0);
-    signal app_dma_tx_mfb_eof_pos        : slv_array_t(DMA_STREAMS -1 downto 0)(MFB_REGIONS*max(1,log2(MFB_REGION_SIZE*MFB_BLOCK_SIZE))-1 downto 0);
+    signal app_dma_tx_mfb_data           : slv_array_t(DMA_STREAMS -1 downto 0)(DMA_MFB_REGIONS*DMA_MFB_REGION_SIZE*MFB_BLOCK_SIZE*MFB_ITEM_WIDTH-1 downto 0);
+    signal app_dma_tx_mfb_sof            : slv_array_t(DMA_STREAMS -1 downto 0)(DMA_MFB_REGIONS-1 downto 0);
+    signal app_dma_tx_mfb_eof            : slv_array_t(DMA_STREAMS -1 downto 0)(DMA_MFB_REGIONS-1 downto 0);
+    signal app_dma_tx_mfb_sof_pos        : slv_array_t(DMA_STREAMS -1 downto 0)(DMA_MFB_REGIONS*max(1,log2(DMA_MFB_REGION_SIZE))-1 downto 0);
+    signal app_dma_tx_mfb_eof_pos        : slv_array_t(DMA_STREAMS -1 downto 0)(DMA_MFB_REGIONS*max(1,log2(DMA_MFB_REGION_SIZE*MFB_BLOCK_SIZE))-1 downto 0);
     signal app_dma_tx_mfb_src_rdy        : std_logic_vector(DMA_STREAMS -1 downto 0);
     signal app_dma_tx_mfb_dst_rdy        : std_logic_vector(DMA_STREAMS -1 downto 0);
 
     signal app_dma_tx_usr_choke          : std_logic_vector(DMA_STREAMS*DMA_TX_CHANNELS-1 downto 0);
 
-    signal eth_rx_mvb_data               : std_logic_vector(ETH_STREAMS*MVB_ITEMS*ETH_RX_HDR_WIDTH-1 downto 0);
-    signal eth_rx_mvb_vld                : std_logic_vector(ETH_STREAMS*MVB_ITEMS-1 downto 0);
+    signal eth_rx_mvb_data               : std_logic_vector(ETH_STREAMS*ETH_MFB_REGIONS*ETH_RX_HDR_WIDTH-1 downto 0);
+    signal eth_rx_mvb_vld                : std_logic_vector(ETH_STREAMS*ETH_MFB_REGIONS-1 downto 0);
     signal eth_rx_mvb_src_rdy            : std_logic_vector(ETH_STREAMS-1 downto 0) := (others => '0');
     signal eth_rx_mvb_dst_rdy            : std_logic_vector(ETH_STREAMS-1 downto 0);
 
-    signal eth_rx_mfb_data               : std_logic_vector(ETH_STREAMS*MFB_REGIONS*MFB_REGION_SIZE*MFB_BLOCK_SIZE*MFB_ITEM_WIDTH-1 downto 0);
-    signal eth_rx_mfb_sof                : std_logic_vector(ETH_STREAMS*MFB_REGIONS-1 downto 0);
-    signal eth_rx_mfb_eof                : std_logic_vector(ETH_STREAMS*MFB_REGIONS-1 downto 0);
-    signal eth_rx_mfb_sof_pos            : std_logic_vector(ETH_STREAMS*MFB_REGIONS*max(1,log2(MFB_REGION_SIZE))-1 downto 0);
-    signal eth_rx_mfb_eof_pos            : std_logic_vector(ETH_STREAMS*MFB_REGIONS*max(1,log2(MFB_REGION_SIZE*MFB_BLOCK_SIZE))-1 downto 0);
+    signal eth_rx_mfb_data               : std_logic_vector(ETH_STREAMS*ETH_MFB_REGIONS*ETH_MFB_REGION_SIZE*MFB_BLOCK_SIZE*MFB_ITEM_WIDTH-1 downto 0);
+    signal eth_rx_mfb_sof                : std_logic_vector(ETH_STREAMS*ETH_MFB_REGIONS-1 downto 0);
+    signal eth_rx_mfb_eof                : std_logic_vector(ETH_STREAMS*ETH_MFB_REGIONS-1 downto 0);
+    signal eth_rx_mfb_sof_pos            : std_logic_vector(ETH_STREAMS*ETH_MFB_REGIONS*max(1,log2(ETH_MFB_REGION_SIZE))-1 downto 0);
+    signal eth_rx_mfb_eof_pos            : std_logic_vector(ETH_STREAMS*ETH_MFB_REGIONS*max(1,log2(ETH_MFB_REGION_SIZE*MFB_BLOCK_SIZE))-1 downto 0);
     signal eth_rx_mfb_src_rdy            : std_logic_vector(ETH_STREAMS-1 downto 0) := (others => '0');
     signal eth_rx_mfb_dst_rdy            : std_logic_vector(ETH_STREAMS-1 downto 0);
 
-    signal eth_tx_mfb_data               : std_logic_vector(ETH_STREAMS*MFB_REGIONS*MFB_REGION_SIZE*MFB_BLOCK_SIZE*MFB_ITEM_WIDTH-1 downto 0);
-    signal eth_tx_mfb_hdr                : std_logic_vector(ETH_STREAMS*MFB_REGIONS*ETH_TX_HDR_WIDTH-1 downto 0); --valid with sof
-    signal eth_tx_mfb_sof                : std_logic_vector(ETH_STREAMS*MFB_REGIONS-1 downto 0);
-    signal eth_tx_mfb_eof                : std_logic_vector(ETH_STREAMS*MFB_REGIONS-1 downto 0);
-    signal eth_tx_mfb_sof_pos            : std_logic_vector(ETH_STREAMS*MFB_REGIONS*max(1,log2(MFB_REGION_SIZE))-1 downto 0);
-    signal eth_tx_mfb_eof_pos            : std_logic_vector(ETH_STREAMS*MFB_REGIONS*max(1,log2(MFB_REGION_SIZE*MFB_BLOCK_SIZE))-1 downto 0);
+    signal eth_tx_mfb_data               : std_logic_vector(ETH_STREAMS*ETH_MFB_REGIONS*ETH_MFB_REGION_SIZE*MFB_BLOCK_SIZE*MFB_ITEM_WIDTH-1 downto 0);
+    signal eth_tx_mfb_hdr                : std_logic_vector(ETH_STREAMS*ETH_MFB_REGIONS*ETH_TX_HDR_WIDTH-1 downto 0); --valid with sof
+    signal eth_tx_mfb_sof                : std_logic_vector(ETH_STREAMS*ETH_MFB_REGIONS-1 downto 0);
+    signal eth_tx_mfb_eof                : std_logic_vector(ETH_STREAMS*ETH_MFB_REGIONS-1 downto 0);
+    signal eth_tx_mfb_sof_pos            : std_logic_vector(ETH_STREAMS*ETH_MFB_REGIONS*max(1,log2(ETH_MFB_REGION_SIZE))-1 downto 0);
+    signal eth_tx_mfb_eof_pos            : std_logic_vector(ETH_STREAMS*ETH_MFB_REGIONS*max(1,log2(ETH_MFB_REGION_SIZE*MFB_BLOCK_SIZE))-1 downto 0);
     signal eth_tx_mfb_src_rdy            : std_logic_vector(ETH_STREAMS-1 downto 0);
     signal eth_tx_mfb_dst_rdy            : std_logic_vector(ETH_STREAMS-1 downto 0) := (others => '1');
 
@@ -555,14 +599,14 @@ architecture FULL of FPGA_COMMON is
     signal tsu_ns                        : std_logic_vector(63 downto 0);
     signal tsu_dv                        : std_logic;
 
-    signal eth_rx_link_up_ser            : std_logic_vector(ETH_PORTS*ETH_CHANNELS-1 downto 0);
-    signal eth_tx_phy_rdy_ser            : std_logic_vector(ETH_PORTS*ETH_CHANNELS-1 downto 0);
-    signal eth_rx_link_up                : slv_array_t(ETH_PORTS-1 downto 0)(ETH_CHANNELS-1 downto 0);
-    signal eth_tx_phy_rdy                : slv_array_t(ETH_PORTS-1 downto 0)(ETH_CHANNELS-1 downto 0);
-    signal eth_rx_activity_ser           : std_logic_vector(ETH_PORTS*ETH_CHANNELS-1 downto 0);
-    signal eth_tx_activity_ser           : std_logic_vector(ETH_PORTS*ETH_CHANNELS-1 downto 0);
-    signal eth_rx_activity               : slv_array_t(ETH_PORTS-1 downto 0)(ETH_CHANNELS-1 downto 0);
-    signal eth_tx_activity               : slv_array_t(ETH_PORTS-1 downto 0)(ETH_CHANNELS-1 downto 0);
+    signal eth_rx_link_up_ser            : std_logic_vector(ETH_PORTS*ETH_PORT_CHANNELS-1 downto 0);
+    signal eth_tx_phy_rdy_ser            : std_logic_vector(ETH_PORTS*ETH_PORT_CHANNELS-1 downto 0);
+    signal eth_rx_link_up                : slv_array_t(ETH_PORTS-1 downto 0)(ETH_PORT_CHANNELS-1 downto 0);
+    signal eth_tx_phy_rdy                : slv_array_t(ETH_PORTS-1 downto 0)(ETH_PORT_CHANNELS-1 downto 0);
+    signal eth_rx_activity_ser           : std_logic_vector(ETH_PORTS*ETH_PORT_CHANNELS-1 downto 0);
+    signal eth_tx_activity_ser           : std_logic_vector(ETH_PORTS*ETH_PORT_CHANNELS-1 downto 0);
+    signal eth_rx_activity               : slv_array_t(ETH_PORTS-1 downto 0)(ETH_PORT_CHANNELS-1 downto 0);
+    signal eth_tx_activity               : slv_array_t(ETH_PORTS-1 downto 0)(ETH_PORT_CHANNELS-1 downto 0);
     signal eth_modprs_n                  : std_logic_vector(ETH_PORTS-1 downto 0);
 
     signal flash_wr_data                 : std_logic_vector(64-1 downto 0);
@@ -979,9 +1023,9 @@ begin
         DEVICE               => DEVICE                    ,
         DMA_STREAMS          => DMA_MODULES               ,
 
-        USR_MVB_ITEMS        => MVB_ITEMS                 ,
-        USR_MFB_REGIONS      => MFB_REGIONS               ,
-        USR_MFB_REGION_SIZE  => MFB_REGION_SIZE           ,
+        USR_MVB_ITEMS        => DMA_MFB_REGIONS           ,
+        USR_MFB_REGIONS      => DMA_MFB_REGIONS           ,
+        USR_MFB_REGION_SIZE  => DMA_MFB_REGION_SIZE       ,
         USR_MFB_BLOCK_SIZE   => MFB_BLOCK_SIZE            ,
         USR_MFB_ITEM_WIDTH   => MFB_ITEM_WIDTH            ,
 
@@ -1181,7 +1225,9 @@ begin
     app_i : entity work.APPLICATION_CORE
     generic map (
         ETH_STREAMS           => ETH_STREAMS,
-        ETH_CHANNELS          => ETH_CHANNELS,
+        ETH_CHANNELS          => ETH_STREAM_CHANNELS,
+        ETH_MFB_REGIONS       => ETH_MFB_REGIONS,
+        ETH_MFB_REGION_SIZE   => ETH_MFB_REGION_SIZE,
         PCIE_ENDPOINTS        => PCIE_ENDPOINTS,
         DMA_STREAMS           => DMA_STREAMS,
         DMA_RX_CHANNELS       => DMA_RX_CHANNELS,
@@ -1189,8 +1235,8 @@ begin
         DMA_HDR_META_WIDTH    => HDR_META_WIDTH,
         DMA_RX_FRAME_SIZE_MAX => DMA_RX_FRAME_SIZE_MAX,
         DMA_TX_FRAME_SIZE_MAX => DMA_TX_FRAME_SIZE_MAX,
-        MFB_REGIONS           => MFB_REGIONS,
-        MFB_REG_SIZE          => MFB_REGION_SIZE,
+        DMA_MFB_REGIONS       => DMA_MFB_REGIONS,
+        DMA_MFB_REGION_SIZE   => DMA_MFB_REGION_SIZE,
         MFB_BLOCK_SIZE        => MFB_BLOCK_SIZE,
         MFB_ITEM_WIDTH        => MFB_ITEM_WIDTH,
         HBM_PORTS             => HBM_PORTS,
@@ -1383,6 +1429,7 @@ begin
     generic map (
         ETH_CORE_ARCH     => ETH_CORE_ARCH  ,
         ETH_PORTS         => ETH_PORTS      ,
+        ETH_STREAMS       => ETH_STREAMS    ,
         ETH_PORT_SPEED    => ETH_PORT_SPEED ,
         ETH_PORT_CHAN     => ETH_PORT_CHAN  ,
         ETH_PORT_RX_MTU   => ETH_PORT_RX_MTU,
@@ -1392,8 +1439,8 @@ begin
         QSFP_I2C_PORTS    => QSFP_I2C_PORTS ,
         QSFP_I2C_TRISTATE => QSFP_I2C_TRISTATE,
 
-        REGIONS           => MFB_REGIONS    ,
-        REGION_SIZE       => MFB_REGION_SIZE,
+        REGIONS           => ETH_MFB_REGIONS,
+        REGION_SIZE       => ETH_MFB_REGION_SIZE,
         BLOCK_SIZE        => MFB_BLOCK_SIZE ,
         ITEM_WIDTH        => MFB_ITEM_WIDTH ,
 
@@ -1509,7 +1556,7 @@ begin
     eth_led_ctrl_i: entity work.ETH_LED_CTRL_TOP
     generic map (
         ETH_PORTS      => ETH_PORTS,
-        ETH_CHANNELS   => ETH_CHANNELS,
+        ETH_CHANNELS   => ETH_PORT_CHANNELS,
         LEDS_PER_PORT  => ETH_PORT_LEDS,
         SYS_CLK_PERIOD => 5, -- 200 MHz
         LED_ON_VAL     => '1'

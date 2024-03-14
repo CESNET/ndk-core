@@ -21,6 +21,8 @@ generic(
     -- Network ports configuration:
     -- =====================================================================    
     ETH_PORTS         : natural := 2; -- max 2 (MI address space limit)
+    -- Number ETH streams, must be equal to ETH_PORTS or ETH_PORTS*ETH_PORT_CHAN!
+    ETH_STREAMS       : natural := ETH_PORTS;
     -- Speed per Ethernet port.
     -- Options: F_TILE core: 400, 200, 100, 50, 40, 25, 10;
     --          E_TILE core: 100, 25, 10;
@@ -129,30 +131,30 @@ port(
     -- =====================================================================
     -- RX interface (Packets for transmit to Ethernet)
     -- =====================================================================
-    RX_MFB_DATA     : in  std_logic_vector(ETH_PORTS*REGIONS*REGION_SIZE*BLOCK_SIZE*ITEM_WIDTH-1 downto 0);
-    RX_MFB_HDR      : in  std_logic_vector(ETH_PORTS*REGIONS*ETH_TX_HDR_WIDTH-1 downto 0); -- valid with SOF
-    RX_MFB_SOF      : in  std_logic_vector(ETH_PORTS*REGIONS-1 downto 0);
-    RX_MFB_EOF      : in  std_logic_vector(ETH_PORTS*REGIONS-1 downto 0);
-    RX_MFB_SOF_POS  : in  std_logic_vector(ETH_PORTS*REGIONS*max(1,log2(REGION_SIZE))-1 downto 0);
-    RX_MFB_EOF_POS  : in  std_logic_vector(ETH_PORTS*REGIONS*max(1,log2(REGION_SIZE*BLOCK_SIZE))-1 downto 0);
-    RX_MFB_SRC_RDY  : in  std_logic_vector(ETH_PORTS-1 downto 0);
-    RX_MFB_DST_RDY  : out std_logic_vector(ETH_PORTS-1 downto 0);
+    RX_MFB_DATA     : in  std_logic_vector(ETH_STREAMS*REGIONS*REGION_SIZE*BLOCK_SIZE*ITEM_WIDTH-1 downto 0);
+    RX_MFB_HDR      : in  std_logic_vector(ETH_STREAMS*REGIONS*ETH_TX_HDR_WIDTH-1 downto 0); -- valid with SOF
+    RX_MFB_SOF      : in  std_logic_vector(ETH_STREAMS*REGIONS-1 downto 0);
+    RX_MFB_EOF      : in  std_logic_vector(ETH_STREAMS*REGIONS-1 downto 0);
+    RX_MFB_SOF_POS  : in  std_logic_vector(ETH_STREAMS*REGIONS*max(1,log2(REGION_SIZE))-1 downto 0);
+    RX_MFB_EOF_POS  : in  std_logic_vector(ETH_STREAMS*REGIONS*max(1,log2(REGION_SIZE*BLOCK_SIZE))-1 downto 0);
+    RX_MFB_SRC_RDY  : in  std_logic_vector(ETH_STREAMS-1 downto 0);
+    RX_MFB_DST_RDY  : out std_logic_vector(ETH_STREAMS-1 downto 0);
 
     -- =====================================================================
     -- TX interface (Packets received from Ethernet)
     -- =====================================================================
-    TX_MFB_DATA     : out std_logic_vector(ETH_PORTS*REGIONS*REGION_SIZE*BLOCK_SIZE*ITEM_WIDTH-1 downto 0);
-    TX_MFB_SOF      : out std_logic_vector(ETH_PORTS*REGIONS-1 downto 0);
-    TX_MFB_EOF      : out std_logic_vector(ETH_PORTS*REGIONS-1 downto 0);
-    TX_MFB_SOF_POS  : out std_logic_vector(ETH_PORTS*REGIONS*max(1,log2(REGION_SIZE))-1 downto 0);
-    TX_MFB_EOF_POS  : out std_logic_vector(ETH_PORTS*REGIONS*max(1,log2(REGION_SIZE*BLOCK_SIZE))-1 downto 0);
-    TX_MFB_SRC_RDY  : out std_logic_vector(ETH_PORTS-1 downto 0);
-    TX_MFB_DST_RDY  : in  std_logic_vector(ETH_PORTS-1 downto 0);
+    TX_MFB_DATA     : out std_logic_vector(ETH_STREAMS*REGIONS*REGION_SIZE*BLOCK_SIZE*ITEM_WIDTH-1 downto 0);
+    TX_MFB_SOF      : out std_logic_vector(ETH_STREAMS*REGIONS-1 downto 0);
+    TX_MFB_EOF      : out std_logic_vector(ETH_STREAMS*REGIONS-1 downto 0);
+    TX_MFB_SOF_POS  : out std_logic_vector(ETH_STREAMS*REGIONS*max(1,log2(REGION_SIZE))-1 downto 0);
+    TX_MFB_EOF_POS  : out std_logic_vector(ETH_STREAMS*REGIONS*max(1,log2(REGION_SIZE*BLOCK_SIZE))-1 downto 0);
+    TX_MFB_SRC_RDY  : out std_logic_vector(ETH_STREAMS-1 downto 0);
+    TX_MFB_DST_RDY  : in  std_logic_vector(ETH_STREAMS-1 downto 0);
 
-    TX_MVB_DATA     : out std_logic_vector(ETH_PORTS*REGIONS*ETH_RX_HDR_WIDTH-1 downto 0);
-    TX_MVB_VLD      : out std_logic_vector(ETH_PORTS*REGIONS-1 downto 0);
-    TX_MVB_SRC_RDY  : out std_logic_vector(ETH_PORTS-1 downto 0);
-    TX_MVB_DST_RDY  : in  std_logic_vector(ETH_PORTS-1 downto 0);
+    TX_MVB_DATA     : out std_logic_vector(ETH_STREAMS*REGIONS*ETH_RX_HDR_WIDTH-1 downto 0);
+    TX_MVB_VLD      : out std_logic_vector(ETH_STREAMS*REGIONS-1 downto 0);
+    TX_MVB_SRC_RDY  : out std_logic_vector(ETH_STREAMS-1 downto 0);
+    TX_MVB_DST_RDY  : in  std_logic_vector(ETH_STREAMS-1 downto 0);
 
     -- =====================================================================
     -- MI interface - ETH MAC

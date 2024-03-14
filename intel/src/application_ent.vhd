@@ -21,6 +21,10 @@ generic (
     ETH_STREAMS        : natural := 1;
     -- ETH: number of possible logical Ethernet links per Ethernet stream
     ETH_CHANNELS       : natural := 1;
+    -- ETH MFB: number of regions in word
+    ETH_MFB_REGIONS       : natural := 1;
+    -- ETH MFB: number of blocks in region
+    ETH_MFB_REGION_SIZE   : natural := 8;
     -- Number of instantiated PCIe endpoints
     PCIE_ENDPOINTS     : natural := 1;
     -- DMA: number of DMA streams
@@ -35,10 +39,14 @@ generic (
     DMA_RX_FRAME_SIZE_MAX : natural := 2**12;
     -- DMA: Maximum size of a frame on TX DMA interfaces (in bytes)
     DMA_TX_FRAME_SIZE_MAX : natural := 2**12;
-    -- MFB parameters: number of regions in word
-    MFB_REGIONS        : natural := 1;
-    -- MFB parameters: number of blocks in region
-    MFB_REG_SIZE       : natural := 8;
+    -- DMA MFB: number of regions in word
+    DMA_MFB_REGIONS       : natural := 1;
+    -- DMA MFB: number of blocks in region
+    DMA_MFB_REGION_SIZE   : natural := 8;
+    -- MFB parameters: number of regions in word, DEPRECATED!
+    MFB_REGIONS        : natural := ETH_MFB_REGIONS;
+    -- MFB parameters: number of blocks in region, DEPRECATED!
+    MFB_REG_SIZE       : natural := ETH_MFB_REGION_SIZE;
     -- MFB parameters: number of items in block
     MFB_BLOCK_SIZE     : natural := 8;
     -- MFB parameters: width of one item in bits
@@ -167,24 +175,24 @@ port (
     -- =========================================================================
 
     -- ETH RX MVB streams: data word with MVB items (ETH RX headers see eth_hdr_pack)
-    ETH_RX_MVB_DATA         : in  std_logic_vector(ETH_STREAMS* MFB_REGIONS*ETH_RX_HDR_WIDTH-1 downto 0);
+    ETH_RX_MVB_DATA         : in  std_logic_vector(ETH_STREAMS* ETH_MFB_REGIONS*ETH_RX_HDR_WIDTH-1 downto 0);
     -- ETH RX MVB streams: valid of each MVB item
-    ETH_RX_MVB_VLD          : in  std_logic_vector(ETH_STREAMS* MFB_REGIONS-1 downto 0);
+    ETH_RX_MVB_VLD          : in  std_logic_vector(ETH_STREAMS* ETH_MFB_REGIONS-1 downto 0);
     -- ETH RX MVB streams: source ready of each MVB bus
     ETH_RX_MVB_SRC_RDY      : in  std_logic_vector(ETH_STREAMS-1 downto 0);
     -- ETH RX MVB streams: destination ready of each MVB bus
     ETH_RX_MVB_DST_RDY      : out std_logic_vector(ETH_STREAMS-1 downto 0);
     
     -- ETH RX MFB streams: data word with frames (packets)
-    ETH_RX_MFB_DATA         : in  std_logic_vector(ETH_STREAMS* MFB_REGIONS*MFB_REG_SIZE*MFB_BLOCK_SIZE*MFB_ITEM_WIDTH-1 downto 0);
+    ETH_RX_MFB_DATA         : in  std_logic_vector(ETH_STREAMS* ETH_MFB_REGIONS*ETH_MFB_REGION_SIZE*MFB_BLOCK_SIZE*MFB_ITEM_WIDTH-1 downto 0);
     -- ETH RX MFB streams: Start Of Frame (SOF) flag for each MFB region
-    ETH_RX_MFB_SOF          : in  std_logic_vector(ETH_STREAMS* MFB_REGIONS-1 downto 0);
+    ETH_RX_MFB_SOF          : in  std_logic_vector(ETH_STREAMS* ETH_MFB_REGIONS-1 downto 0);
     -- ETH RX MFB streams: End Of Frame (EOF) flag for each MFB region
-    ETH_RX_MFB_EOF          : in  std_logic_vector(ETH_STREAMS* MFB_REGIONS-1 downto 0);
+    ETH_RX_MFB_EOF          : in  std_logic_vector(ETH_STREAMS* ETH_MFB_REGIONS-1 downto 0);
     -- ETH RX MFB streams: SOF position for each MFB region in MFB blocks
-    ETH_RX_MFB_SOF_POS      : in  std_logic_vector(ETH_STREAMS* MFB_REGIONS*max(1,log2(MFB_REG_SIZE))-1 downto 0);
+    ETH_RX_MFB_SOF_POS      : in  std_logic_vector(ETH_STREAMS* ETH_MFB_REGIONS*max(1,log2(ETH_MFB_REGION_SIZE))-1 downto 0);
     -- ETH RX MFB streams: EOF position for each MFB region in MFB items
-    ETH_RX_MFB_EOF_POS      : in  std_logic_vector(ETH_STREAMS* MFB_REGIONS*max(1,log2(MFB_REG_SIZE*MFB_BLOCK_SIZE))-1 downto 0);
+    ETH_RX_MFB_EOF_POS      : in  std_logic_vector(ETH_STREAMS* ETH_MFB_REGIONS*max(1,log2(ETH_MFB_REGION_SIZE*MFB_BLOCK_SIZE))-1 downto 0);
     -- ETH RX MFB streams: source ready of each MFB bus
     ETH_RX_MFB_SRC_RDY      : in  std_logic_vector(ETH_STREAMS-1 downto 0);
     -- ETH RX MFB streams: destination ready of each MFB bus
@@ -198,17 +206,17 @@ port (
     -- =========================================================================
 
     -- ETH TX MFB streams: data word with frames (packets)
-    ETH_TX_MFB_DATA         : out std_logic_vector(ETH_STREAMS* MFB_REGIONS*MFB_REG_SIZE*MFB_BLOCK_SIZE*MFB_ITEM_WIDTH-1 downto 0);
+    ETH_TX_MFB_DATA         : out std_logic_vector(ETH_STREAMS* ETH_MFB_REGIONS*ETH_MFB_REGION_SIZE*MFB_BLOCK_SIZE*MFB_ITEM_WIDTH-1 downto 0);
     -- ETH TX MFB streams: header (see eth_hdr_pack) for each frame, is valid for each SOF
-    ETH_TX_MFB_HDR          : out std_logic_vector(ETH_STREAMS* MFB_REGIONS*ETH_TX_HDR_WIDTH-1 downto 0) := (others => '0');
+    ETH_TX_MFB_HDR          : out std_logic_vector(ETH_STREAMS* ETH_MFB_REGIONS*ETH_TX_HDR_WIDTH-1 downto 0) := (others => '0');
     -- ETH TX MFB streams: Start Of Frame (SOF) flag for each MFB region
-    ETH_TX_MFB_SOF          : out std_logic_vector(ETH_STREAMS* MFB_REGIONS-1 downto 0);
+    ETH_TX_MFB_SOF          : out std_logic_vector(ETH_STREAMS* ETH_MFB_REGIONS-1 downto 0);
     -- ETH TX MFB streams: End Of Frame (EOF) flag for each MFB region
-    ETH_TX_MFB_EOF          : out std_logic_vector(ETH_STREAMS* MFB_REGIONS-1 downto 0);
+    ETH_TX_MFB_EOF          : out std_logic_vector(ETH_STREAMS* ETH_MFB_REGIONS-1 downto 0);
     -- ETH TX MFB streams: SOF position for each MFB region in MFB blocks
-    ETH_TX_MFB_SOF_POS      : out std_logic_vector(ETH_STREAMS* MFB_REGIONS*max(1,log2(MFB_REG_SIZE))-1 downto 0);
+    ETH_TX_MFB_SOF_POS      : out std_logic_vector(ETH_STREAMS* ETH_MFB_REGIONS*max(1,log2(ETH_MFB_REGION_SIZE))-1 downto 0);
     -- ETH TX MFB streams: EOF position for each MFB region in MFB items
-    ETH_TX_MFB_EOF_POS      : out std_logic_vector(ETH_STREAMS* MFB_REGIONS*max(1,log2(MFB_REG_SIZE*MFB_BLOCK_SIZE))-1 downto 0);
+    ETH_TX_MFB_EOF_POS      : out std_logic_vector(ETH_STREAMS* ETH_MFB_REGIONS*max(1,log2(ETH_MFB_REGION_SIZE*MFB_BLOCK_SIZE))-1 downto 0);
     -- ETH TX MFB streams: source ready of each MFB bus
     ETH_TX_MFB_SRC_RDY      : out std_logic_vector(ETH_STREAMS-1 downto 0);
     -- ETH TX MFB streams: destination ready of each MFB bus
@@ -222,30 +230,30 @@ port (
     -- =========================================================================
 
     -- DMA RX MVB streams: length of data packet in bytes
-    DMA_RX_MVB_LEN           : out std_logic_vector(DMA_STREAMS* MFB_REGIONS*log2(DMA_RX_FRAME_SIZE_MAX+1)-1 downto 0);
+    DMA_RX_MVB_LEN           : out std_logic_vector(DMA_STREAMS* DMA_MFB_REGIONS*log2(DMA_RX_FRAME_SIZE_MAX+1)-1 downto 0);
     -- DMA RX MVB streams: user metadata for DMA header
-    DMA_RX_MVB_HDR_META      : out std_logic_vector(DMA_STREAMS* MFB_REGIONS*DMA_HDR_META_WIDTH-1 downto 0);
+    DMA_RX_MVB_HDR_META      : out std_logic_vector(DMA_STREAMS* DMA_MFB_REGIONS*DMA_HDR_META_WIDTH-1 downto 0);
     -- DMA RX MVB streams: number of DMA channel
-    DMA_RX_MVB_CHANNEL       : out std_logic_vector(DMA_STREAMS* MFB_REGIONS*log2(DMA_RX_CHANNELS)-1 downto 0);
+    DMA_RX_MVB_CHANNEL       : out std_logic_vector(DMA_STREAMS* DMA_MFB_REGIONS*log2(DMA_RX_CHANNELS)-1 downto 0);
     -- DMA RX MVB streams: discard flag (when is set, packet is discarded in DMA module)
-    DMA_RX_MVB_DISCARD       : out std_logic_vector(DMA_STREAMS* MFB_REGIONS-1 downto 0);
+    DMA_RX_MVB_DISCARD       : out std_logic_vector(DMA_STREAMS* DMA_MFB_REGIONS-1 downto 0);
     -- DMA RX MVB streams: valid of each MVB item
-    DMA_RX_MVB_VLD           : out std_logic_vector(DMA_STREAMS* MFB_REGIONS-1 downto 0);
+    DMA_RX_MVB_VLD           : out std_logic_vector(DMA_STREAMS* DMA_MFB_REGIONS-1 downto 0);
     -- DMA RX MVB streams: source ready of each MVB bus
     DMA_RX_MVB_SRC_RDY       : out std_logic_vector(DMA_STREAMS-1 downto 0);
     -- DMA RX MVB streams: destination ready of each MVB bus
     DMA_RX_MVB_DST_RDY       : in  std_logic_vector(DMA_STREAMS-1 downto 0);
 
     -- DMA RX MFB streams: data word with frames (packets)
-    DMA_RX_MFB_DATA          : out std_logic_vector(DMA_STREAMS* MFB_REGIONS*MFB_REG_SIZE*MFB_BLOCK_SIZE*MFB_ITEM_WIDTH-1 downto 0);
+    DMA_RX_MFB_DATA          : out std_logic_vector(DMA_STREAMS* DMA_MFB_REGIONS*DMA_MFB_REGION_SIZE*MFB_BLOCK_SIZE*MFB_ITEM_WIDTH-1 downto 0);
     -- DMA RX MFB streams: Start Of Frame (SOF) flag for each MFB region
-    DMA_RX_MFB_SOF           : out std_logic_vector(DMA_STREAMS* MFB_REGIONS-1 downto 0);
+    DMA_RX_MFB_SOF           : out std_logic_vector(DMA_STREAMS* DMA_MFB_REGIONS-1 downto 0);
     -- DMA RX MFB streams: End Of Frame (EOF) flag for each MFB region
-    DMA_RX_MFB_EOF           : out std_logic_vector(DMA_STREAMS* MFB_REGIONS-1 downto 0);
+    DMA_RX_MFB_EOF           : out std_logic_vector(DMA_STREAMS* DMA_MFB_REGIONS-1 downto 0);
     -- DMA RX MFB streams: SOF position for each MFB region in MFB blocks
-    DMA_RX_MFB_SOF_POS       : out std_logic_vector(DMA_STREAMS* MFB_REGIONS*max(1,log2(MFB_REG_SIZE))-1 downto 0);
+    DMA_RX_MFB_SOF_POS       : out std_logic_vector(DMA_STREAMS* DMA_MFB_REGIONS*max(1,log2(DMA_MFB_REGION_SIZE))-1 downto 0);
     -- DMA RX MFB streams: EOF position for each MFB region in MFB items
-    DMA_RX_MFB_EOF_POS       : out std_logic_vector(DMA_STREAMS* MFB_REGIONS*max(1,log2(MFB_REG_SIZE*MFB_BLOCK_SIZE))-1 downto 0);
+    DMA_RX_MFB_EOF_POS       : out std_logic_vector(DMA_STREAMS* DMA_MFB_REGIONS*max(1,log2(DMA_MFB_REGION_SIZE*MFB_BLOCK_SIZE))-1 downto 0);
     -- DMA RX MFB streams: source ready of each MFB bus
     DMA_RX_MFB_SRC_RDY       : out std_logic_vector(DMA_STREAMS-1 downto 0);
     -- DMA RX MFB streams: destination ready of each MFB bus
@@ -259,28 +267,28 @@ port (
     -- =========================================================================
 
     -- DMA TX MVB streams: length of data packet in bytes
-    DMA_TX_MVB_LEN          : in  std_logic_vector(DMA_STREAMS* MFB_REGIONS*log2(DMA_TX_FRAME_SIZE_MAX+1)-1 downto 0);
+    DMA_TX_MVB_LEN          : in  std_logic_vector(DMA_STREAMS* DMA_MFB_REGIONS*log2(DMA_TX_FRAME_SIZE_MAX+1)-1 downto 0);
     -- DMA TX MVB streams: user metadata for DMA header
-    DMA_TX_MVB_HDR_META     : in  std_logic_vector(DMA_STREAMS* MFB_REGIONS*DMA_HDR_META_WIDTH-1 downto 0);
+    DMA_TX_MVB_HDR_META     : in  std_logic_vector(DMA_STREAMS* DMA_MFB_REGIONS*DMA_HDR_META_WIDTH-1 downto 0);
     -- DMA TX MVB streams: number of DMA channel
-    DMA_TX_MVB_CHANNEL      : in  std_logic_vector(DMA_STREAMS* MFB_REGIONS*log2(DMA_TX_CHANNELS)-1 downto 0);
+    DMA_TX_MVB_CHANNEL      : in  std_logic_vector(DMA_STREAMS* DMA_MFB_REGIONS*log2(DMA_TX_CHANNELS)-1 downto 0);
     -- DMA TX MVB streams: valid of each MVB item
-    DMA_TX_MVB_VLD          : in  std_logic_vector(DMA_STREAMS* MFB_REGIONS-1 downto 0);
+    DMA_TX_MVB_VLD          : in  std_logic_vector(DMA_STREAMS* DMA_MFB_REGIONS-1 downto 0);
     -- DMA TX MVB streams: source ready of each MVB bus
     DMA_TX_MVB_SRC_RDY      : in  std_logic_vector(DMA_STREAMS-1 downto 0);
     -- DMA TX MVB streams: destination ready of each MVB bus
     DMA_TX_MVB_DST_RDY      : out std_logic_vector(DMA_STREAMS-1 downto 0);
 
     -- DMA TX MFB streams: data word with frames (packets)
-    DMA_TX_MFB_DATA         : in  std_logic_vector(DMA_STREAMS* MFB_REGIONS*MFB_REG_SIZE*MFB_BLOCK_SIZE*MFB_ITEM_WIDTH-1 downto 0);
+    DMA_TX_MFB_DATA         : in  std_logic_vector(DMA_STREAMS* DMA_MFB_REGIONS*DMA_MFB_REGION_SIZE*MFB_BLOCK_SIZE*MFB_ITEM_WIDTH-1 downto 0);
     -- DMA TX MFB streams: Start Of Frame (SOF) flag for each MFB region
-    DMA_TX_MFB_SOF          : in  std_logic_vector(DMA_STREAMS* MFB_REGIONS-1 downto 0);
+    DMA_TX_MFB_SOF          : in  std_logic_vector(DMA_STREAMS* DMA_MFB_REGIONS-1 downto 0);
     -- DMA TX MFB streams: End Of Frame (EOF) flag for each MFB region
-    DMA_TX_MFB_EOF          : in  std_logic_vector(DMA_STREAMS* MFB_REGIONS-1 downto 0);
+    DMA_TX_MFB_EOF          : in  std_logic_vector(DMA_STREAMS* DMA_MFB_REGIONS-1 downto 0);
     -- DMA TX MFB streams: SOF position for each MFB region in MFB blocks
-    DMA_TX_MFB_SOF_POS      : in  std_logic_vector(DMA_STREAMS* MFB_REGIONS*max(1,log2(MFB_REG_SIZE))-1 downto 0);
+    DMA_TX_MFB_SOF_POS      : in  std_logic_vector(DMA_STREAMS* DMA_MFB_REGIONS*max(1,log2(DMA_MFB_REGION_SIZE))-1 downto 0);
     -- DMA TX MFB streams: EOF position for each MFB region in MFB items
-    DMA_TX_MFB_EOF_POS      : in  std_logic_vector(DMA_STREAMS* MFB_REGIONS*max(1,log2(MFB_REG_SIZE*MFB_BLOCK_SIZE))-1 downto 0);
+    DMA_TX_MFB_EOF_POS      : in  std_logic_vector(DMA_STREAMS* DMA_MFB_REGIONS*max(1,log2(DMA_MFB_REGION_SIZE*MFB_BLOCK_SIZE))-1 downto 0);
     -- DMA TX MFB streams: source ready of each MFB bus
     DMA_TX_MFB_SRC_RDY      : in  std_logic_vector(DMA_STREAMS-1 downto 0);
     -- DMA TX MFB streams: destination ready of each MFB bus
