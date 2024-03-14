@@ -60,6 +60,11 @@ set ETH_PORT_TX_MTU(0) 16383
 set ETH_PORT_TX_MTU(1) 16383
 set ETH_PORT_TX_MTU(2) 16383
 set ETH_PORT_TX_MTU(3) 16383
+# Ethernet streams mode. Options are:
+#    0 = All ETH channels from one ETH port (QSFP) are merged to a single ETH
+#        stream (MFB+MVB bus). This is the default mode.
+#    1 = Each ETH channel is linked to an independent ETH stream (MFB+MVB bus).
+set ETH_STREAMS_MODE   0
 # Total number of QSFP cages
 set QSFP_CAGES         4
 # I2C address of each QSFP cage
