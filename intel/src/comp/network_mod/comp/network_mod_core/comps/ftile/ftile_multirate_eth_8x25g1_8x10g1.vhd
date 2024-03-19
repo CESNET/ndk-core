@@ -245,10 +245,11 @@ architecture FULL of FTILE_MULTIRATE_ETH_8x25G1_8x10G1 is
     signal reconfig_waitrequest    :  std_logic_vector(MI_SEL_RANGE-1 downto 0);
 
     -- signals for multiplexor
-    signal reconfig_write_drp      :  std_logic_vector(MI_SEL_RANGE-1 downto 0);
-    signal reconfig_read_drp       :  std_logic_vector(MI_SEL_RANGE-1 downto 0);
-    signal reconfig_addr_drp       :  slv_array_t     (MI_SEL_RANGE-1 downto 0)(MI_ADDR_WIDTH_PHY-1 downto 0);
-    signal reconfig_writedata_drp  :  slv_array_t     (MI_SEL_RANGE-1 downto 0)(MI_DATA_WIDTH_PHY-1 downto 0);
+    signal reconfig_write_drp       :  std_logic_vector(MI_SEL_RANGE-1 downto 0);
+    signal reconfig_read_drp        :  std_logic_vector(MI_SEL_RANGE-1 downto 0);
+    signal reconfig_addr_drp        :  slv_array_t     (MI_SEL_RANGE-1 downto 0)(MI_ADDR_WIDTH_PHY-1 downto 0);
+    signal reconfig_writedata_drp   :  slv_array_t     (MI_SEL_RANGE-1 downto 0)(MI_DATA_WIDTH_PHY-1 downto 0);
+    signal reconfig_waitrequest_drp : std_logic_vector(MI_SEL_RANGE-1 downto 0) := (others => '0');
 
     -- signal for Ftile interface 
     signal ftile_rx_rst_n             : std_logic;
@@ -298,7 +299,6 @@ architecture FULL of FTILE_MULTIRATE_ETH_8x25G1_8x10G1 is
     -- signal sync_repeater_ctrl : std_logic_vector(REPEATER_CTRL'range);
     signal sync_repeater_ctrl : std_logic;
 
-    signal mi_ia_ardy_phy : std_logic_vector(MI_SEL_RANGE-1 downto 0) := (others => '0');
     signal init_done      : std_logic_vector(PMA_LANES   -1 downto 0);
     signal init_ready     : std_logic_vector(PMA_LANES   -1 downto 0);
 
@@ -410,7 +410,7 @@ begin
         RECONFIG_WRITE          => reconfig_write_drp,
         RECONFIG_READDATA       => reconfig_readdata,
         RECONFIG_WRITEDATA      => reconfig_writedata_drp,
-        RECONFIG_WAITREQUEST    => mi_ia_ardy_phy
+        RECONFIG_WAITREQUEST    => reconfig_waitrequest_drp
     );
 
     -- selection of unused input signals from bridge_drp which have to be conect to '0'
@@ -511,7 +511,7 @@ begin
     end generate;
 
     mi_ardy_conversion_g: for i in PMA_LANES downto 0 generate
-        mi_ia_ardy_phy(i) <= not reconfig_waitrequest(i);
+        reconfig_waitrequest_drp(i) <= not reconfig_waitrequest(i);
     end generate;
  
     CLK_ETH_OUT <= ftile_clk_out;
@@ -530,13 +530,13 @@ begin
             i_dr_new_cfg_applied_ack      => '1',
             o_dr_in_progress              => open,
             o_dr_error_status             => open,
-            i_dr_host_avmm_address        => reconfig_addr_drp       (11)(10-1 downto 0),
-            o_dr_host_avmm_readdata_valid => reconfig_readdata_valid (11),
-            i_dr_host_avmm_read           => reconfig_read_drp       (11),
-            i_dr_host_avmm_write          => reconfig_write_drp      (11),
-            o_dr_host_avmm_readdata       => reconfig_readdata       (11),
-            i_dr_host_avmm_writedata      => reconfig_writedata_drp  (11),
-            o_dr_host_avmm_waitrequest    => reconfig_waitrequest    (11)
+            i_dr_host_avmm_address        => reconfig_addr_drp        (11)(10-1 downto 0),
+            o_dr_host_avmm_readdata_valid => reconfig_readdata_valid  (11),
+            i_dr_host_avmm_read           => reconfig_read_drp        (11),
+            i_dr_host_avmm_write          => reconfig_write_drp       (11),
+            o_dr_host_avmm_readdata       => reconfig_readdata        (11),
+            i_dr_host_avmm_writedata      => reconfig_writedata_drp   (11),
+            o_dr_host_avmm_waitrequest    => reconfig_waitrequest_drp (11)
         );
     end generate dr_ctrl_g;
 
