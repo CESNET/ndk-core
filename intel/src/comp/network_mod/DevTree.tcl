@@ -46,6 +46,7 @@ proc dts_network_mod { base_mac base_pcs base_pmd ports ETH_PORT_SPEED ETH_PORT_
     }
 
     set ports_per_qsfp [expr $ports / $qsfp_cages]
+    global ETH_MAC_BYPASS
 
     for {set p 0} {$p < $ports} {incr p} {
         set channel_lanes [expr $port_lanes($p)/$port_chan($p)]
@@ -58,9 +59,13 @@ proc dts_network_mod { base_mac base_pcs base_pmd ports ETH_PORT_SPEED ETH_PORT_
             }
             append ret "regarr$ei:" [dts_pcs_regs $ei [expr $base_pcs + $MGMT_PORT_OFF * $p + $MGMT_CHAN_OFF * $ch]]
             append ret "pcspma$ei:" [dts_mgmt $ei "$port_speed($p)G" "regarr$ei" $pcspma_params]
-            append ret "txmac$ei:" [dts_tx_mac_lite $ei $port_speed($p) [expr $base_mac + $p * $PORTS_OFF + $ch * $CHAN_OFF + $TX_RX_MAC_OFF * 0] $port_tx_mtu($p)]
-            append ret "rxmac$ei:" [dts_rx_mac_lite $ei $port_speed($p) [expr $base_mac + $p * $PORTS_OFF + $ch * $CHAN_OFF + $TX_RX_MAC_OFF * 1] $port_rx_mtu($p)]
-            append ret [dts_eth_channel $ei $pmd_id $ei $ei $ei $eth_lanes]
+            if {$ETH_MAC_BYPASS} {
+                append ret [dts_eth_channel $ei $pmd_id -1 -1 $ei $eth_lanes]
+            } else {
+                append ret "txmac$ei:" [dts_tx_mac_lite $ei $port_speed($p) [expr $base_mac + $p * $PORTS_OFF + $ch * $CHAN_OFF + $TX_RX_MAC_OFF * 0] $port_tx_mtu($p)]
+                append ret "rxmac$ei:" [dts_rx_mac_lite $ei $port_speed($p) [expr $base_mac + $p * $PORTS_OFF + $ch * $CHAN_OFF + $TX_RX_MAC_OFF * 1] $port_rx_mtu($p)]
+                append ret [dts_eth_channel $ei $pmd_id $ei $ei $ei $eth_lanes]
+            }
             incr ei
         }
     }

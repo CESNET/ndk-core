@@ -114,7 +114,8 @@ if {$ETH_PORTS == 0} {
     VhdlPkgIntArr ETH_PORT_TX_MTU $ETH_PORTS
 }
 
-VhdlPkgInt ETH_STREAMS_MODE $ETH_STREAMS_MODE
+VhdlPkgInt  ETH_STREAMS_MODE $ETH_STREAMS_MODE
+VhdlPkgBool ETH_MAC_BYPASS   $ETH_MAC_BYPASS
 
 # ------------------------------------------------------------------------------
 # DMA Channel calculation

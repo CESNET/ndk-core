@@ -65,6 +65,8 @@ set ETH_PORT_TX_MTU(3) 16383
 #        stream (MFB+MVB bus). This is the default mode.
 #    1 = Each ETH channel is linked to an independent ETH stream (MFB+MVB bus).
 set ETH_STREAMS_MODE   0
+# Optional option to disable Ethernet MAC Lite modules. Dangerously!
+set ETH_MAC_BYPASS     false
 # Total number of QSFP cages
 set QSFP_CAGES         4
 # I2C address of each QSFP cage

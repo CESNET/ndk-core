@@ -34,12 +34,14 @@ generic(
     --          CMAC   core: 1.
 
     ETH_PORT_CHAN     : integer_vector(ETH_PORTS-1 downto 0) := (others => 4);
-    -- Maximum allowed size of RX frame in bytes per Ethernet port.
-    EHIP_PORT_TYPE    : integer_vector(ETH_PORTS-1 downto 0) := (others => 0);
     -- Type of used IP core default is F_Tile.
+    EHIP_PORT_TYPE    : integer_vector(ETH_PORTS-1 downto 0) := (others => 0);
+    -- Maximum allowed size of RX frame in bytes per Ethernet port.
     ETH_PORT_RX_MTU   : integer_vector(ETH_PORTS-1 downto 0) := (others => 16383);
     -- Maximum allowed size of TX frame in bytes per Ethernet port.
     ETH_PORT_TX_MTU   : integer_vector(ETH_PORTS-1 downto 0) := (others => 16383);
+    -- Optional option to disable MAC Lite modules. Dangerously!
+    ETH_MAC_BYPASS    : boolean := False;
     -- Number of serial lanes.
     -- Options: F_TILE      core: 8;
     --          E_TILE/CMAC core: 4.
