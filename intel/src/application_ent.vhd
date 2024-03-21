@@ -117,6 +117,11 @@ port (
     -- reset input synchronized with CLK_USER_X4
     RESET_USER_X4 : in  std_logic_vector(RESET_WIDTH-1 downto 0);
 
+    -- clock input with ethernet core frequency for each ETH stream
+    CLK_ETH       : in  std_logic_vector(ETH_STREAMS-1 downto 0);
+    -- reset input synchronized with CLK_ETH for each ETH stream
+    RESET_ETH     : in  std_logic_vector(ETH_STREAMS-1 downto 0);
+
     -- =========================================================================
     -- CLOCK AND RESET OUTPUTS (DEFINED BY APPLICATION)
     -- =========================================================================

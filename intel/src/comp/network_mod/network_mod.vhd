@@ -335,6 +335,7 @@ begin
             ETH_PORT_ID      => p                 ,
             ETH_PORT_RX_MTU  => ETH_PORT_RX_MTU(p),
             ETH_PORT_TX_MTU  => ETH_PORT_TX_MTU(p),
+            ETH_MAC_BYPASS   => ETH_MAC_BYPASS,
             -- MFB
             USER_REGIONS     => REGIONS         ,
             USER_REGION_SIZE => REGION_SIZE     ,

@@ -440,6 +440,7 @@ architecture FULL of FPGA_COMMON is
 
     signal clk_pci                       : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
     signal clk_eth_phy                   : std_logic_vector(ETH_PORTS-1 downto 0);
+    signal clk_eth_streams               : std_logic_vector(ETH_STREAMS-1 downto 0);
     signal clk_mi                        : std_logic;
     signal clk_dma                       : std_logic;
     signal clk_dma_x2                    : std_logic;
@@ -447,6 +448,7 @@ architecture FULL of FPGA_COMMON is
     
     signal rst_pci                       : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
     signal rst_eth_phy                   : std_logic_vector(ETH_PORTS-1 downto 0);
+    signal rst_eth_streams               : std_logic_vector(ETH_STREAMS-1 downto 0);
     signal rst_mi                        : std_logic_vector(RESET_WIDTH-1 downto 0);
     signal rst_dma                       : std_logic_vector(RESET_WIDTH-1 downto 0);
     signal rst_dma_x2                    : std_logic_vector(RESET_WIDTH-1 downto 0);
@@ -717,6 +719,15 @@ begin
     MISC_OUT(1) <= rst_usr_x1(0);
     MISC_OUT(2) <= clk_usr_x2;  -- 200 MHz
     MISC_OUT(3) <= rst_usr_x2(0);
+
+    eth_streams_g: for i in 0 to ETH_PORTS-1 generate
+        constant ETH_PPS : natural := ETH_STREAMS/ETH_PORTS;
+    begin
+        eth_streams_g2: for j in 0 to ETH_PPS-1 generate
+            clk_eth_streams(i*ETH_PPS+j) <= clk_eth_phy(i);
+            rst_eth_streams(i*ETH_PPS+j) <= rst_vector((4+i)*RESET_WIDTH+1);
+        end generate;
+    end generate;
 
     -- =========================================================================
     --                      PCIe module instance and connections
@@ -1272,6 +1283,9 @@ begin
         RESET_USER_X3      => rst_usr_x3,
         RESET_USER_X4      => rst_usr_x4,
 
+        CLK_ETH            => clk_eth_streams,
+        RESET_ETH          => rst_eth_streams,
+
         MI_CLK             => clk_mi,
         DMA_CLK            => clk_dma,
         DMA_CLK_X2         => clk_dma_x2,
@@ -1434,6 +1448,7 @@ begin
         ETH_PORT_CHAN     => ETH_PORT_CHAN  ,
         ETH_PORT_RX_MTU   => ETH_PORT_RX_MTU,
         ETH_PORT_TX_MTU   => ETH_PORT_TX_MTU,
+        ETH_MAC_BYPASS    => ETH_MAC_BYPASS ,
         LANES             => ETH_LANES      ,
         QSFP_PORTS        => QSFP_PORTS     ,
         QSFP_I2C_PORTS    => QSFP_I2C_PORTS ,

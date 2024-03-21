@@ -31,6 +31,8 @@ generic(
     ETH_PORT_RX_MTU : natural := 16383;
     -- Maximum allowed size of TX frame in bytes
     ETH_PORT_TX_MTU : natural := 16383;
+    -- Optional option to disable MAC Lite modules. Dangerously!
+    ETH_MAC_BYPASS : boolean := False;
 
     -- =====================================================================
     -- MFB configuration:
@@ -192,7 +194,6 @@ architecture FULL of NETWORK_MOD_LOGIC is
     -- =========================================================================
     --                                SIGNALS
     -- =========================================================================
-    -- signal repl_rst : std_logic_vector(RESET_CORE_WIDTH-1 downto 0);
 
     -- MFB splitter RX (SEL input signals)t
     signal mfb_hdr_arr         : slv_array_t     (USER_REGIONS-1 downto 0)(ETH_TX_HDR_WIDTH          -1 downto 0);
@@ -240,70 +241,61 @@ begin
         report "NETWORK_MOD_LOGIC: ETH_STREAMS must be equal to 1 or ETH_PORT_CHAN!" 
         severity failure;
 
-    -- =========================================================================
-    --  Resets replication
-    -- =========================================================================
-    -- async_reset_i : entity work.ASYNC_RESET
-    -- generic map(
-    --     TWO_REG  => false,
-    --     OUT_REG  => true ,
-    --     REPLICAS => RESET_CORE_WIDTH
-    -- )
-    -- port map(
-    --     CLK         => CLK_CORE  (i),
-    --     ASYNC_RST   => RESET_CORE(i),
-    --     OUT_RST     => repl_rst((i+1)*RESET_CORE_WIDTH-1 downto i*RESET_CORE_WIDTH)
-    -- );
+    assert ((ETH_STREAMS = ETH_PORT_CHAN and ETH_MAC_BYPASS = True) or (ETH_MAC_BYPASS = False)) 
+        report "NETWORK_MOD_LOGIC: ETH_MAC_BYPASS is supported only when ETH_STREAMS = ETH_PORT_CHAN!" 
+        severity failure;
+
+    mi_splitter_g: if not ETH_MAC_BYPASS generate
+        -- MI SPLITTER for MAC lites
+        mi_splitter_i : entity work.MI_SPLITTER_PLUS_GEN
+        generic map(
+            ADDR_WIDTH  => MI_ADDR_WIDTH      ,
+            DATA_WIDTH  => MI_DATA_WIDTH      ,
+            META_WIDTH  => 0                  ,
+            PORTS       => MI_ADDR_BASES      ,
+            PIPE_OUT    => (others => true)   ,
+            PIPE_TYPE   => "REG"              ,
+            ADDR_BASES  => MI_ADDR_BASES      ,
+            ADDR_BASE   => mi_addr_base_init_f,
+            DEVICE      => DEVICE
+        )
+        port map(
+            CLK         => MI_CLK  ,
+            RESET       => MI_RESET,
+
+            RX_DWR      => MI_DWR         ,
+            RX_MWR      => (others => '0'),
+            RX_ADDR     => MI_ADDR        ,
+            RX_BE       => MI_BE          ,
+            RX_RD       => MI_RD          ,
+            RX_WR       => MI_WR          ,
+            RX_ARDY     => MI_ARDY        ,
+            RX_DRD      => MI_DRD         ,
+            RX_DRDY     => MI_DRDY        ,
+            
+            TX_DWR     => mi_split_dwr    ,
+            TX_MWR     => open            ,
+            TX_ADDR    => mi_split_addr   ,
+            TX_BE      => mi_split_be     ,
+            TX_RD      => mi_split_rd     ,
+            TX_WR      => mi_split_wr     ,
+            TX_ARDY    => mi_split_ardy   ,
+            TX_DRD     => mi_split_drd    ,
+            TX_DRDY    => mi_split_drdy
+        );
+    else generate
+        MI_ARDY <= MI_RD or MI_WR;
+        MI_DRDY <= MI_RD;
+        MI_DRD  <= X"DEADCAFE"; 
+    end generate;
 
     -- =========================================================================
-    --  MI SPLITTER for MAC lites
-    -- =========================================================================
-    mi_splitter_plus_gen_i : entity work.MI_SPLITTER_PLUS_GEN
-    generic map(
-        ADDR_WIDTH  => MI_ADDR_WIDTH      ,
-        DATA_WIDTH  => MI_DATA_WIDTH      ,
-        META_WIDTH  => 0                  ,
-        PORTS       => MI_ADDR_BASES      ,
-        PIPE_OUT    => (others => true)   ,
-        PIPE_TYPE   => "REG"              ,
-        ADDR_BASES  => MI_ADDR_BASES      ,
-        ADDR_BASE   => mi_addr_base_init_f,
-        DEVICE      => DEVICE
-    )
-    port map(
-        -- Common interface -----------------------------------------------------
-        CLK         => MI_CLK  ,
-        RESET       => MI_RESET,
-        -- Input MI interface ---------------------------------------------------
-        RX_DWR      => MI_DWR         ,
-        RX_MWR      => (others => '0'),
-        RX_ADDR     => MI_ADDR        ,
-        RX_BE       => MI_BE          ,
-        RX_RD       => MI_RD          ,
-        RX_WR       => MI_WR          ,
-        RX_ARDY     => MI_ARDY        ,
-        RX_DRD      => MI_DRD         ,
-        RX_DRDY     => MI_DRDY        ,
-        -- Output MI interfaces -------------------------------------------------
-        TX_DWR     => mi_split_dwr    ,
-        TX_MWR     => open            ,
-        TX_ADDR    => mi_split_addr   ,
-        TX_BE      => mi_split_be     ,
-        TX_RD      => mi_split_rd     ,
-        TX_WR      => mi_split_wr     ,
-        TX_ARDY    => mi_split_ardy   ,
-        TX_DRD     => mi_split_drd    ,
-        TX_DRDY    => mi_split_drdy
-    );
-
-    -- =====================================================================
     -- TX path
-    -- =====================================================================
+    -- =========================================================================
 
-    mfb_splitter_tree_g: if (ETH_STREAMS = 1) generate
-
+    mfb_splitter_g: if (ETH_STREAMS = 1) generate
         mfb_hdr_arr <= slv_array_downto_deser(RX_USER_MFB_HDR(0), USER_REGIONS);
-        splitter_addr_p : for r in USER_REGIONS-1 downto 0 generate
+        splitter_addr_g : for r in USER_REGIONS-1 downto 0 generate
             eth_hdr_tx_port_arr(r) <= mfb_hdr_arr        (r)(ETH_TX_HDR_PORT); -- (8 bits wide)
             split_addr_arr     (r) <= eth_hdr_tx_port_arr(r)(max(1,log2(ETH_PORT_CHAN))-1 downto 0);
         end generate;
@@ -353,11 +345,86 @@ begin
         RX_USER_MFB_DST_RDY <= split_mfb_dst_rdy;
     end generate;
 
-    mac_lites_g : for ch in 0 to ETH_PORT_CHAN-1 generate
+    tx_g : for ch in 0 to ETH_PORT_CHAN-1 generate
+        tx_mac_g: if not ETH_MAC_BYPASS generate
+            tx_mac_i : entity work.TX_MAC_LITE
+            generic map(
+                RX_REGIONS      => USER_REGIONS    ,
+                RX_REGION_SIZE  => USER_REGION_SIZE,
+                RX_BLOCK_SIZE   => BLOCK_SIZE      ,
+                RX_ITEM_WIDTH   => ITEM_WIDTH      ,
+                TX_REGIONS      => CORE_REGIONS    ,
+                TX_REGION_SIZE  => CORE_REGION_SIZE,
+                TX_BLOCK_SIZE   => BLOCK_SIZE      ,
+                TX_ITEM_WIDTH   => ITEM_WIDTH      ,
+                RESIZE_ON_TX    => True            ,
+                PKT_MTU_BYTES   => ETH_PORT_TX_MTU ,
+                RX_INCLUDE_CRC  => false           ,
+                RX_INCLUDE_IPG  => false           ,
+                CRC_INSERT_EN   => false           ,
+                IPG_GENERATE_EN => false           ,
+                USE_DSP_CNT     => true            ,
+                DEVICE          => DEVICE
+            )
+            port map(
+                MI_CLK         => MI_CLK  ,
+                MI_RESET       => MI_RESET,
+                MI_DWR         => mi_split_dwr (ch*2+0),
+                MI_ADDR        => mi_split_addr(ch*2+0),
+                MI_RD          => mi_split_rd  (ch*2+0),
+                MI_WR          => mi_split_wr  (ch*2+0),
+                MI_BE          => mi_split_be  (ch*2+0),
+                MI_DRD         => mi_split_drd (ch*2+0),
+                MI_ARDY        => mi_split_ardy(ch*2+0),
+                MI_DRDY        => mi_split_drdy(ch*2+0),
+
+                RX_CLK         => CLK_USER             ,
+                RX_CLK_X2      => CLK_USER             , -- CX inside is not used, else use CLK_X2
+                RX_RESET       => RESET_USER(0)        ,
+                RX_MFB_DATA    => split_mfb_data   (ch),
+                RX_MFB_SOF_POS => split_mfb_sof_pos(ch),
+                RX_MFB_EOF_POS => split_mfb_eof_pos(ch),
+                RX_MFB_SOF     => split_mfb_sof    (ch),
+                RX_MFB_EOF     => split_mfb_eof    (ch),
+                RX_MFB_SRC_RDY => split_mfb_src_rdy(ch),
+                RX_MFB_DST_RDY => split_mfb_dst_rdy(ch),
+
+                TX_CLK         => CLK_CORE               ,
+                TX_RESET       => RESET_CORE(ch*2)       ,
+                TX_MFB_DATA    => TX_CORE_MFB_DATA   (ch),
+                TX_MFB_SOF     => TX_CORE_MFB_SOF    (ch),
+                TX_MFB_EOF     => TX_CORE_MFB_EOF    (ch),
+                TX_MFB_SOF_POS => TX_CORE_MFB_SOF_POS(ch),
+                TX_MFB_EOF_POS => TX_CORE_MFB_EOF_POS(ch),
+                TX_MFB_SRC_RDY => TX_CORE_MFB_SRC_RDY(ch),
+                TX_MFB_DST_RDY => TX_CORE_MFB_DST_RDY(ch),
+
+                OUTGOING_FRAME => ACTIVITY_TX(ch)
+            );
+        else generate
+            -- The MFB bus does not support idles inside frame and runs directly
+            -- on the ETH CORE clock.
+
+            TX_CORE_MFB_DATA(ch)    <= split_mfb_data(ch);
+            TX_CORE_MFB_SOF(ch)     <= split_mfb_sof(ch);
+            TX_CORE_MFB_EOF(ch)     <= split_mfb_eof(ch);
+            TX_CORE_MFB_SOF_POS(ch) <= split_mfb_sof_pos(ch);
+            TX_CORE_MFB_EOF_POS(ch) <= split_mfb_eof_pos(ch);
+            TX_CORE_MFB_SRC_RDY(ch) <= split_mfb_src_rdy(ch);
+            split_mfb_dst_rdy(ch)   <= TX_CORE_MFB_DST_RDY(ch);
+
+            ACTIVITY_TX(ch) <= split_mfb_src_rdy(ch) and (or split_mfb_eof(ch));
+        end generate;
+    end generate;
+
+    -- =========================================================================
+    -- RX path
+    -- =========================================================================
+
+    rx_g : for ch in 0 to ETH_PORT_CHAN-1 generate
         signal rx_core_mfb_sof_tmp  : std_logic_vector(CORE_REGIONS-1 downto 0);
         signal rx_core_mfb_eof_tmp  : std_logic_vector(CORE_REGIONS-1 downto 0);
     begin
-
         process(all)
         begin
             -- this fix bug in questasim elsewhere it could be connected directly
@@ -365,136 +432,93 @@ begin
             rx_core_mfb_eof_tmp <= RX_CORE_MFB_EOF(ch);
         end process;
 
+        rx_mac_g: if not ETH_MAC_BYPASS generate
+            rx_mac_i : entity work.RX_MAC_LITE
+            generic map(
+                RX_REGIONS      => CORE_REGIONS    ,
+                RX_REGION_SIZE  => CORE_REGION_SIZE,
+                RX_BLOCK_SIZE   => BLOCK_SIZE      ,
+                RX_ITEM_WIDTH   => ITEM_WIDTH      ,
+                TX_REGIONS      => USER_REGIONS    ,
+                TX_REGION_SIZE  => USER_REGION_SIZE,
+                TX_BLOCK_SIZE   => BLOCK_SIZE      ,
+                TX_ITEM_WIDTH   => ITEM_WIDTH      ,
+                RESIZE_BUFFER   => RESIZE_BUFFER   ,
+                NETWORK_PORT_ID => ETH_PORT_ID*ETH_PORT_CHAN+ch, -- no support different number of channels for each port
+                PKT_MTU_BYTES   => ETH_PORT_RX_MTU ,
+                CRC_IS_RECEIVED => false           ,
+                CRC_CHECK_EN    => false           ,
+                CRC_REMOVE_EN   => false           ,
+                MAC_CHECK_EN    => true            ,
+                MAC_COUNT       => 16              ,
+                TIMESTAMP_EN    => true            ,
+                DEVICE          => DEVICE
+            )
+            port map(
+                RX_CLK          => CLK_CORE     ,
+                RX_RESET        => RESET_CORE(ch*2+1), -- todo
+                TX_CLK          => CLK_USER     ,
+                TX_RESET        => RESET_USER(0),
 
-        tx_mac_lite_i : entity work.TX_MAC_LITE
-        generic map(
-            RX_REGIONS      => USER_REGIONS    ,
-            RX_REGION_SIZE  => USER_REGION_SIZE,
-            RX_BLOCK_SIZE   => BLOCK_SIZE      ,
-            RX_ITEM_WIDTH   => ITEM_WIDTH      ,
-            TX_REGIONS      => CORE_REGIONS    ,
-            TX_REGION_SIZE  => CORE_REGION_SIZE,
-            TX_BLOCK_SIZE   => BLOCK_SIZE      ,
-            TX_ITEM_WIDTH   => ITEM_WIDTH      ,
-            RESIZE_ON_TX    => True            ,
-            PKT_MTU_BYTES   => ETH_PORT_TX_MTU ,
-            RX_INCLUDE_CRC  => false           ,
-            RX_INCLUDE_IPG  => false           ,
-            CRC_INSERT_EN   => false           ,
-            IPG_GENERATE_EN => false           ,
-            USE_DSP_CNT     => true            ,
-            --TRANS_FIFO_SIZE => ,
-            --ETH_VERSION     => ,
-            DEVICE          => DEVICE
-        )
-        port map(
-            MI_CLK         => MI_CLK  ,
-            MI_RESET       => MI_RESET,
-            MI_DWR         => mi_split_dwr (ch*2+0),
-            MI_ADDR        => mi_split_addr(ch*2+0),
-            MI_RD          => mi_split_rd  (ch*2+0),
-            MI_WR          => mi_split_wr  (ch*2+0),
-            MI_BE          => mi_split_be  (ch*2+0),
-            MI_DRD         => mi_split_drd (ch*2+0),
-            MI_ARDY        => mi_split_ardy(ch*2+0),
-            MI_DRDY        => mi_split_drdy(ch*2+0),
+                RX_MFB_DATA     => RX_CORE_MFB_DATA   (ch),
+                RX_MFB_SOF      => rx_core_mfb_sof_tmp,
+                RX_MFB_EOF      => rx_core_mfb_eof_tmp,
+                RX_MFB_SOF_POS  => RX_CORE_MFB_SOF_POS(ch),
+                RX_MFB_EOF_POS  => RX_CORE_MFB_EOF_POS(ch),
+                RX_MFB_ERROR    => RX_CORE_MFB_ERROR  (ch),
+                RX_MFB_SRC_RDY  => RX_CORE_MFB_SRC_RDY(ch),
 
-            RX_CLK         => CLK_USER             ,
-            RX_CLK_X2      => CLK_USER             , -- CX inside is not used, else use CLK_X2
-            RX_RESET       => RESET_USER(0)        ,
-            RX_MFB_DATA    => split_mfb_data   (ch),
-            RX_MFB_SOF_POS => split_mfb_sof_pos(ch),
-            RX_MFB_EOF_POS => split_mfb_eof_pos(ch),
-            RX_MFB_SOF     => split_mfb_sof    (ch),
-            RX_MFB_EOF     => split_mfb_eof    (ch),
-            RX_MFB_SRC_RDY => split_mfb_src_rdy(ch),
-            RX_MFB_DST_RDY => split_mfb_dst_rdy(ch),
+                ADAPTER_LINK_UP => RX_LINK_UP(ch),
 
-            TX_CLK         => CLK_CORE               ,
-            TX_RESET       => RESET_CORE(ch*2)       ,
-            TX_MFB_DATA    => TX_CORE_MFB_DATA   (ch),
-            TX_MFB_SOF     => TX_CORE_MFB_SOF    (ch),
-            TX_MFB_EOF     => TX_CORE_MFB_EOF    (ch),
-            TX_MFB_SOF_POS => TX_CORE_MFB_SOF_POS(ch),
-            TX_MFB_EOF_POS => TX_CORE_MFB_EOF_POS(ch),
-            TX_MFB_SRC_RDY => TX_CORE_MFB_SRC_RDY(ch),
-            TX_MFB_DST_RDY => TX_CORE_MFB_DST_RDY(ch),
+                TSU_TS_NS       => TSU_TS_NS,
+                TSU_TS_DV       => TSU_TS_DV,
 
-            OUTGOING_FRAME => ACTIVITY_TX(ch)
-        );
+                TX_MFB_DATA     => merg_mfb_data   (ch),
+                TX_MFB_SOF      => merg_mfb_sof    (ch),
+                TX_MFB_EOF      => merg_mfb_eof    (ch),
+                TX_MFB_SOF_POS  => merg_mfb_sof_pos(ch),
+                TX_MFB_EOF_POS  => merg_mfb_eof_pos(ch),
+                TX_MFB_SRC_RDY  => merg_mfb_src_rdy(ch),
+                TX_MFB_DST_RDY  => merg_mfb_dst_rdy(ch),
+                TX_MVB_DATA     => merg_mvb_data   (ch),
+                TX_MVB_VLD      => merg_mvb_vld    (ch),
+                TX_MVB_SRC_RDY  => merg_mvb_src_rdy(ch),
+                TX_MVB_DST_RDY  => merg_mvb_dst_rdy(ch),
 
-        -- =====================================================================
-        -- RX path
-        -- =====================================================================
-        rx_mac_lite_i : entity work.RX_MAC_LITE
-        generic map(
-            RX_REGIONS      => CORE_REGIONS    ,
-            RX_REGION_SIZE  => CORE_REGION_SIZE,
-            RX_BLOCK_SIZE   => BLOCK_SIZE      ,
-            RX_ITEM_WIDTH   => ITEM_WIDTH      ,
-            TX_REGIONS      => USER_REGIONS    ,
-            TX_REGION_SIZE  => USER_REGION_SIZE,
-            TX_BLOCK_SIZE   => BLOCK_SIZE      ,
-            TX_ITEM_WIDTH   => ITEM_WIDTH      ,
-            RESIZE_BUFFER   => RESIZE_BUFFER   ,
-            NETWORK_PORT_ID => ETH_PORT_ID*ETH_PORT_CHAN+ch, -- no support different number of channels for each port
-            PKT_MTU_BYTES   => ETH_PORT_RX_MTU ,
-            CRC_IS_RECEIVED => false           ,
-            CRC_CHECK_EN    => false           ,
-            CRC_REMOVE_EN   => false           ,
-            MAC_CHECK_EN    => true            ,
-            MAC_COUNT       => 16              ,
-            TIMESTAMP_EN    => true            ,
-            DEVICE          => DEVICE
-        )
-        port map(
-            RX_CLK          => CLK_CORE     ,
-            RX_RESET        => RESET_CORE(ch*2+1), -- todo
-            TX_CLK          => CLK_USER     ,
-            TX_RESET        => RESET_USER(0),
+                LINK_UP         => open,
+                INCOMING_FRAME  => ACTIVITY_RX(ch),
 
-            RX_MFB_DATA     => RX_CORE_MFB_DATA   (ch),
-            RX_MFB_SOF      => rx_core_mfb_sof_tmp,
-            RX_MFB_EOF      => rx_core_mfb_eof_tmp,
-            RX_MFB_SOF_POS  => RX_CORE_MFB_SOF_POS(ch),
-            RX_MFB_EOF_POS  => RX_CORE_MFB_EOF_POS(ch),
-            RX_MFB_ERROR    => RX_CORE_MFB_ERROR  (ch),
-            RX_MFB_SRC_RDY  => RX_CORE_MFB_SRC_RDY(ch),
+                MI_CLK          => MI_CLK  ,
+                MI_RESET        => MI_RESET,
+                MI_DWR          => mi_split_dwr (ch*2+1),
+                MI_ADDR         => mi_split_addr(ch*2+1),
+                MI_RD           => mi_split_rd  (ch*2+1),
+                MI_WR           => mi_split_wr  (ch*2+1),
+                MI_BE           => mi_split_be  (ch*2+1),
+                MI_DRD          => mi_split_drd (ch*2+1),
+                MI_ARDY         => mi_split_ardy(ch*2+1),
+                MI_DRDY         => mi_split_drdy(ch*2+1)
+            );
+        else generate
+            -- The MFB bus does not support DST_RDY and runs directly on the
+            -- ETH CORE clock.
+            merg_mfb_data(ch)    <= RX_CORE_MFB_DATA(ch);
+            merg_mfb_sof(ch)     <= rx_core_mfb_sof_tmp;
+            merg_mfb_eof(ch)     <= rx_core_mfb_eof_tmp;
+            merg_mfb_sof_pos(ch) <= RX_CORE_MFB_SOF_POS(ch);
+            merg_mfb_eof_pos(ch) <= RX_CORE_MFB_EOF_POS(ch);
+            merg_mfb_src_rdy(ch) <= RX_CORE_MFB_SRC_RDY(ch);
 
-            ADAPTER_LINK_UP => RX_LINK_UP(ch),
+            -- MVB metadata bus is not supported in this mode.
+            merg_mvb_data(ch)    <= (others => '0');
+            merg_mvb_vld(ch)     <= (others => '0');
+            merg_mvb_src_rdy(ch) <= '0';
 
-            TSU_TS_NS       => TSU_TS_NS,
-            TSU_TS_DV       => TSU_TS_DV,
-
-            TX_MFB_DATA     => merg_mfb_data   (ch),
-            TX_MFB_SOF      => merg_mfb_sof    (ch),
-            TX_MFB_EOF      => merg_mfb_eof    (ch),
-            TX_MFB_SOF_POS  => merg_mfb_sof_pos(ch),
-            TX_MFB_EOF_POS  => merg_mfb_eof_pos(ch),
-            TX_MFB_SRC_RDY  => merg_mfb_src_rdy(ch),
-            TX_MFB_DST_RDY  => merg_mfb_dst_rdy(ch),
-            TX_MVB_DATA     => merg_mvb_data   (ch),
-            TX_MVB_VLD      => merg_mvb_vld    (ch),
-            TX_MVB_SRC_RDY  => merg_mvb_src_rdy(ch),
-            TX_MVB_DST_RDY  => merg_mvb_dst_rdy(ch),
-
-            LINK_UP         => open,
-            INCOMING_FRAME  => ACTIVITY_RX(ch),
-
-            MI_CLK          => MI_CLK  ,
-            MI_RESET        => MI_RESET,
-            MI_DWR          => mi_split_dwr (ch*2+1),
-            MI_ADDR         => mi_split_addr(ch*2+1),
-            MI_RD           => mi_split_rd  (ch*2+1),
-            MI_WR           => mi_split_wr  (ch*2+1),
-            MI_BE           => mi_split_be  (ch*2+1),
-            MI_DRD          => mi_split_drd (ch*2+1),
-            MI_ARDY         => mi_split_ardy(ch*2+1),
-            MI_DRDY         => mi_split_drdy(ch*2+1)
-        );
+            ACTIVITY_RX(ch) <= RX_CORE_MFB_SRC_RDY(ch) and (or rx_core_mfb_eof_tmp);
+        end generate;
     end generate;
 
-    mfb_merger_tree_g: if (ETH_STREAMS = 1) generate
+    mfb_merger_g: if (ETH_STREAMS = 1) generate
         -- Merge all ETH_CHANNELS into one ETH_STREAM from each RX MAC Lite
         mfb_merger_tree_i : entity work.MFB_MERGER_GEN
         generic map(
