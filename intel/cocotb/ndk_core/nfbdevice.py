@@ -1,12 +1,17 @@
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import Timer, RisingEdge, FallingEdge, Combine
+from cocotb.utils import get_sim_steps
 
 from cocotbext.ofm.axi4stream.drivers import Axi4StreamMaster, Axi4StreamSlave
 from cocotbext.ofm.axi4stream.monitors import Axi4Stream
+from cocotbext.ofm.avst_pcie.drivers import AvstPcieDriverMaster, AvstPcieDriverSlave
+from cocotbext.ofm.avst_pcie.monitors import AvstPcieMonitor
 
 from cocotbext.ofm.pcie import Axi4SCompleter
 from cocotbext.ofm.pcie import Axi4SRequester
+from cocotbext.ofm.pcie import AvstCompleter
+from cocotbext.ofm.pcie import AvstRequester
 
 import cocotbext.nfb
 from cocotbext.ofm.lbus.monitors import LBusMonitor
@@ -54,7 +59,7 @@ class NFBDevice(cocotbext.nfb.NfbDevice):
             # N6010
             await cocotb.start(Clock(self._dut.SYS_CLK_100M, 10, 'ns').start())
             await cocotb.start(Clock(self._core.clk_gen_i.OUTCLK_0, 2.5, 'ns').start())
-            await cocotb.start(Clock(self._core.clk_gen_i.OUTCLK_1, 10/3, 'ns').start())
+            await cocotb.start(Clock(self._core.clk_gen_i.OUTCLK_1, get_sim_steps(10/3 / 2, 'ns', round_mode='round')*2).start())
             await cocotb.start(Clock(self._core.clk_gen_i.OUTCLK_2, 5, 'ns').start())
             await cocotb.start(Clock(self._core.clk_gen_i.OUTCLK_3, 10, 'ns').start())
             self._core.clk_gen_i.LOCKED.value = 1
@@ -97,6 +102,18 @@ class NFBDevice(cocotbext.nfb.NfbDevice):
 
                 req = Axi4SRequester(self.ram, rq, rc, rqm)
                 mi  = Axi4SCompleter(cq, cc, ccm)
+                self.mi.append(mi)
+                self.pcie_req.append(req)
+
+            if hasattr(pcie_i, "pcie_avst_down_data"):
+                cc_rq_drv = AvstPcieDriverSlave(pcie_i, "pcie_avst_up", clk, array_idx=i)
+                cq_rc_drv = AvstPcieDriverMaster(pcie_i, "pcie_avst_down", clk, array_idx=i)
+
+                cc_mon = AvstPcieMonitor(pcie_i, "pcie_avst_up", clk, 0, aux_signals=True, array_idx=i)
+                rq_mon = AvstPcieMonitor(pcie_i, "pcie_avst_up", clk, aux_signals=True, array_idx=i)
+
+                req = AvstRequester(self.ram, cc_rq_drv, cq_rc_drv, rq_mon)
+                mi = AvstCompleter(cq_rc_drv, cc_rq_drv, cc_mon)
                 self.mi.append(mi)
                 self.pcie_req.append(req)
 
