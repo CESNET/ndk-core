@@ -133,7 +133,8 @@ if { $ARCHGRP == "40GE" } {
 
 if { $ARCHGRP == "CESNET_LL10GE" || $ARCHGRP == "CESNET_LL40GE" } {
     if { [file exists "$LL10GE40GE_BASE/Modules.tcl"] == 1} {
-        lappend COMPONENTS [list "CESNET_LL10GE40GE" $LL10GE40GE_BASE "FULL"]
+        lappend COMPONENTS [list "CESNET_LL10GE40GE" $LL10GE40GE_BASE $ARCHGRP]
+        lappend MOD "$LL10GE40GE_BASE/network_mod_core_10ge_40ge_ll.vhd"
     } else {
         puts stderr "ERROR: CESNET LL10GE40GE IP not found. This IP is not publicly available and requires an additional license!"
         exit 1

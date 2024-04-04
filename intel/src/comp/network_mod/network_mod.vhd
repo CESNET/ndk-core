@@ -39,18 +39,14 @@ architecture FULL of NETWORK_MOD is
                 when 10     => return 1;
                 when others => return 0;
             end case;
-        elsif (ETH_CORE_ARCH = "E_TILE" or ETH_CORE_ARCH = "CMAC") then
+        else
             case ETH_PORT_SPEED(0) is
                 when 100    => return 8;
-                when 25     => return 1;
                 when 40     => return 4;
+                when 25     => return 1;
                 when 10     => return 1;
                 when others => return 0;
             end case;
-        elsif (ETH_CORE_ARCH = "CESNET_LL10GE") then
-            return 1;
-        else
-            return 0;
         end if;
     end function;
 
@@ -194,8 +190,6 @@ architecture FULL of NETWORK_MOD is
     signal synced_ts_ns        : slv_array_t     (ETH_PORTS-1 downto 0)(64-1 downto 0);
 
 begin
-
-    assert (REGION_SIZE_CORE /= 0) report "REGION_SIZE_CORE=0! Check function region_size_core_f!" severity failure;
 
     -- =========================================================================
     --  Resets replication
