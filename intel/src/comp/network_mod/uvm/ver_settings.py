@@ -34,7 +34,7 @@ SETTINGS = {
 
     "large_packets" : {
         "PACKET_SIZE_MIN"                : "12000",
-        "PACKET_SIZE_MAX"                : "16384-1",
+        "PACKET_SIZE_MAX"                : "16384",
     },
 
     "small_packets" : {

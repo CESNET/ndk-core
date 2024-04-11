@@ -49,6 +49,10 @@ package tbench_param;
         parameter time CLK_MI_PHY_PERIOD = 4ns;
         parameter time CLK_MI_PMD_PERIOD = 4ns;
         parameter time CLK_TSU_PERIOD    = 4ns;
+
+        parameter int unsigned PACKET_SIZE_MIN = 64;
+        parameter int unsigned PACKET_SIZE_MAX = 16384;
+
 endpackage
 `endif
 
