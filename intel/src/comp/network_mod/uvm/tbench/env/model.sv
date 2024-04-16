@@ -110,7 +110,7 @@ class model#(ETH_PORTS, int unsigned ETH_PORT_CHAN[ETH_PORTS-1:0], REGIONS, ITEM
 
         for (int unsigned it = 0; it < ETH_PORTS; it++) begin
             for (int unsigned jt = 0; jt < ETH_PORT_CHAN[it]; jt++) begin
-                uvm_probe::pool::get_global_pool().get({"probe_event_component_", $sformatf("testbench.DUT_U.VHDL_DUT_U.eth_core_g[%0d].network_mod_logic_i.mac_lites_g[%0d].rx_mac_lite_i.buffer_i", it, jt), ".probe_drop"}).add_callback(drop_sync[it][jt]);
+                uvm_probe::pool::get_global_pool().get({"probe_event_component_", $sformatf("testbench.DUT_U.VHDL_DUT_U.eth_core_g[%0d].network_mod_logic_i.rx_g[%0d].rx_mac_g.rx_mac_i.buffer_i", it, jt), ".probe_drop"}).add_callback(drop_sync[it][jt]);
             end
         end
     endfunction

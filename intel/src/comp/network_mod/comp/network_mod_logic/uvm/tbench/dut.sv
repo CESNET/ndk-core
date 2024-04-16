@@ -162,8 +162,8 @@ module DUT (
     // MVB discard inf --------------------------------
     generate
         for (genvar j = 0; j < ETH_CHANNELS; j++) begin
-            assign  mvb_data[j] = VHDL_DUT_U.mac_lites_g[j].rx_mac_lite_i.s_stin_discarded;
-            assign  mvb_vld[j]  = VHDL_DUT_U.mac_lites_g[j].rx_mac_lite_i.s_stin_valid;
+            assign  mvb_data[j] = VHDL_DUT_U.rx_g[j].rx_mac_g.rx_mac_i.s_stin_discarded;
+            assign  mvb_vld[j]  = VHDL_DUT_U.rx_g[j].rx_mac_g.rx_mac_i.s_stin_valid;
         end
     endgenerate
     
