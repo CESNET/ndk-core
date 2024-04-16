@@ -12,6 +12,7 @@ set STREAMING_DBG_BASE "$OFM_PATH/comp/debug/streaming_debug"
 set EVENT_COUNTER_BASE "$OFM_PATH/comp/base/misc/event_counter"
 set MI_SPLITTER_BASE   "$OFM_PATH/comp/mi_tools/splitter_plus_gen"
 set INTEL_BASE         "$ENTITY_BASE/../../../../.."
+set MI_ASYNC_BASE      "$OFM_PATH/comp/mi_tools/async"
 
 # Packages
 lappend PACKAGES "$OFM_PATH/comp/base/pkg/math_pack.vhd"
@@ -26,6 +27,7 @@ lappend COMPONENTS [ list "PCIE_ADAPTER" "$PCIE_COMP_BASE/pcie_adapter"  "FULL" 
 lappend COMPONENTS [ list "DEBUG_PROBE"  $STREAMING_DBG_BASE             "FULL" ]
 lappend COMPONENTS [ list "EVENT_CNT"    $EVENT_COUNTER_BASE             "FULL" ]
 lappend COMPONENTS [ list "MI_SPLITTER"  $MI_SPLITTER_BASE               "FULL" ]
+lappend COMPONENTS [ list "MI_ASYNC"     $MI_ASYNC_BASE                  "FULL" ]
 
 lappend MOD "$ENTITY_BASE/pcie_core_ent.vhd"
 
