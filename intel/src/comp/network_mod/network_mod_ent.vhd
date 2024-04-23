@@ -73,6 +73,14 @@ generic(
     -- =====================================================================
     -- Other configuration:
     -- =====================================================================
+    -- Enable timestamp-limiting demo/testing.
+    -- Timestamps and channel IDs are sent from the APP Core to the Network module
+    -- via a special MVB-like interface. There, before entering the IP core,
+    -- time between packets from the same DMA channel is measured.
+    -- The measured data is presented to the user via a couple of dedicated registers.
+    -- WARNING: works only for a single-channel (and single-Region) designs with E-Tile (Intel)!
+    TS_DEMO_EN        : boolean := false;
+    TX_DMA_CHANNELS   : natural := 16;
     -- Ethernet lanes polarity
     LANE_RX_POLARITY  : std_logic_vector(ETH_PORTS*LANES-1 downto 0) := (others => '0');
     LANE_TX_POLARITY  : std_logic_vector(ETH_PORTS*LANES-1 downto 0) := (others => '0');
@@ -141,6 +149,12 @@ port(
     RX_MFB_EOF_POS  : in  std_logic_vector(ETH_STREAMS*REGIONS*max(1,log2(REGION_SIZE*BLOCK_SIZE))-1 downto 0);
     RX_MFB_SRC_RDY  : in  std_logic_vector(ETH_STREAMS-1 downto 0);
     RX_MFB_DST_RDY  : out std_logic_vector(ETH_STREAMS-1 downto 0);
+
+    -- This interface is to transmit Channel IDs and Timestamps of packets
+    -- from the APP Core to the demo/testing logic in the Network Mod Core (E-Tile).
+    ETH_TX_MVB_CHANNEL   : in std_logic_vector(ETH_PORTS*REGIONS*max(1,log2(TX_DMA_CHANNELS))-1 downto 0);
+    ETH_TX_MVB_TIMESTAMP : in std_logic_vector(ETH_PORTS*REGIONS*48-1 downto 0);
+    ETH_TX_MVB_VLD       : in std_logic_vector(ETH_PORTS*REGIONS-1 downto 0);
 
     -- =====================================================================
     -- TX interface (Packets received from Ethernet)

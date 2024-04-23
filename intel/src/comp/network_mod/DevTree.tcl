@@ -46,7 +46,7 @@ proc dts_network_mod { base_mac base_pcs base_pmd ports ETH_PORT_SPEED ETH_PORT_
     }
 
     set ports_per_qsfp [expr $ports / $qsfp_cages]
-    global ETH_MAC_BYPASS
+    global ETH_MAC_BYPASS TS_DEMO_EN
 
     for {set p 0} {$p < $ports} {incr p} {
         set channel_lanes [expr $port_lanes($p)/$port_chan($p)]
@@ -67,6 +67,10 @@ proc dts_network_mod { base_mac base_pcs base_pmd ports ETH_PORT_SPEED ETH_PORT_
                 append ret [dts_eth_channel $ei $pmd_id $ei $ei $ei $eth_lanes]
             }
             incr ei
+        }
+        # For the demo/testing logic in the Network Mod Core (E-Tile)
+        if {$TS_DEMO_EN} {
+            append ret [dts_ts_demo_logic $p [expr $base_pcs + $MGMT_PORT_OFF * $p + $MGMT_CHAN_OFF]]
         }
     }
 
@@ -116,6 +120,27 @@ proc dts_eth_channel {no pmd rxmac_num txmac_num phy_num lines} {
     if {$rxmac_num != -1} {append ret "rxmac = <&rxmac$rxmac_num>;"}
     if {$txmac_num != -1} {append ret "txmac = <&txmac$txmac_num>;"}
     append ret "pmd-params {lines = <$lines>;};"
+    append ret "};"
+    return $ret;
+}
+
+# 1. no        - node index
+# 2. base      - base address
+proc dts_ts_demo_logic {no base} {
+    set    ret ""
+    set    packets_regs 0x2
+    set    ts_diffs_regs 0x2
+    set    ts_min_regs 0x2
+    set    ts_max_regs 0x2
+    append ret "ts_demo_logic$no {"
+    append ret "compatible = \"cesnet,replicator,demo\";"
+    append ret "reg = <$base 0x100>;"
+    append ret "reset_reg = <0x0 0x1>;"
+    append ret "sample_reg = <0x4 0x1>;"
+    append ret "packets_reg = <[expr   2                                           *0x4] $packets_regs>;"
+    append ret "ts_diffs_reg = <[expr (2+$packets_regs)                            *0x4] $ts_diffs_regs>;"
+    append ret "ts_min_reg = <[expr   (2+$packets_regs+$ts_diffs_regs)             *0x4] $ts_min_regs>;"
+    append ret "ts_max_reg = <[expr   (2+$packets_regs+$ts_diffs_regs+$ts_min_regs)*0x4] $ts_max_regs>;"
     append ret "};"
     return $ret;
 }
