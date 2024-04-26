@@ -95,6 +95,9 @@ generic (
     HBM_LEN_WIDTH           : natural := 4;
     HBM_SIZE_WIDTH          : natural := 3;
     HBM_RESP_WIDTH          : natural := 2;
+    HBM_PROT_WIDTH          : natural := 3;
+    HBM_QOS_WIDTH           : natural := 4;
+    HBM_USER_WIDTH          : natural := 1;
 
     MEM_PORTS               : natural := 2;
     MEM_ADDR_WIDTH          : natural := 27;
@@ -154,9 +157,9 @@ port (
     -- =========================================================================
     -- HBM AXI interfaces (clocked at HBM_CLK)
     -- =========================================================================
-    HBM_CLK                 : in  std_logic := '0';
-    HBM_RESET               : in  std_logic := '0';
-    HBM_INIT_DONE           : in  std_logic := '0';
+    HBM_CLK                 : in  std_logic_vector(HBM_PORTS-1 downto 0) := (others => '0');
+    HBM_RESET               : in  std_logic_vector(HBM_PORTS-1 downto 0) := (others => '0');
+    HBM_INIT_DONE           : in  std_logic_vector(HBM_PORTS-1 downto 0) := (others => '0');
 
     HBM_AXI_ARADDR          : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_ADDR_WIDTH-1 downto 0);
     HBM_AXI_ARBURST         : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_BURST_WIDTH-1 downto 0);
@@ -165,6 +168,9 @@ port (
     HBM_AXI_ARSIZE          : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_SIZE_WIDTH-1 downto 0);
     HBM_AXI_ARVALID         : out std_logic_vector(HBM_PORTS-1 downto 0);
     HBM_AXI_ARREADY         : in  std_logic_vector(HBM_PORTS-1 downto 0) := (others => '0');
+    HBM_AXI_ARPROT          : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_PROT_WIDTH-1 downto 0);
+    HBM_AXI_ARQOS           : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_QOS_WIDTH-1 downto 0);
+    HBM_AXI_ARUSER          : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_USER_WIDTH-1 downto 0);
 
     HBM_AXI_RDATA           : in  slv_array_t(HBM_PORTS-1 downto 0)(HBM_DATA_WIDTH-1 downto 0) := (others => (others => '0'));
     HBM_AXI_RDATA_PARITY    : in  slv_array_t(HBM_PORTS-1 downto 0)((HBM_DATA_WIDTH/8)-1 downto 0) := (others => (others => '0'));
@@ -181,6 +187,9 @@ port (
     HBM_AXI_AWSIZE          : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_SIZE_WIDTH-1 downto 0);
     HBM_AXI_AWVALID         : out std_logic_vector(HBM_PORTS-1 downto 0);
     HBM_AXI_AWREADY         : in  std_logic_vector(HBM_PORTS-1 downto 0) := (others => '0');
+    HBM_AXI_AWPROT          : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_PROT_WIDTH-1 downto 0);
+    HBM_AXI_AWQOS           : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_QOS_WIDTH-1 downto 0);
+    HBM_AXI_AWUSER          : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_USER_WIDTH-1 downto 0);
 
     HBM_AXI_WDATA           : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_DATA_WIDTH-1 downto 0);
     HBM_AXI_WDATA_PARITY    : out slv_array_t(HBM_PORTS-1 downto 0)((HBM_DATA_WIDTH/8)-1 downto 0);
@@ -1247,6 +1256,9 @@ begin
         HBM_LEN_WIDTH         => HBM_LEN_WIDTH,
         HBM_SIZE_WIDTH        => HBM_SIZE_WIDTH,
         HBM_RESP_WIDTH        => HBM_RESP_WIDTH,
+        HBM_PROT_WIDTH        => HBM_PROT_WIDTH,
+        HBM_QOS_WIDTH         => HBM_QOS_WIDTH,
+        HBM_USER_WIDTH        => HBM_USER_WIDTH,
         MEM_PORTS             => MEM_PORTS,
         MEM_ADDR_WIDTH        => MEM_ADDR_WIDTH,
         MEM_BURST_WIDTH       => MEM_BURST_WIDTH,
@@ -1359,6 +1371,9 @@ begin
         HBM_AXI_ARSIZE       => HBM_AXI_ARSIZE,
         HBM_AXI_ARVALID      => HBM_AXI_ARVALID,
         HBM_AXI_ARREADY      => HBM_AXI_ARREADY,
+        HBM_AXI_ARPROT       => HBM_AXI_ARPROT,
+        HBM_AXI_ARQOS        => HBM_AXI_ARQOS,
+        HBM_AXI_ARUSER       => HBM_AXI_ARUSER,
 
         HBM_AXI_RDATA        => HBM_AXI_RDATA,
         HBM_AXI_RDATA_PARITY => HBM_AXI_RDATA_PARITY,
@@ -1375,6 +1390,9 @@ begin
         HBM_AXI_AWSIZE       => HBM_AXI_AWSIZE,
         HBM_AXI_AWVALID      => HBM_AXI_AWVALID,
         HBM_AXI_AWREADY      => HBM_AXI_AWREADY,
+        HBM_AXI_AWPROT       => HBM_AXI_AWPROT,
+        HBM_AXI_AWQOS        => HBM_AXI_AWQOS,
+        HBM_AXI_AWUSER       => HBM_AXI_AWUSER,
         
         HBM_AXI_WDATA        => HBM_AXI_WDATA,
         HBM_AXI_WDATA_PARITY => HBM_AXI_WDATA_PARITY,
