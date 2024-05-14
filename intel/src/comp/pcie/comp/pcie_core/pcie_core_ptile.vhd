@@ -1212,7 +1212,7 @@ begin
                 DATA_WIDTH => MI_WIDTH          ,
                 PORTS      => 1+DBG_EVENTS      ,
                 ADDR_BASE  => mi_addr_base_dbg_f,
-                PIPE_OUT   => (others => false) ,
+                PIPE_OUT   => (others => true)  ,
                 DEVICE     => DEVICE
             )
             port map(
