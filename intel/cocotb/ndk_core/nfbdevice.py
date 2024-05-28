@@ -1,16 +1,23 @@
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import Timer, RisingEdge, FallingEdge, Combine
+from cocotb.utils import get_sim_steps
 
 from cocotbext.ofm.axi4stream.drivers import Axi4StreamMaster, Axi4StreamSlave
 from cocotbext.ofm.axi4stream.monitors import Axi4Stream
+from cocotbext.ofm.avst_pcie.drivers import AvstPcieDriverMaster, AvstPcieDriverSlave
+from cocotbext.ofm.avst_pcie.monitors import AvstPcieMonitor
 
 from cocotbext.ofm.pcie import Axi4SCompleter
 from cocotbext.ofm.pcie import Axi4SRequester
+from cocotbext.ofm.pcie import AvstCompleter
+from cocotbext.ofm.pcie import AvstRequester
 
 import cocotbext.nfb
 from cocotbext.ofm.lbus.monitors import LBusMonitor
 from cocotbext.ofm.lbus.drivers import LBusDriver
+from cocotbext.ofm.avst_eth.monitors import AvstEthMonitor
+from cocotbext.ofm.avst_eth.drivers import AvstEthDriver
 
 class Axi4StreamMasterV(Axi4StreamMaster):
     _signals = {"TVALID": "VALID"}
@@ -27,7 +34,7 @@ class NFBDevice(cocotbext.nfb.NfbDevice):
     @staticmethod
     def core_instance_from_top(dut):
         try:
-            core = [getattr(dut, core) for core in ["usp_i", "fpga_i", "ag_i"] if hasattr(dut, core)][0]
+            core = [getattr(dut, core) for core in ["usp_i", "fpga_i", "ag_i", "cm_i"] if hasattr(dut, core)][0]
         except:
             # No fpga_common instance in card, try fpga_common directly
             core = dut
@@ -35,6 +42,7 @@ class NFBDevice(cocotbext.nfb.NfbDevice):
         return core
 
     async def _init_clks(self):
+        self._core = NFBDevice.core_instance_from_top(self._dut)
         if hasattr(self._dut, 'REFCLK'):
             # Tivoli card
             await cocotb.start(Clock(self._dut.REFCLK, 20, 'ns').start())
@@ -47,6 +55,15 @@ class NFBDevice(cocotbext.nfb.NfbDevice):
             # FIXME: Check freq
             await cocotb.start(Clock(self._dut.AG_SYSCLK0_P, 8, 'ns').start())
             await cocotb.start(Clock(self._dut.AG_SYSCLK1_P, 8, 'ns').start())
+        elif hasattr(self._dut, 'SYS_CLK_100M'):
+            # N6010
+            await cocotb.start(Clock(self._dut.SYS_CLK_100M, 10, 'ns').start())
+            await cocotb.start(Clock(self._core.clk_gen_i.OUTCLK_0, 2.5, 'ns').start())
+            await cocotb.start(Clock(self._core.clk_gen_i.OUTCLK_1, get_sim_steps(10/3 / 2, 'ns', round_mode='round')*2).start())
+            await cocotb.start(Clock(self._core.clk_gen_i.OUTCLK_2, 5, 'ns').start())
+            await cocotb.start(Clock(self._core.clk_gen_i.OUTCLK_3, 10, 'ns').start())
+            self._core.clk_gen_i.LOCKED.value = 1
+            self._core.clk_gen_i.INIT_DONE_N.value = 0
         else:
             # No card: fpga_common
             await cocotb.start(Clock(self._dut.SYSCLK, 10, 'ns').start())
@@ -57,6 +74,8 @@ class NFBDevice(cocotbext.nfb.NfbDevice):
         for eth_core in self._core.network_mod_i.eth_core_g:
             if hasattr(eth_core.network_mod_core_i, 'cmac_clk_322m'):
                 await cocotb.start(Clock(eth_core.network_mod_core_i.cmac_clk_322m, 3106, 'ps').start())
+            if hasattr(eth_core.network_mod_core_i, 'etile_clk_out'):
+                await cocotb.start(Clock(eth_core.network_mod_core_i.etile_clk_out, 2482, 'ps').start())
 
     def _init_pcie(self):
         try:
@@ -86,6 +105,18 @@ class NFBDevice(cocotbext.nfb.NfbDevice):
                 self.mi.append(mi)
                 self.pcie_req.append(req)
 
+            if hasattr(pcie_i, "pcie_avst_down_data"):
+                cc_rq_drv = AvstPcieDriverSlave(pcie_i, "pcie_avst_up", clk, array_idx=i)
+                cq_rc_drv = AvstPcieDriverMaster(pcie_i, "pcie_avst_down", clk, array_idx=i)
+
+                cc_mon = AvstPcieMonitor(pcie_i, "pcie_avst_up", clk, 0, aux_signals=True, array_idx=i)
+                rq_mon = AvstPcieMonitor(pcie_i, "pcie_avst_up", clk, aux_signals=True, array_idx=i)
+
+                req = AvstRequester(self.ram, cc_rq_drv, cq_rc_drv, rq_mon)
+                mi = AvstCompleter(cq_rc_drv, cc_rq_drv, cc_mon)
+                self.mi.append(mi)
+                self.pcie_req.append(req)
+
         self._eth_rx_driver = []
         self._eth_tx_monitor = []
         for i, eth_core in enumerate(self._core.network_mod_i.eth_core_g):
@@ -95,6 +126,15 @@ class NFBDevice(cocotbext.nfb.NfbDevice):
 
                 tx_monitor = LBusMonitor(eth_core.network_mod_core_i, "cmac_tx_lbus", eth_core.network_mod_core_i.cmac_clk_322m)
                 rx_driver = LBusDriver(eth_core.network_mod_core_i, "cmac_rx_lbus", eth_core.network_mod_core_i.cmac_clk_322m)
+                self._eth_tx_monitor.append(tx_monitor)
+                self._eth_rx_driver.append(rx_driver)
+
+            if hasattr(eth_core.network_mod_core_i, 'tx_avst_ready'):
+                eth_core.network_mod_core_i.tx_avst_ready.value = 1
+                # eth_core.network_mod_core_i.tx_ad_avst_error.value = 0
+
+                tx_monitor = AvstEthMonitor(eth_core.network_mod_core_i, "tx_avst", eth_core.network_mod_core_i.etile_clk_out)
+                rx_driver = AvstEthDriver(eth_core.network_mod_core_i, "rx_avst", eth_core.network_mod_core_i.etile_clk_out)
                 self._eth_tx_monitor.append(tx_monitor)
                 self._eth_rx_driver.append(rx_driver)
 
