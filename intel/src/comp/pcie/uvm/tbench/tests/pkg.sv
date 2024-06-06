@@ -1,5 +1,5 @@
 //-- pkg.sv: Test package
-//-- Copyright (C) 2023 CESNET z. s. p. o.
+//-- Copyright (C) 2024 CESNET z. s. p. o.
 //-- Author:   Daniel Kříž <xkrizd01@vutbr.cz>
 
 //-- SPDX-License-Identifier: BSD-3-Clause
@@ -26,32 +26,31 @@ package test;
     // MFB configuration
     // For Intel configuration have to be same
     // =====================================================================
-    // CQ MFB
-    // Supported configurations are: (2,1,8,32), (1,1,8,32)
-    parameter CQ_MFB_REGIONS     = 2;
-    parameter CQ_MFB_REGION_SIZE = 1;
-    parameter CQ_MFB_BLOCK_SIZE  = 8;
-    parameter CQ_MFB_ITEM_WIDTH  = 32;
-    // RC MFB
-    // Supported configuration is 4,1,4,32 for PCIe on UltraScale+
-    // Supported configuration is 2,1,4,32 for PCIe on Virtex 7 Series
-    parameter RC_MFB_REGIONS     = 4;
-    parameter RC_MFB_REGION_SIZE = 1;
-    parameter RC_MFB_BLOCK_SIZE  = 4;
-    parameter RC_MFB_ITEM_WIDTH  = 32;
-    // CC MFB
-    // Supported configuration is: (2,1,8,32), (1,1,8,32)
-    parameter CC_MFB_REGIONS     = 2;
-    parameter CC_MFB_REGION_SIZE = 1;
-    parameter CC_MFB_BLOCK_SIZE  = 8;
-    parameter CC_MFB_ITEM_WIDTH  = 32;
     // RQ MFB
     // Supported configurations are: (2,1,8,32), (1,1,8,32)
     parameter RQ_MFB_REGIONS     = 2;
     parameter RQ_MFB_REGION_SIZE = 1;
     parameter RQ_MFB_BLOCK_SIZE  = 8;
-    parameter RQ_MFB_ITEM_WIDTH  = 32;
-    // AVALON META WIDTH
+   // RC MFB
+    // Supported configuration is 4,1,4,32 for PCIe on UltraScale+
+    // Supported configuration is 2,1,4,32 for PCIe on Virtex 7 Series
+    parameter RC_MFB_REGIONS     = 2;
+    parameter RC_MFB_REGION_SIZE = 1;
+    parameter RC_MFB_BLOCK_SIZE  = 8;
+     // CQ MFB
+    // Supported configurations are: (2,1,8,32), (1,1,8,32)
+    parameter CQ_MFB_REGIONS     = 2;
+    parameter CQ_MFB_REGION_SIZE = 1;
+    parameter CQ_MFB_BLOCK_SIZE  = 8;
+   // CC MFB
+    // Supported configuration is: (2,1,8,32), (1,1,8,32)
+    parameter CC_MFB_REGIONS     = 2;
+    parameter CC_MFB_REGION_SIZE = 1;
+    parameter CC_MFB_BLOCK_SIZE  = 8;
+     // AVALON META WIDTH
+    parameter ITEM_WIDTH  = 32;
+
+
                               // HDR + PREFIX + ERROR
     parameter AVST_UP_META_W   = 128 + 32 + 1;
                               // HDR + PREFIX + BAR_RANGE
@@ -65,11 +64,11 @@ package test;
     // =====================================================================
     // Common configuration
     // =====================================================================
-    // Total number of DMA_EP, DMA_EP=PCIE_EP or 2*DMA_EP=PCIE_EP
-    parameter DMA_PORTS = 1;
+    // DMA ports per PCIE_ENDPOINT. Total number of dma_ports is PCIE_ENDPOINTS*DMA_PORTS 
+    parameter DMA_PORTS = 16;
     // Connected PCIe endpoint type
     // P_TILE, R_TILE
-    parameter PCIE_ENDPOINT_TYPE = "DUMMY";
+    parameter PCIE_ENDPOINT_TYPE = "P_TILE";
     // Connected PCIe endpoint mode: 0=x16, 1=x8x8, 2=x8
     parameter PCIE_ENDPOINT_MODE = 0;
     // Number of PCIe endpoints
@@ -91,22 +90,17 @@ package test;
     parameter XVC_ENABLE         = 0;
     // FPGA device
     // STRATIX10, AGILEX, ULTRASCALE, 7SERIES
-    parameter DEVICE             = "ULTRASCALE";
-    parameter IS_INTEL_DEV       = (DEVICE == "STRATIX10" || DEVICE == "AGILEX");
+    parameter DEVICE             = "AGILEX";
 
     // AXI META WIDTH
     parameter CQ_MFB_META_W       = sv_pcie_meta_pack::PCIE_CQ_META_WIDTH;
     parameter CC_MFB_META_W       = sv_pcie_meta_pack::PCIE_CC_META_WIDTH;
     parameter RQ_MFB_META_W       = sv_pcie_meta_pack::PCIE_RQ_META_WIDTH;
     parameter RC_MFB_META_W       = sv_pcie_meta_pack::PCIE_RC_META_WIDTH;
-    parameter DMA_UPHDR_WIDTH_W   = sv_dma_bus_pack::DMA_UPHDR_WIDTH;
-    parameter DMA_DOWNHDR_WIDTH_W = sv_dma_bus_pack::DMA_DOWNHDR_WIDTH;
 
     // =====================================================================
     // AXI configuration
     // =====================================================================
-
-    parameter AXI_DATA_WIDTH     = CQ_MFB_REGIONS*CQ_MFB_REGION_SIZE*CQ_MFB_BLOCK_SIZE*CQ_MFB_ITEM_WIDTH;
     // Allowed values: 183 (USP Gen3x16); With and without straddling
     // 88 (USP Gen3x8), 85 (V7 Gen3x8); Both without straddling
     parameter AXI_CQUSER_WIDTH   = 183;
@@ -130,16 +124,14 @@ package test;
     parameter PCIE_LEN_MAX      = 128;
     parameter BYTES_LEN_MAX     = PCIE_LEN_MAX*4;
 
-    parameter PCIE_SYSCLK_CLK_PERIOD = 10ns;
-    parameter MI_CLK_PERIOD          = 5ns;
-    parameter DMA_CLK_PERIOD         = 5ns;
+    parameter time PCIE_SYSCLK_CLK_PERIOD = 10ns;
+    parameter time MI_CLK_PERIOD          = 5ns;
+    parameter time DMA_CLK_PERIOD         = 5ns;
 
-    parameter TRANSACTION_COUNT      = 100;
+    parameter  TRANSACTION_COUNT      = 1000;
 
-    `include "sequence_base.sv"
-    `include "sequence_intel.sv"
-    `include "sequence_xilinx.sv"
+
     `include "test.sv"
-    
+
 endpackage
 `endif

@@ -1,227 +1,205 @@
-//-- sequence.sv
-//-- Copyright (C) 2023 CESNET z. s. p. o.
-//-- Author(s): Daniel Kriz <danielkriz@cesnet.cz>
+// sequence.sv : virtual sequence
+// Copyright (C) 2024 CESNET z. s. p. o.
+// Author(s): Daniel Kriz <danielkriz@cesnet.cz>
 
-//-- SPDX-License-Identifier: BSD-3-Clause
+// SPDX-License-Identifier: BSD-3-Clause
 
-class byte_array_sequence#(PCIE_UPHDR_WIDTH, PCIE_DOWNHDR_WIDTH, RQ_TUSER_WIDTH, RCB_SIZE, CLK_PERIOD, string DEVICE) extends uvm_sequence #(uvm_logic_vector_array::sequence_item #(32));
-    `uvm_object_utils(uvm_pcie::byte_array_sequence#(PCIE_UPHDR_WIDTH, PCIE_DOWNHDR_WIDTH, RQ_TUSER_WIDTH, RCB_SIZE, CLK_PERIOD, DEVICE))
+class sequence_base #(
+    RC_MFB_REGIONS,
+    RC_MFB_REGION_SIZE,
+    RC_MFB_BLOCK_SIZE,
+    RC_MFB_META_W,
+    
+    CQ_MFB_REGIONS,
+    CQ_MFB_REGION_SIZE,
+    CQ_MFB_BLOCK_SIZE,
+    CQ_MFB_META_W,
+        
+    RQ_MFB_META_W,
 
-    localparam LOW_ADDR_WIDTH = (DEVICE == "STRATIX10" || DEVICE == "AGILEX") ? 7 : 12; // 7 for INTEL 12 XILINX
-    localparam BYTE_CNT_WIDTH = (DEVICE == "STRATIX10" || DEVICE == "AGILEX") ? 12 : 13; // 12 for INTEL 13 XILINX
-    localparam HDR_USER_WIDTH = (DEVICE == "STRATIX10" || DEVICE == "AGILEX") ? PCIE_UPHDR_WIDTH : PCIE_UPHDR_WIDTH+RQ_TUSER_WIDTH;
+    CC_MFB_REGIONS,
+    CC_MFB_REGION_SIZE,
+    CC_MFB_BLOCK_SIZE,
+    CC_MFB_META_W,
+    
+    ITEM_WIDTH,
+    DMA_PORTS, PCIE_CONS, PCIE_ENDPOINTS) extends uvm_sequence; 
+    `uvm_object_param_utils(uvm_pcie_top::sequence_base#(RC_MFB_REGIONS, RC_MFB_REGION_SIZE, RC_MFB_BLOCK_SIZE, RC_MFB_META_W, CQ_MFB_REGIONS, CQ_MFB_REGION_SIZE,  CQ_MFB_BLOCK_SIZE, CQ_MFB_META_W,
+                                                         RQ_MFB_META_W,  CC_MFB_REGIONS, CC_MFB_REGION_SIZE, CC_MFB_BLOCK_SIZE, CC_MFB_META_W, ITEM_WIDTH, DMA_PORTS, PCIE_CONS, PCIE_ENDPOINTS))
 
-    uvm_pcie_rc::tr_planner #(HDR_USER_WIDTH, RQ_TUSER_WIDTH, PCIE_DOWNHDR_WIDTH, RCB_SIZE, CLK_PERIOD, DEVICE) tr_plan;
-    int unsigned mfb_cnt = 0;
+     `uvm_declare_p_sequencer(uvm_pcie_top::sequencer#(RC_MFB_REGIONS, RC_MFB_REGION_SIZE, RC_MFB_BLOCK_SIZE, RC_MFB_META_W,
+                                                       CQ_MFB_REGIONS, CQ_MFB_REGION_SIZE, CQ_MFB_BLOCK_SIZE, CQ_MFB_META_W,
+                                                       ITEM_WIDTH, RQ_MFB_META_W, CC_MFB_META_W, DMA_PORTS, PCIE_ENDPOINTS))
+
+    protected int unsigned stop;
+    //RQ
+    uvm_pcie_top::sequence_dma_rq#(PCIE_ENDPOINTS*DMA_PORTS) dma_rq[PCIE_ENDPOINTS][DMA_PORTS];
+    //RC
+    uvm_sequence #(uvm_mfb::sequence_item #(RC_MFB_REGIONS, RC_MFB_REGION_SIZE, RC_MFB_BLOCK_SIZE, ITEM_WIDTH, RC_MFB_META_W)) m_mfb_rc[PCIE_ENDPOINTS][DMA_PORTS];
+    uvm_sequence #(uvm_mvb::sequence_item #(RC_MFB_REGIONS, sv_dma_bus_pack::DMA_DOWNHDR_WIDTH))                               m_mvb_rc[PCIE_ENDPOINTS][DMA_PORTS];
+    //CQ
+    uvm_sequence #(uvm_mfb::sequence_item #(CQ_MFB_REGIONS, CQ_MFB_REGION_SIZE, CQ_MFB_BLOCK_SIZE, ITEM_WIDTH, CQ_MFB_META_W)) m_mfb_cq[PCIE_ENDPOINTS][DMA_PORTS];
+    //CC
+
+    //MI
+    uvm_pcie_top::mi_cc_sequence #(32, 32) mi_seq[PCIE_ENDPOINTS];
+
+    //PCIE
+    uvm_pcie::sequence_base pcie_seq[PCIE_ENDPOINTS];
+
+    // Start reset sequence
+    uvm_reset::sequence_start m_dma_reset;
+    uvm_reset::sequence_start m_mi_reset;
+    uvm_reset::sequence_start m_pcie_sysrst_n;
+
+    //STOP SEQUENCE
+    //sequences_cfg_sync#(int unsigned NUM) sync;
 
     function new(string name = "sequence_simple_rx_base");
         super.new(name);
     endfunction
 
-    task body;
-        req = uvm_logic_vector_array::sequence_item #(32)::type_id::create("req");
+    virtual function void init(
+        uvm_pcie_top::sequencer#(RC_MFB_REGIONS, RC_MFB_REGION_SIZE, RC_MFB_BLOCK_SIZE, RC_MFB_META_W,
+                                 CQ_MFB_REGIONS, CQ_MFB_REGION_SIZE, CQ_MFB_BLOCK_SIZE, CQ_MFB_META_W,
+                                 ITEM_WIDTH, RQ_MFB_META_W, CC_MFB_META_W, DMA_PORTS, PCIE_ENDPOINTS) p_sequencer);
 
-        forever begin
-            wait(tr_plan.byte_array.size() != 0);
-            req = tr_plan.byte_array.pop_front();
-            start_item(req);
-            finish_item(req);
+        for (int unsigned pcie = 0; pcie < PCIE_ENDPOINTS; pcie++) begin
+             string pcie_string;
+             pcie_string.itoa(pcie);
+
+             for (int dma = 0; dma < DMA_PORTS; dma++) begin
+                string dma_string = {pcie_string, $sformatf("_%0d", dma)};
+                uvm_mfb::sequence_lib_tx  #(RC_MFB_REGIONS, RC_MFB_REGION_SIZE, RC_MFB_BLOCK_SIZE, ITEM_WIDTH, RC_MFB_META_W)              m_mfb_rc_lib;
+                uvm_mvb::sequence_lib_tx #(RC_MFB_REGIONS, sv_dma_bus_pack::DMA_DOWNHDR_WIDTH)                                             m_mvb_rc_lib;
+                uvm_mfb::sequence_lib_tx  #(CQ_MFB_REGIONS, CQ_MFB_REGION_SIZE, CQ_MFB_BLOCK_SIZE, ITEM_WIDTH, CQ_MFB_META_W)              m_mfb_cq_lib;
+
+                //RQ
+                dma_rq[pcie][dma] = uvm_pcie_top::sequence_dma_rq#(PCIE_ENDPOINTS*DMA_PORTS)::type_id::create("dma_rq", p_sequencer.m_dma_rq[pcie][dma]);
+
+                //RC
+                m_mfb_rc_lib  = uvm_mfb::sequence_lib_tx#(RC_MFB_REGIONS, RC_MFB_REGION_SIZE, RC_MFB_BLOCK_SIZE, ITEM_WIDTH, RC_MFB_META_W)::type_id::create({"m_mfb_rc_lib_", dma_string}, p_sequencer.m_dma_rc_mfb[pcie][dma]);
+                m_mfb_rc_lib.init_sequence();
+                m_mfb_rc_lib.min_random_count = 100;
+                m_mfb_rc_lib.max_random_count = 200;
+                m_mfb_rc[pcie][dma] = m_mfb_rc_lib;
+
+                m_mvb_rc_lib  = uvm_mvb::sequence_lib_tx#(RC_MFB_REGIONS, sv_dma_bus_pack::DMA_DOWNHDR_WIDTH)::type_id::create({"m_mvb_rc_lib_", dma_string}, p_sequencer.m_dma_rc_mvb[pcie][dma]);
+                m_mvb_rc_lib.init_sequence();
+                m_mvb_rc_lib.min_random_count = 100;
+                m_mvb_rc_lib.max_random_count = 200;
+                m_mvb_rc[pcie][dma] = m_mvb_rc_lib;
+
+                //CQ
+                m_mfb_cq_lib  = uvm_mfb::sequence_lib_tx#(CQ_MFB_REGIONS, CQ_MFB_REGION_SIZE, CQ_MFB_BLOCK_SIZE, ITEM_WIDTH, CQ_MFB_META_W)::type_id::create({"m_mfb_cq_lib_", dma_string}, p_sequencer.m_dma_cq[pcie][dma]);
+                m_mfb_cq_lib.init_sequence();
+                m_mfb_cq_lib.min_random_count = 100;
+                m_mfb_cq_lib.max_random_count = 200;
+                m_mfb_cq[pcie][dma] = m_mfb_cq_lib;
+             end
+
+             //MI interface
+             mi_seq[pcie] = uvm_pcie_top::mi_cc_sequence #(32, 32)::type_id::create({"mi_seq_", pcie_string}, p_sequencer.m_mi_sqr[pcie]);
+
+             //PCIE
+             pcie_seq[pcie] = new(); //uvm_pcie::sequence_base::type_id::create({"pcie_seq_", pcie_string}, p_sequencer.m_pcie[pcie]);
         end
 
-    endtask
-endclass
-
-class logic_vector_sequence #(PCIE_DOWNHDR_WIDTH, PCIE_UPHDR_WIDTH, RQ_TUSER_WIDTH, RCB_SIZE, CLK_PERIOD, string DEVICE) extends uvm_sequence #(uvm_logic_vector::sequence_item#(PCIE_DOWNHDR_WIDTH));
-    `uvm_object_param_utils(uvm_pcie::logic_vector_sequence #(PCIE_DOWNHDR_WIDTH, PCIE_UPHDR_WIDTH, RQ_TUSER_WIDTH, RCB_SIZE, CLK_PERIOD, DEVICE))
-
-    localparam LOW_ADDR_WIDTH = (DEVICE == "STRATIX10" || DEVICE == "AGILEX") ? 7 : 12; // 7 for INTEL 12 XILINX
-    localparam BYTE_CNT_WIDTH = (DEVICE == "STRATIX10" || DEVICE == "AGILEX") ? 12 : 13; // 12 for INTEL 13 XILINX
-    localparam HDR_USER_WIDTH = (DEVICE == "STRATIX10" || DEVICE == "AGILEX") ? PCIE_UPHDR_WIDTH : PCIE_UPHDR_WIDTH+RQ_TUSER_WIDTH;
-
-    uvm_pcie_rc::tr_planner #(HDR_USER_WIDTH, RQ_TUSER_WIDTH, PCIE_DOWNHDR_WIDTH, RCB_SIZE, CLK_PERIOD, DEVICE) tr_plan;
-    int unsigned mvb_cnt = 0;
-
-    function new(string name = "logic_vector_sequence");
-        super.new(name);
+        m_dma_reset     = uvm_reset::sequence_start::type_id::create("m_dma_reset");
+        m_mi_reset      = uvm_reset::sequence_start::type_id::create("m_mi_reset");
+        m_pcie_sysrst_n = uvm_reset::sequence_start::type_id::create("m_pcie_sysrst_n");
     endfunction
 
-    task body;
-        req = uvm_logic_vector::sequence_item#(PCIE_DOWNHDR_WIDTH)::type_id::create("req");
+    virtual task run_rq(int unsigned pcie, int unsigned dma);
+        const int unsigned dma_unitid_const = (DMA_PORTS*pcie + dma);
 
+        while (stop == 0) begin
+            assert (dma_rq[pcie][dma].randomize() with {dma_rq[pcie][dma].unit_id ==  dma_unitid_const;});
+            dma_rq[pcie][dma].start(p_sequencer.m_dma_rq[pcie][dma]);
+        end
+    endtask
+
+    //RUN RC
+    virtual task run_rc(int unsigned pcie, int unsigned dma);
+        fork
+            forever begin
+                assert(m_mfb_rc[pcie][dma].randomize());
+                m_mfb_rc[pcie][dma].start(p_sequencer.m_dma_rc_mfb[pcie][dma]);
+            end
+
+            forever begin
+                assert(m_mvb_rc[pcie][dma].randomize());
+                m_mvb_rc[pcie][dma].start(p_sequencer.m_dma_rc_mvb[pcie][dma]);
+            end
+        join
+    endtask
+
+    //RUN CQ
+    virtual task run_cq(int unsigned pcie, int unsigned dma);
         forever begin
-            wait(tr_plan.logic_array.size() != 0);
-            req = tr_plan.logic_array.pop_front();
-            req.data = {req.data[31 : 0], req.data[63 : 32], req.data[95 : 64], req.data[127 : 96]};
-            start_item(req);
-            finish_item(req);
+            assert(m_mfb_cq[pcie][dma].randomize()) else `uvm_fatal(p_sequencer.m_dma_cq[pcie][dma].get_full_name(), "\n\tCannot randomize sequence");;
+            m_mfb_cq[pcie][dma].start(p_sequencer.m_dma_cq[pcie][dma]);
+        end
+    endtask
+
+    //RUN MI
+    virtual task run_mi(int unsigned pcie);
+        //while (stop == 0) begin
+        forever begin
+            assert(mi_seq[pcie].randomize()) else `uvm_fatal(p_sequencer.m_mi_sqr[pcie].get_full_name(), "\n\tCannot randomize sequence");
+            mi_seq[pcie].start(p_sequencer.m_mi_sqr[pcie]);
+        end
+    endtask
+
+    //RUN PCIE
+    virtual task run_pcie(int unsigned pcie);
+
+        while (p_sequencer.m_pcie[pcie].info.rq_hdr.size() != 0 || stop == 0) begin
+            assert(pcie_seq[pcie].randomize()) else `uvm_fatal(m_sequencer.get_full_name(), "\n\tCannot randomize pcie sequence");
+            pcie_seq[pcie].response_only = (stop == 1);
+            pcie_seq[pcie].start(p_sequencer.m_pcie[pcie]);
+        end
+    endtask
+
+
+
+    task run_reset(uvm_reset::sequence_start m_reset, uvm_reset::sequencer m_reset_sqr);
+        assert(m_reset.randomize());
+        m_reset.start(m_reset_sqr);
+    endtask
+
+    task body();
+        //Run RESET
+        stop = 0;
+
+        fork
+            run_reset(m_dma_reset, p_sequencer.m_dma_reset);
+            run_reset(m_mi_reset, p_sequencer.m_mi_reset);
+            run_reset(m_pcie_sysrst_n, p_sequencer.m_pcie_sysrst_n);
+        join_none
+
+        #(1us);
+
+        for (int unsigned pcie = 0; pcie < PCIE_ENDPOINTS; pcie++) begin
+            fork
+                automatic int unsigned index_pcie = pcie;
+                for (int dma = 0; dma < DMA_PORTS; dma++) begin
+                    fork
+                        automatic int unsigned index_dma = dma;
+                        run_rq(index_pcie, index_dma);
+                        run_rc(index_pcie, index_dma);
+                        run_cq(index_pcie, index_dma);
+                    join_none
+                end
+                run_pcie(index_pcie); 
+                run_mi(index_pcie);
+            join_none
         end
 
+        //#(50ms);
+        #(1ms);
+        stop = 1;
+        //wait();
     endtask
 endclass
 
-
-// class crdt_sequence#(CC_MFB_REGIONS, CC_MFB_REGION_SIZE, CC_MFB_BLOCK_SIZE, CC_MFB_ITEM_WIDTH, AVST_UP_META_W, PCIE_MPS_DW) extends uvm_sequence #(uvm_avst_crdt::sequence_item);
-//     `uvm_object_param_utils(uvm_pcie_adapter::crdt_sequence#(CC_MFB_REGIONS, CC_MFB_REGION_SIZE, CC_MFB_BLOCK_SIZE, CC_MFB_ITEM_WIDTH, AVST_UP_META_W, PCIE_MPS_DW))
-
-//     uvm_pcie_adapter::tr_planner #(CC_MFB_REGIONS, CC_MFB_REGION_SIZE, CC_MFB_BLOCK_SIZE, CC_MFB_ITEM_WIDTH, AVST_UP_META_W) tr_plan;
-//     uvm_logic_vector::sequence_item #(AVST_UP_META_W) meta;
-
-//     function new(string name = "logic_vector_array_sequence");
-//         super.new(name);
-//     endfunction
-
-//     task body;
-//         localparam SEED_MIN = (PCIE_MPS_DW/4)/15 + 1;
-//         localparam SEED_MAX = (PCIE_MPS_DW/4);
-//         logic [11-1 : 0] pcie_len;
-//         logic [8-1 : 0] pcie_type;
-//         logic [4-1 : 0] credits = '0;
-//         int unsigned cnt = 0;
-//         int unsigned credit_cnt = 0;
-//         logic hdr_valid = 1'b0;
-//         logic init = 1'b0;
-
-//         req = uvm_avst_crdt::sequence_item::type_id::create("req");
-//         void'(std::randomize(cnt) with {cnt inside {[SEED_MIN : SEED_MAX]}; });
-
-//         forever begin
-//             if (tr_plan.tr_array.size() != 0 && init == 1'b1) begin
-//                 credit_cnt = 0;
-//                 meta = tr_plan.tr_array.pop_front();
-
-//                 if (meta.data[106-1 : 96] == 0)
-//                     pcie_len  = 1024;
-//                 else
-//                     pcie_len  = meta.data[106-1 : 96];
-
-//                 if (pcie_len % 4 != 0) begin
-//                     pcie_len += 4 - (pcie_len % 4);
-//                 end
-
-//                 pcie_type = meta.data[128-1 : 120];
-
-//                 hdr_valid = 1'b1;
-
-//                 while (pcie_len/4 != credit_cnt) begin
-//                     start_item(req);
-
-//                     req.init_done = 1'b1;
-//                     req.update    = '0;
-//                     req.cnt_ph    = '0;
-//                     req.cnt_nph   = '0;
-//                     req.cnt_cplh  = '0;
-//                     req.cnt_pd    = '0;
-//                     req.cnt_npd   = '0;
-//                     req.cnt_cpld  = '0;
-
-//                     if (((pcie_len/4) - credit_cnt) >= 15) begin
-//                         void'(std::randomize(credits) with {credits inside {[1 : 15]}; });
-//                     end else begin
-//                         credits = (pcie_len/4) - credit_cnt;
-//                     end
-
-//                     credit_cnt += credits;
-
-//                     if (credit_cnt > pcie_len/4) begin
-//                         $write("Credit cnt %d\n", credit_cnt);
-//                         $write("pcie_len/4 %d\n", pcie_len/4);
-//                         `uvm_fatal(this.get_full_name(), "credit_cnt is bigger than pcie_len/4");
-//                     end
-
-//                     case (pcie_type)
-//                         8'b00000000 :
-//                         begin
-//                             if (hdr_valid == 1'b1) begin
-//                                 req.update[1] = 1'b1;
-//                                 req.cnt_nph   = 1'b1;
-//                                 hdr_valid     = 1'b0;
-//                             end
-//                         end
-//                         8'b00100000 :
-//                         begin
-//                             if (hdr_valid == 1'b1) begin
-//                                 req.update[1] = 1'b1;
-//                                 req.cnt_nph   = 1'b1;
-//                                 hdr_valid     = 1'b0;
-//                             end
-//                         end
-//                         8'b01001010 :
-//                         begin
-//                             req.update[5] = 1'b1;
-//                             if (hdr_valid == 1'b1) begin
-//                                 req.update[2] = 1'b1;
-//                                 req.cnt_cplh  = 1'b1;
-//                                 hdr_valid     = 1'b0;
-//                             end
-//                             req.cnt_cpld = credits;
-//                         end
-//                         8'b01000000 :
-//                         begin
-//                             req.update[3] = 1'b1;
-//                             if (hdr_valid == 1'b1) begin
-//                                 req.update[0] = 1'b1;
-//                                 req.cnt_ph    = 1'b1;
-//                                 hdr_valid     = 1'b0;
-//                             end
-//                             req.cnt_pd = credits;
-//                         end
-//                         8'b01100000 :
-//                         begin
-//                             req.update[3] = 1'b1;
-//                             if (hdr_valid == 1'b1) begin
-//                                 req.update[0] = 1'b1;
-//                                 req.cnt_ph    = 1'b1;
-//                                 hdr_valid     = 1'b0;
-//                             end
-//                             req.cnt_pd = credits;
-//                         end
-//                     endcase
-
-//                     finish_item(req);
-//                     get_response(rsp);
-//                 end
-
-//             end else begin
-//                 // Init phase
-//                 start_item(req);
-//                 req.init_done = 1'b1;
-//                 req.update = '0;
-//                 req.cnt_cpld = '0;
-//                 req.cnt_cplh = '0;
-//                 req.cnt_pd = '0;
-//                 req.cnt_npd = '0;
-//                 req.cnt_ph = '0;
-//                 req.cnt_nph = '0;
-
-//                 if (cnt > 0) begin
-//                     req.init_done = 1'b0;
-//                     req.update[0] = 1'b1;
-//                     req.cnt_ph = '1;
-//                     req.update[1] = 1'b1;
-//                     req.cnt_nph = '1;
-//                     req.update[2] = 1'b1;
-//                     req.cnt_cplh = '1;
-//                     req.update[3] = 1'b1;
-//                     req.cnt_pd = '1;
-//                     req.update[4] = 1'b1;
-//                     req.cnt_npd = '1;
-//                     req.update[5] = 1'b1;
-//                     req.cnt_cpld = '1;
-//                     cnt--;
-//                 end else begin
-//                     req.init_done = 1'b1;
-//                     req.update = '0;
-//                     req.cnt_cpld = '0;
-//                     req.cnt_cplh = '0;
-//                     req.cnt_pd = '0;
-//                     req.cnt_npd = '0;
-//                     req.cnt_ph = '0;
-//                     req.cnt_nph = '0;
-//                     init = 1'b1;
-//                 end
-//                 finish_item(req);
-//                 get_response(rsp);
-//             end
-//         end
-//     endtask
-// endclass
