@@ -47,6 +47,12 @@ if { $ARCHGRP_ARR(APPLICATION_CORE_ENTITY_ONLY) } {
       set DMA_ARCH "CALYPTE"
   }
 
+  set JTAG_OP_ARCH "EMPTY"
+
+  if { $ARCHGRP_ARR(VIRTUAL_DEBUG_ENABLE) eq true } {
+    set JTAG_OP_ARCH $ARCHGRP_ARR(CLOCK_GEN_ARCH)
+  }
+
   lappend COMPONENTS [list "CLOCK_GEN"       $CLOCK_GEN_BASE       $ARCHGRP_ARR(CLOCK_GEN_ARCH) ]
   lappend COMPONENTS [list "SDM_CTRL"        $SDM_CTRL_BASE        $ARCHGRP_ARR(SDM_SYSMON_ARCH)]
   lappend COMPONENTS [list "ASYNC_RESET"     $ASYNC_RESET_BASE     "FULL"                       ]
@@ -61,7 +67,7 @@ if { $ARCHGRP_ARR(APPLICATION_CORE_ENTITY_ONLY) } {
   lappend COMPONENTS [list "ETH_LED_CTRL"    $ETH_LED_CTRL_BASE    "FULL"                       ]
   lappend COMPONENTS [list "DMA"             $DMA_BASE             $DMA_ARCH                    ]
   lappend COMPONENTS [list "DMA_GENERATOR"   $DMA_GENERATOR_BASE   "FULL"                       ]
-  lappend COMPONENTS [list "JTAG_OP_CTRL"    $JTAG_OP_CTRL_BASE    $ARCHGRP_ARR(CLOCK_GEN_ARCH) ]
+  lappend COMPONENTS [list "JTAG_OP_CTRL"    $JTAG_OP_CTRL_BASE    $JTAG_OP_ARCH                ]
 
   lappend MOD "$ENTITY_BASE/src/application_ent.vhd"
   lappend MOD "$ENTITY_BASE/src/fpga_common.vhd"
