@@ -140,16 +140,25 @@ class NFBDevice(cocotbext.nfb.NfbDevice):
 
         self.dtb = None
 
-    async def _reset(self):
+    async def _reset(self, time=40, units="ns"):
+        t = Timer(time, units)
         pcie_i = self._core.pcie_i.pcie_core_i
         if hasattr(pcie_i, 'pcie_hip_rst'):
             for rst in pcie_i.pcie_hip_rst:
                 rst.value = 1
-            await Timer(40, units="ns")
+            await t
             for rst in pcie_i.pcie_hip_rst:
                 rst.value = 0
 
-        await cocotb.triggers.FallingEdge(self._core.global_reset)
+            await cocotb.triggers.FallingEdge(self._core.global_reset)
+        elif hasattr(pcie_i, 'pcie_reset_status_n'):
+            for rst in pcie_i.pcie_reset_status_n:
+                rst.value = 0
+            await t
+            for rst in pcie_i.pcie_reset_status_n:
+                rst.value = 1
+        else:
+            raise NotImplementedError("Unknown signals for PCI/device reset")
 
     async def _pcie_cfg_ext_reg_access(self, addr, index = 0, fn = 0, sync=True, data=None):
         pcie_i = self._core.pcie_i.pcie_core_i
