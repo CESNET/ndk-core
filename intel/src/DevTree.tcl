@@ -53,7 +53,7 @@ proc dts_build_netcope {} {
     # 2 = Generic flash + custom BMC controller (Silicom fb4CGg3@VU9P, Netcope NFB-200G2QL, ReflexCES AGI-FH400G)
     # 3 = AXI QSPI + custom BMC controller (Silicom fb2CGhh@KU15P)
     # 4 = ASx4 BOOT via Intel SDM client (Bittware IA-420f)
-    # 5 = OFS PMCI boot controller (Silicom N6010)
+    # 5 = OFS PMCI boot controller (Silicom N6010) or OFS SPI boot controller (Silicom N5014)
 
     # BOOT component
     set boot_active_serial 0
@@ -71,6 +71,11 @@ proc dts_build_netcope {} {
 
     append ret [dts_mi_test_space "mi_test_space" $ADDR_TEST_SPACE]
 
+    # Card specific components
+    if { [llength [info procs dts_card_specific]] > 0 } {
+        append ret [ dts_card_specific ]
+    }
+    
     # TSU component
     global TSU_ENABLE
     if {$TSU_ENABLE} {
