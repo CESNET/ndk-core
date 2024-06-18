@@ -121,9 +121,9 @@ SETTINGS = {
         "RC_MFB_REGION_SIZE"   : "1"                 ,
         "RC_MFB_BLOCK_SIZE"    : "4"                 ,
 
-        "RC_MFB_REGIONS"       : "2"                 ,
-        "RC_MFB_REGION_SIZE"   : "1"                 ,
-        "RC_MFB_BLOCK_SIZE"    : "8"                 ,
+        "CQ_MFB_REGIONS"       : "2"                 ,
+        "CQ_MFB_REGION_SIZE"   : "1"                 ,
+        "CQ_MFB_BLOCK_SIZE"    : "8"                 ,
 
         "CC_MFB_REGIONS"       : "2"                 ,
         "CC_MFB_REGION_SIZE"   : "1"                 ,
