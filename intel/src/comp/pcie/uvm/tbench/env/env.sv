@@ -88,7 +88,7 @@ class env #(
         for(int unsigned pcie = 0; pcie < PCIE_ENDPOINTS; pcie++) begin
             uvm_mi::config_item m_mi_cfg;
             uvm_pcie::config_item m_pcie_cfg;
-            uvm_dma::config_item m_dma_rq_cfg;
+            uvm_dma::config_item m_dma_cfg;
             string i_string;
             i_string.itoa(pcie);
 
@@ -115,14 +115,14 @@ class env #(
                 uvm_logic_vector_mvb::config_item        m_rc_mvb_cfg;
 
                 //RQ DMA
-                m_dma_rq_cfg = new();
-                m_dma_rq_cfg.interface_name_rq_mfb = {"vif_rq_mfb_", dma_string};
-                m_dma_rq_cfg.interface_name_rq_mvb = {"vif_rq_mvb_", dma_string};
-                m_dma_rq_cfg.interface_name_rc_mfb = {"vif_rc_mfb_", dma_string};
-                m_dma_rq_cfg.interface_name_rc_mvb = {"vif_rc_mvb_", dma_string};
-                uvm_config_db #(uvm_dma::config_item)::set(this, {"m_dma_rq_", dma_string}, "m_config", m_dma_rq_cfg);
+                m_dma_cfg = new();
+                m_dma_cfg.interface_name_rq_mfb = {"vif_rq_mfb_", dma_string};
+                m_dma_cfg.interface_name_rq_mvb = {"vif_rq_mvb_", dma_string};
+                m_dma_cfg.interface_name_rc_mfb = {"vif_rc_mfb_", dma_string};
+                m_dma_cfg.interface_name_rc_mvb = {"vif_rc_mvb_", dma_string};
+                uvm_config_db #(uvm_dma::config_item)::set(this, {"m_dma_env_", dma_string}, "m_config", m_dma_cfg);
                 m_dma_env[pcie][dma] = uvm_dma::env#(RQ_MFB_REGIONS, RQ_MFB_REGION_SIZE, RQ_MFB_BLOCK_SIZE, ITEM_WIDTH, RQ_MFB_META_W,
-                  RC_MFB_REGIONS, RC_MFB_REGION_SIZE, RC_MFB_BLOCK_SIZE, ITEM_WIDTH, RC_MFB_META_W)::type_id::create({"m_dma_rq_", dma_string}, this);
+                  RC_MFB_REGIONS, RC_MFB_REGION_SIZE, RC_MFB_BLOCK_SIZE, ITEM_WIDTH, RC_MFB_META_W)::type_id::create({"m_dma_env_", dma_string}, this);
 
                 //CQ
                 m_cq_mfb_cfg = new();
