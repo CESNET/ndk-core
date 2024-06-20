@@ -120,8 +120,8 @@ port(
     -- =====================================================================
     MI_CLK_PHY      : in  std_logic;
     MI_RESET_PHY    : in  std_logic;
-    MI_DWR_PHY      : in  std_logic_vector(MI_ADDR_WIDTH_PHY-1 downto 0);
-    MI_ADDR_PHY     : in  std_logic_vector(MI_DATA_WIDTH_PHY-1 downto 0);
+    MI_DWR_PHY      : in  std_logic_vector(MI_DATA_WIDTH_PHY-1 downto 0);
+    MI_ADDR_PHY     : in  std_logic_vector(MI_ADDR_WIDTH_PHY-1 downto 0);
     MI_RD_PHY       : in  std_logic;
     MI_WR_PHY       : in  std_logic;
     MI_BE_PHY       : in  std_logic_vector(MI_DATA_WIDTH_PHY/8-1 downto 0);
