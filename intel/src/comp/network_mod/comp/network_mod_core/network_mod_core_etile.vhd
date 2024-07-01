@@ -16,6 +16,17 @@ use work.math_pack.all;
 use work.type_pack.all;
 use work.eth_hdr_pack.all;
 
+
+-- Thi E-Tile design also contains extra demo/testing logic for Timestamp Limiting (see the Timestamp Limiter unit).
+-- The logic is enabled by the :vhdl:genconstant:`TS_DEMO_EN <network_mod_core.network_mod_core>` generic.
+--
+-- .. Warning::
+--      The Demo/Testing logic works only for a single-channel (and single-Region) designs with E-Tile (Intel)!
+--
+-- **MI address space**
+--
+-- Is allocated after the address space of the MGMT unit
+
 architecture ETILE of NETWORK_MOD_CORE is
 
     -- =========================================================================
@@ -410,7 +421,7 @@ architecture ETILE of NETWORK_MOD_CORE is
     --                                           eth inf       + xcvr inf + rsfec in case of 100g1 or 25g4
     constant IA_OUTPUT_INFS         : natural := ETH_PORT_CHAN + LANES    + tsel(ETH_PORT_SPEED = 10, 0, 1);
 
-    constant MI_ADDR_BASES_PHY      : natural := ETH_PORT_CHAN;
+    constant MI_ADDR_BASES_PHY      : natural := ETH_PORT_CHAN + tsel(TS_DEMO_EN, 1, 0);
     constant MGMT_OFF               : std_logic_vector(MI_ADDR_WIDTH_PHY-1 downto 0) := X"0004_0000";
 
     function mi_addr_base_init_phy_f return slv_array_t is
@@ -1479,5 +1490,47 @@ begin
         BLOAD      => '1',
         BVALID     => open
     );
+
+    -- =====================================================================
+    -- Timestamp-limiting demo/testing logic
+    -- =====================================================================
+
+    ts_demo_en_g : if TS_DEMO_EN generate
+
+        ts_demo_logic_i: entity work.TS_DEMO_LOGIC
+        generic map (
+            REGIONS         => REGIONS          ,
+            ETH_PORT_CHAN   => ETH_PORT_CHAN    ,
+            MI_DATA_WIDTH   => MI_DATA_WIDTH_PHY,
+            MI_ADDR_WIDTH   => MI_ADDR_WIDTH_PHY,
+            TX_DMA_CHANNELS => TX_DMA_CHANNELS  ,
+            DEVICE          => DEVICE
+        )
+        port map (
+            CLK_ETH       => CLK_ETH                               ,
+            RESET_ETH     => RESET_ETH                             ,
+
+            CORE_SOP      => tx_avst_sop                           ,
+            CORE_SRC_RDY  => tx_avst_valid                         ,
+            CORE_DST_RDY  => tx_avst_ready                         ,
+
+            APP_CHANNEL   => RX_MVB_CHANNEL                        ,
+            APP_TIMESTAMP => RX_MVB_TIMESTAMP                      ,
+            APP_VLD       => RX_MVB_VLD                            ,
+
+            TSU_TS_NS     => TSU_TS_NS                             ,
+            TSU_TS_DV     => TSU_TS_DV                             ,
+
+            MI_DWR        => split_mi_dwr_phy (MI_ADDR_BASES_PHY-1),
+            MI_ADDR       => split_mi_addr_phy(MI_ADDR_BASES_PHY-1),
+            MI_RD         => split_mi_rd_phy  (MI_ADDR_BASES_PHY-1),
+            MI_WR         => split_mi_wr_phy  (MI_ADDR_BASES_PHY-1),
+            MI_BE         => split_mi_be_phy  (MI_ADDR_BASES_PHY-1),
+            MI_DRD        => split_mi_drd_phy (MI_ADDR_BASES_PHY-1),
+            MI_ARDY       => split_mi_ardy_phy(MI_ADDR_BASES_PHY-1),
+            MI_DRDY       => split_mi_drdy_phy(MI_ADDR_BASES_PHY-1)
+        );
+
+    end generate;
 
 end architecture;

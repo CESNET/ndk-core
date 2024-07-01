@@ -17,6 +17,10 @@ set AGI_FH400G_IP_BASE  "$CARDS_BASE/agi-fh400g/src/ip"
 set CMAC_IP_BASE        "$CARDS_BASE/fb4cgg3/src/ip"
 set 40GE_BASE           "$OFM_PATH/comp/nic/eth_phy/40ge"
 set LL10GE40GE_BASE     "$OFM_PATH/../modules/hft/comp/net_mod/top"
+set FIFO_BASE           "$OFM_PATH/comp/base/fifo"
+set MI_SPLITTER_BASE    "$OFM_PATH/comp/mi_tools/splitter_plus_gen"
+set BASE_LOGIC_BASE     "$OFM_PATH/comp/base/logic"
+set TSU_BASE            "$OFM_PATH/comp/tsu"
 
 # Packages
 lappend PACKAGES "$OFM_PATH/comp/base/pkg/math_pack.vhd"
@@ -29,6 +33,7 @@ lappend PACKAGES "$OFM_PATH/comp/base/pkg/eth_hdr_pack.vhd"
 lappend COMPONENTS [list "MI_INDIRECT_ACCESS"   "$MI_TOOLS_BASE/indirect_access"   "FULL"]
 lappend COMPONENTS [list "MI_SPLITTER_PLUS_GEN" "$MI_TOOLS_BASE/splitter_plus_gen" "FULL"]
 lappend COMPONENTS [list "MGMT"                  $MGMT_BASE                        "FULL"]
+lappend COMPONENTS [list "TSU_FORMAT_CONV"      "$TSU_BASE/tsu_format_to_ns"       "FULL"]
 
 lappend MOD "$ENTITY_BASE/network_mod_core_ent.vhd"
 
@@ -90,9 +95,15 @@ if { $ARCHGRP == "F_TILE"} {
 }
 
 if { $ARCHGRP == "E_TILE"} {
-    lappend COMPONENTS [list "TX_ETILE_ADAPTER"    "$TX_ADAPTER_BASE/avst_100g" "FULL"]
-    lappend COMPONENTS [list "RX_ETILE_ADAPTER"    "$RX_ADAPTER_BASE/eth_avst"  "FULL"]
+    lappend COMPONENTS [list "TX_ETILE_ADAPTER"    "$TX_ADAPTER_BASE/avst_100g"               "FULL"]
+    lappend COMPONENTS [list "RX_ETILE_ADAPTER"    "$RX_ADAPTER_BASE/eth_avst"                "FULL"]
     lappend COMPONENTS [list "ASYNC_BUS_HANDSHAKE" "$OFM_PATH/comp/base/async/bus_handshake"  "FULL"]
+    lappend COMPONENTS [list "FIFOX_MULTI"         "$FIFO_BASE/fifox_multi"                   "FULL"]
+    lappend COMPONENTS [list "ASYNC_FIFO"          "$FIFO_BASE/asfifox"                       "FULL"]
+    lappend COMPONENTS [list "ASYNC_RESET"         "$ASYNC_BASE/reset"                        "FULL"]
+    lappend COMPONENTS [list "MI_SPLITTER"         $MI_SPLITTER_BASE                          "FULL"]
+    lappend COMPONENTS [list "EDGE_DETECT"         "$BASE_LOGIC_BASE/edge_detect"             "FULL"]
+    lappend COMPONENTS [list "PULSE_EXTEND"        $MGMT_BASE                                 "FULL"]
 
     # IP are now in card top-level Modules.tcl
     # Uncomment for network module synthesis only!
@@ -103,6 +114,7 @@ if { $ARCHGRP == "E_TILE"} {
     # Source files for implemented component
     lappend MOD "$ENTITY_BASE/etile_init.vhd"
     lappend MOD "$ENTITY_BASE/avst_loop.vhd"
+    lappend MOD "$ENTITY_BASE/ts_demo_logic.vhd"
     lappend MOD "$ENTITY_BASE/network_mod_core_etile.vhd"
 }
  

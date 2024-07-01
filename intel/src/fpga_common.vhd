@@ -595,6 +595,10 @@ architecture FULL of FPGA_COMMON is
     signal eth_tx_mfb_src_rdy            : std_logic_vector(ETH_STREAMS-1 downto 0);
     signal eth_tx_mfb_dst_rdy            : std_logic_vector(ETH_STREAMS-1 downto 0) := (others => '1');
 
+    signal eth_tx_mvb_channel            : std_logic_vector(ETH_STREAMS*ETH_MFB_REGIONS*log2(DMA_TX_CHANNELS)-1 downto 0);
+    signal eth_tx_mvb_timestamp_vld      : std_logic_vector(ETH_STREAMS*ETH_MFB_REGIONS*48-1 downto 0);
+    signal eth_tx_mvb_vld                : std_logic_vector(ETH_STREAMS-1 downto 0);
+
     signal tsu_clk                       : std_logic;
     signal tsu_rst                       : std_logic;
     signal tsu_freq                      : std_logic_vector(31 downto 0);
@@ -1329,6 +1333,10 @@ begin
         ETH_TX_MFB_SRC_RDY => eth_tx_mfb_src_rdy,
         ETH_TX_MFB_DST_RDY => eth_tx_mfb_dst_rdy,
 
+        ETH_TX_MVB_CHANNEL   => eth_tx_mvb_channel,
+        ETH_TX_MVB_TIMESTAMP => eth_tx_mvb_timestamp_vld,
+        ETH_TX_MVB_VLD       => eth_tx_mvb_vld,
+
         DMA_RX_MVB_LEN      => app_dma_rx_mvb_len,
         DMA_RX_MVB_HDR_META => app_dma_rx_mvb_hdr_meta,
         DMA_RX_MVB_CHANNEL  => app_dma_rx_mvb_channel,
@@ -1465,6 +1473,9 @@ begin
         MI_DATA_WIDTH_PHY => 32             ,
         MI_ADDR_WIDTH_PHY => 32             ,
 
+        TS_DEMO_EN        => TS_DEMO_EN     ,
+        TX_DMA_CHANNELS   => DMA_TX_CHANNELS,
+
         LANE_RX_POLARITY  => ETH_LANE_RXPOLARITY,
         LANE_TX_POLARITY  => ETH_LANE_TXPOLARITY,
         RESET_WIDTH       => 1              ,
@@ -1516,6 +1527,10 @@ begin
         RX_MFB_EOF      => eth_tx_mfb_eof,
         RX_MFB_SRC_RDY  => eth_tx_mfb_src_rdy,
         RX_MFB_DST_RDY  => eth_tx_mfb_dst_rdy,
+
+        ETH_TX_MVB_CHANNEL   => eth_tx_mvb_channel,
+        ETH_TX_MVB_TIMESTAMP => eth_tx_mvb_timestamp_vld,
+        ETH_TX_MVB_VLD       => eth_tx_mvb_vld,
 
         TX_MFB_DATA     => eth_rx_mfb_data,
         TX_MFB_SOF_POS  => eth_rx_mfb_sof_pos,

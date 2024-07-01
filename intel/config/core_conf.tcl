@@ -148,3 +148,6 @@ set DMA_DEBUG_ENABLE       false
 set PCIE_CORE_DEBUG_ENABLE false
 # Enables debug probes in the PCIe Module (PCIe Ctrl)
 set PCIE_CTRL_DEBUG_ENABLE false
+
+# Enables Timstamp limit demo/testing logic
+set TS_DEMO_EN             false

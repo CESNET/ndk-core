@@ -57,6 +57,8 @@ generic(
     -- =====================================================================
     -- Other configuration:
     -- =====================================================================
+    TS_DEMO_EN        : boolean := false;
+    TX_DMA_CHANNELS   : natural := 8;
     -- GTY TX equalization bits: 59:40 - precursor,
     --                           39:20 - postcursor,
     --                           19:0  - drive (swing)
@@ -104,6 +106,15 @@ port(
     RX_MFB_SRC_RDY  : in  std_logic_vector(ETH_PORT_CHAN-1 downto 0);
     RX_MFB_DST_RDY  : out std_logic_vector(ETH_PORT_CHAN-1 downto 0);
 
+    -- This interface is to transmit Channel IDs and Timestamps of packets
+    -- from the APP Core to the demo/testing logic in the Network Mod Core (E-Tile).
+    RX_MVB_CHANNEL   : in  std_logic_vector(REGIONS*log2(TX_DMA_CHANNELS)-1 downto 0);
+    RX_MVB_TIMESTAMP : in  std_logic_vector(REGIONS*48-1 downto 0);
+    RX_MVB_VLD       : in  std_logic_vector(REGIONS-1 downto 0);
+
+    TSU_TS_NS        : in  std_logic_vector(64-1 downto 0);
+    TSU_TS_DV        : in  std_logic;
+    
     -- =====================================================================
     -- TX interface (Packets received from Ethernet, for transmit to MFB)
     -- =====================================================================
@@ -120,8 +131,8 @@ port(
     -- =====================================================================
     MI_CLK_PHY      : in  std_logic;
     MI_RESET_PHY    : in  std_logic;
-    MI_DWR_PHY      : in  std_logic_vector(MI_ADDR_WIDTH_PHY-1 downto 0);
-    MI_ADDR_PHY     : in  std_logic_vector(MI_DATA_WIDTH_PHY-1 downto 0);
+    MI_DWR_PHY      : in  std_logic_vector(MI_DATA_WIDTH_PHY-1 downto 0);
+    MI_ADDR_PHY     : in  std_logic_vector(MI_ADDR_WIDTH_PHY-1 downto 0);
     MI_RD_PHY       : in  std_logic;
     MI_WR_PHY       : in  std_logic;
     MI_BE_PHY       : in  std_logic_vector(MI_DATA_WIDTH_PHY/8-1 downto 0);
