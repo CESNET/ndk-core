@@ -1521,6 +1521,9 @@ begin
             TSU_TS_NS     => TSU_TS_NS                             ,
             TSU_TS_DV     => TSU_TS_DV                             ,
 
+            MI_CLK        => MI_CLK_PHY                            ,
+            MI_RESET      => MI_RESET_PHY                          ,
+
             MI_DWR        => split_mi_dwr_phy (MI_ADDR_BASES_PHY-1),
             MI_ADDR       => split_mi_addr_phy(MI_ADDR_BASES_PHY-1),
             MI_RD         => split_mi_rd_phy  (MI_ADDR_BASES_PHY-1),
