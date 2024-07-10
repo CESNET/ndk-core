@@ -597,7 +597,7 @@ architecture FULL of FPGA_COMMON is
 
     signal eth_tx_mvb_channel            : std_logic_vector(ETH_STREAMS*ETH_MFB_REGIONS*log2(DMA_TX_CHANNELS)-1 downto 0);
     signal eth_tx_mvb_timestamp_vld      : std_logic_vector(ETH_STREAMS*ETH_MFB_REGIONS*48-1 downto 0);
-    signal eth_tx_mvb_vld                : std_logic_vector(ETH_STREAMS-1 downto 0);
+    signal eth_tx_mvb_vld                : std_logic_vector(ETH_STREAMS*ETH_MFB_REGIONS-1 downto 0);
 
     signal tsu_clk                       : std_logic;
     signal tsu_rst                       : std_logic;
