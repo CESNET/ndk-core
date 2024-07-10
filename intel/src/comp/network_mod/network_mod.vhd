@@ -197,9 +197,9 @@ architecture FULL of NETWORK_MOD is
     signal demo_asfifo_wr           : std_logic_vector(ETH_PORTS-1 downto 0);
     signal demo_asfifo_dout         : slv_array_t     (ETH_PORTS-1 downto 0)(REGIONS*(max(1,log2(TX_DMA_CHANNELS))+48+1)-1 downto 0);
     signal demo_asfifo_empty        : std_logic_vector(ETH_PORTS-1 downto 0);
-    signal mvb_ch                   : slv_array_t     (ETH_PORTS-1 downto 0)(REGIONS*max(1,log2(TX_DMA_CHANNELS))-1 downto 0);
-    signal mvb_ts                   : slv_array_t     (ETH_PORTS-1 downto 0)(REGIONS*48-1 downto 0);
-    signal mvb_vld                  : slv_array_t     (ETH_PORTS-1 downto 0)(REGIONS-1 downto 0);
+    signal mvb_ch                   : slv_array_t     (ETH_PORTS-1 downto 0)(REGIONS_CORE*max(1,log2(TX_DMA_CHANNELS))-1 downto 0);
+    signal mvb_ts                   : slv_array_t     (ETH_PORTS-1 downto 0)(REGIONS_CORE*48-1 downto 0);
+    signal mvb_vld                  : slv_array_t     (ETH_PORTS-1 downto 0)(REGIONS_CORE-1 downto 0);
 
 begin
 
@@ -582,45 +582,53 @@ begin
         -- =====================================================================
         -- DEMO ASFIFOX for DMA Channels
         -- =====================================================================
+        -- WARNING: This logic only supports E-Tile where REGIONS == REGIONS_CORE.
 
-        eth_tx_mvb_channel_arr   <= slv_array_deser(ETH_TX_MVB_CHANNEL, ETH_PORTS);
-        eth_tx_mvb_timestamp_arr <= slv_array_deser(ETH_TX_MVB_TIMESTAMP, ETH_PORTS);
-        eth_tx_mvb_vld_arr       <= slv_array_deser(ETH_TX_MVB_VLD, ETH_PORTS);
+        ts_demo_en_g : if TS_DEMO_EN generate
+            eth_tx_mvb_channel_arr   <= slv_array_deser(ETH_TX_MVB_CHANNEL, ETH_PORTS);
+            eth_tx_mvb_timestamp_arr <= slv_array_deser(ETH_TX_MVB_TIMESTAMP, ETH_PORTS);
+            eth_tx_mvb_vld_arr       <= slv_array_deser(ETH_TX_MVB_VLD, ETH_PORTS);
 
-        -- Sloppy serialization (and deserialization) - do not use elsewhere
-        demo_asfifo_din(p) <= eth_tx_mvb_channel_arr(p) & eth_tx_mvb_timestamp_arr(p) & eth_tx_mvb_vld_arr(p);
-        demo_asfifo_wr(p) <= or eth_tx_mvb_vld_arr(p);
+            -- Sloppy serialization (and deserialization) - do not use elsewhere
+            demo_asfifo_din(p) <= eth_tx_mvb_channel_arr(p) & eth_tx_mvb_timestamp_arr(p) & eth_tx_mvb_vld_arr(p);
+            demo_asfifo_wr(p) <= or eth_tx_mvb_vld_arr(p);
 
-        demo_asfifox_i : entity work.ASFIFOX
-        generic map(
-            DATA_WIDTH => REGIONS*(max(1,log2(TX_DMA_CHANNELS))+48+1),
-            ITEMS      => 8     ,
-            RAM_TYPE   => "LUT" ,
-            FWFT_MODE  => true  ,
-            OUTPUT_REG => true  ,
-            DEVICE     => DEVICE
-        )
-        port map (
-            WR_CLK    => CLK_USER               ,
-            WR_RST    => RESET_USER       (0)   ,
-            WR_DATA   => demo_asfifo_din  (p)   ,
-            WR_EN     => demo_asfifo_wr   (p)   ,
-            WR_FULL   => open                   ,
-            WR_AFULL  => open                   ,
-            WR_STATUS => open                   ,
+            demo_asfifox_i : entity work.ASFIFOX
+            generic map(
+                DATA_WIDTH => REGIONS*(max(1,log2(TX_DMA_CHANNELS))+48+1),
+                ITEMS      => 8     ,
+                RAM_TYPE   => "LUT" ,
+                FWFT_MODE  => true  ,
+                OUTPUT_REG => true  ,
+                DEVICE     => DEVICE
+            )
+            port map (
+                WR_CLK    => CLK_USER               ,
+                WR_RST    => RESET_USER       (0)   ,
+                WR_DATA   => demo_asfifo_din  (p)   ,
+                WR_EN     => demo_asfifo_wr   (p)   ,
+                WR_FULL   => open                   ,
+                WR_AFULL  => open                   ,
+                WR_STATUS => open                   ,
 
-            RD_CLK    => CLK_ETH          (p)   ,
-            RD_RST    => repl_rst_arr     (p)(1),
-            RD_DATA   => demo_asfifo_dout (p)   ,
-            RD_EN     => '1'                    ,
-            RD_EMPTY  => demo_asfifo_empty(p)   ,
-            RD_AEMPTY => open                   ,
-            RD_STATUS => open
-        );
+                RD_CLK    => CLK_ETH          (p)   ,
+                RD_RST    => repl_rst_arr     (p)(1),
+                RD_DATA   => demo_asfifo_dout (p)   ,
+                RD_EN     => '1'                    ,
+                RD_EMPTY  => demo_asfifo_empty(p)   ,
+                RD_AEMPTY => open                   ,
+                RD_STATUS => open
+            );
 
-        mvb_ch (p) <= demo_asfifo_dout(p)(REGIONS*(max(1,log2(TX_DMA_CHANNELS))+48+1)-1 downto REGIONS*(48+1));
-        mvb_ts (p) <= demo_asfifo_dout(p)(REGIONS*(48+1)-1 downto REGIONS);
-        mvb_vld(p) <= demo_asfifo_dout(p)(REGIONS-1 downto 0) and not demo_asfifo_empty(p);
+            mvb_ch (p) <= demo_asfifo_dout(p)(REGIONS*(max(1,log2(TX_DMA_CHANNELS))+48+1)-1 downto REGIONS*(48+1));
+            mvb_ts (p) <= demo_asfifo_dout(p)(REGIONS*(48+1)-1 downto REGIONS);
+            mvb_vld(p) <= demo_asfifo_dout(p)(REGIONS-1 downto 0) and not demo_asfifo_empty(p);
+            -- TODO add conversion from REGIONS to REGIONS_CORE...
+        else generate
+            mvb_ch (p) <= (others => '0');
+            mvb_ts (p) <= (others => '0');
+            mvb_vld(p) <= (others => '0');
+        end generate;
     end generate;
 
     ACTIVITY_RX <= slv_array_ser(sig_activity_rx);
