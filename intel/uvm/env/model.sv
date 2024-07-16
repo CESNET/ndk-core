@@ -18,7 +18,8 @@ class packet_header #(WIDTH, CHANNELS, PKT_MTU);
     function string convert2string();
         string msg;
 
-        $swrite(msg, "\n\tmeta %h\n\tchannel %0d\n\tpacket size %0d\n\tdiscard %b", meta, channel, packet_size, discard);
+        msg = {msg, $sformatf("\n\tPacket form %h", {discard, channel, meta, packet_size})}; 
+        msg = {msg, $sformatf("\n\tmeta %h\n\tchannel %0d\n\tpacket size %0d\n\tdiscard %b", meta, channel, packet_size, discard)};
         return msg;
     endfunction
 endclass

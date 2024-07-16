@@ -1,29 +1,19 @@
-/*
- * file       : agent.sv
- * Copyright (C) 2021 CESNET z. s. p. o.
- * description: top_agent
- * date       : 2021
- * author     : Radek Iša <isa@cesnet.cz>
- *
- * SPDX-License-Identifier: BSD-3-Clause
-*/
+//-- driver.sv: Clone packet transaction to mfb and mvb
+//-- Copyright (C) 2024 CESNET z. s. p. o.
+//-- Author(s): Radek Iša <isa@cesnet.cz>
 
-class driver#(ITEM_WIDTH) extends uvm_driver #(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH));
-    // registration of component tools
-    `uvm_component_param_utils(uvm_app_core_top_agent::driver#(ITEM_WIDTH))
+//-- SPDX-License-Identifier: BSD-3-Clause 
+
+
+class driver#(ITEM_WIDTH, META_WIDTH) extends uvm_driver #(sequence_item#(ITEM_WIDTH, META_WIDTH));
+    `uvm_component_param_utils(uvm_app_core_top_agent::driver#(ITEM_WIDTH, META_WIDTH))
 
     //RESET reset_sync
     uvm_reset::sync_terminate reset_sync;
 
-    uvm_logic_vector_array::sequence_item#(ITEM_WIDTH) m_sequencer;
-    mailbox#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)) logic_vector_array_export;
-    mailbox#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)) header_export;
-
     // Contructor, where analysis port is created.
     function new(string name, uvm_component parent = null);
         super.new(name, parent);
-        logic_vector_array_export = new(10);
-        header_export     = new(10);
         reset_sync = new();
     endfunction: new
 
@@ -32,19 +22,27 @@ class driver#(ITEM_WIDTH) extends uvm_driver #(uvm_logic_vector_array::sequence_
     // -----------------------
 
     task run_phase(uvm_phase phase);
-        uvm_logic_vector_array::sequence_item#(ITEM_WIDTH) clone_item;
+        uvm_common::fifo#(sequence_item#(ITEM_WIDTH, META_WIDTH)) fifo_mvb;
+        uvm_common::fifo#(sequence_item#(ITEM_WIDTH, META_WIDTH)) fifo_mfb;
+
+        assert (uvm_config_db#(uvm_common::fifo#(sequence_item#(ITEM_WIDTH, META_WIDTH)))::get(this, "", "fifo_mvb", fifo_mvb)) else begin
+            `uvm_fatal(this.get_full_name(), "\n\tCannot get mvb fifo");
+        end
+
+        assert (uvm_config_db#(uvm_common::fifo#(sequence_item#(ITEM_WIDTH, META_WIDTH)))::get(this, "", "fifo_mfb", fifo_mfb)) else begin
+            `uvm_fatal(this.get_full_name(), "\n\tCannot get mfb fifo");
+        end
+
 
         forever begin
+            sequence_item#(ITEM_WIDTH, META_WIDTH) gen;
+
             // Get new sequence item to drive to interface
-            wait((logic_vector_array_export.num() < 10 &&  header_export.num() < 10) || reset_sync.is_reset());
+            wait((fifo_mvb.size() < 20 && fifo_mfb.size() < 20) || reset_sync.is_reset());
             if (reset_sync.has_been_reset()) begin
-                uvm_logic_vector_array::sequence_item#(ITEM_WIDTH) tmp;
 
-                while (logic_vector_array_export.try_get(tmp)) begin
-                end
-
-                while (header_export.try_get(tmp)) begin
-                end
+                fifo_mvb.flush();
+                fifo_mfb.flush();
 
                 while(reset_sync.has_been_reset() != 0) begin
                     #(40ns);
@@ -52,9 +50,10 @@ class driver#(ITEM_WIDTH) extends uvm_driver #(uvm_logic_vector_array::sequence_
             end
 
             seq_item_port.get_next_item(req);
-            $cast(clone_item, req.clone());
-            logic_vector_array_export.put(clone_item);
-            header_export.put(clone_item);
+            $cast(gen, req.clone());
+
+            fifo_mvb.push_back(gen);
+            fifo_mfb.push_back(gen);
             seq_item_port.item_done();
         end
     endtask

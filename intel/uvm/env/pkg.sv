@@ -27,6 +27,8 @@ package uvm_app_core;
     `include "scoreboard.sv"
     `include "env.sv"
 
+    `include "sequence.sv"
+
 endpackage
 
 `endif
