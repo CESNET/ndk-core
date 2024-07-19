@@ -46,10 +46,10 @@ if {$ARCHGRP == "USP" || $ARCHGRP == "USP_PCIE4C" || $ARCHGRP == "USP_PCIE4"} {
     lappend MOD "$ENTITY_BASE/tbench/pcie_intel/pkg.sv"
     lappend COMPONENTS [ list "SV_LOGIC_VECTOR_ARRAY_AVST"   "$OFM_PATH/comp/uvm/logic_vector_array_avst"   "FULL"]
     lappend MOD "$ENTITY_BASE/tbench/testbench_intel.sv"
+} elseif {$ARCHGRP == "R_TILE"} {
+    lappend MOD "$ENTITY_BASE/tbench/pcie_intel/pkg.sv"
+    lappend MOD "$ENTITY_BASE/tbench/pcie_intel_r_tile/pkg.sv"
+    lappend COMPONENTS [ list "SV_LOGIC_VECTOR_ARRAY_AVST" "$OFM_PATH/comp/uvm/logic_vector_array_avst" "FULL"]
+    lappend COMPONENTS [ list "SV_AVST_CRDT"               "$OFM_PATH/comp/uvm/avst_crdt"               "FULL"]
+    lappend MOD "$ENTITY_BASE/tbench/testbench_intel_r_tile.sv"
 }
-#elseif {$ARCHGRP == "R_TILE"} {
-#    lappend COMPONENTS [ list "PCIE_CII2CFG" "$PCIE_COMP_BASE/pcie_cii2cfg" "FULL" ]
-#    lappend COMPONENTS [ list "PCIE_CRDT"    "$PCIE_COMP_BASE/pcie_crdt"    "FULL" ]
-#    lappend MOD "$ENTITY_BASE/pcie_core_rtile.vhd"
-#}
-

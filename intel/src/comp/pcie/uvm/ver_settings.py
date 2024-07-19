@@ -35,7 +35,7 @@ SETTINGS = {
         "PCIE_ENDPOINT_TYPE"   : "\\\"P_TILE\\\""    ,
         "__core_params__"          : {"PCIE_TYPE" : "P_TILE"},
     },
-    "intel_p_tyle" : {
+    "intel_p_tile" : {
         "RQ_MFB_REGIONS"       : "2"                 ,
         "RQ_MFB_REGION_SIZE"   : "1"                 ,
         "RQ_MFB_BLOCK_SIZE"    : "8"                 ,
@@ -60,7 +60,7 @@ SETTINGS = {
         "PCIE_ENDPOINT_TYPE"   : "\\\"P_TILE\\\""    ,
         "__core_params__"          : {"PCIE_TYPE" : "P_TILE"},
     },
-    "intel_p_tyle_bifur" : {
+    "intel_p_tile_bifur" : {
         "RQ_MFB_REGIONS"       : "2"                 ,
         "RQ_MFB_REGION_SIZE"   : "1"                 ,
         "RQ_MFB_BLOCK_SIZE"    : "8"                 ,
@@ -85,7 +85,7 @@ SETTINGS = {
         "PCIE_ENDPOINT_TYPE"   : "\\\"P_TILE\\\""    ,
         "__core_params__"          : {"PCIE_TYPE" : "P_TILE"},
     },
-    "intel_p_tyle_bifur2" : {
+    "intel_p_tile_bifur2" : {
         "RQ_MFB_REGIONS"       : "2"                 ,
         "RQ_MFB_REGION_SIZE"   : "1"                 ,
         "RQ_MFB_BLOCK_SIZE"    : "8"                 ,
@@ -111,6 +111,81 @@ SETTINGS = {
         "__core_params__"          : {"PCIE_TYPE" : "P_TILE"},
     },
 
+    "intel_r_tile" : {
+        "RQ_MFB_REGIONS"       : "2",
+        "RQ_MFB_REGION_SIZE"   : "1",
+        "RQ_MFB_BLOCK_SIZE"    : "8",
+
+        "RC_MFB_REGIONS"       : "2",
+        "RC_MFB_REGION_SIZE"   : "1",
+        "RC_MFB_BLOCK_SIZE"    : "8",
+
+        "CQ_MFB_REGIONS"       : "4",
+        "CQ_MFB_REGION_SIZE"   : "1",
+        "CQ_MFB_BLOCK_SIZE"    : "8",
+
+        "CC_MFB_REGIONS"       : "4",
+        "CC_MFB_REGION_SIZE"   : "1",
+        "CC_MFB_BLOCK_SIZE"    : "8",
+
+        "PCIE_ENDPOINT_MODE"   : 0,
+        "PCIE_ENDPOINTS"       : 1,
+        "PCIE_CONS"            : 1,
+
+        "DEVICE"               : "\\\"AGILEX\\\"",
+        "PCIE_ENDPOINT_TYPE"   : "\\\"R_TILE\\\"",
+        "__core_params__"      : {"PCIE_TYPE" : "R_TILE"},
+    },
+    "intel_r_tile_bifur" : {
+        "RQ_MFB_REGIONS"       : "4",
+        "RQ_MFB_REGION_SIZE"   : "1",
+        "RQ_MFB_BLOCK_SIZE"    : "8",
+
+        "RC_MFB_REGIONS"       : "4",
+        "RC_MFB_REGION_SIZE"   : "1",
+        "RC_MFB_BLOCK_SIZE"    : "8",
+
+        "CQ_MFB_REGIONS"       : "4",
+        "CQ_MFB_REGION_SIZE"   : "1",
+        "CQ_MFB_BLOCK_SIZE"    : "8",
+
+        "CC_MFB_REGIONS"       : "4",
+        "CC_MFB_REGION_SIZE"   : "1",
+        "CC_MFB_BLOCK_SIZE"    : "8",
+
+        "PCIE_ENDPOINT_MODE"   : 1,
+        "PCIE_ENDPOINTS"       : 2,
+        "PCIE_CONS"            : 1,
+
+        "DEVICE"               : "\\\"AGILEX\\\"",
+        "PCIE_ENDPOINT_TYPE"   : "\\\"R_TILE\\\"",
+        "__core_params__"      : {"PCIE_TYPE" : "R_TILE"},
+    },
+    "intel_r_tile_bifur2" : {
+        "RQ_MFB_REGIONS"       : "4",
+        "RQ_MFB_REGION_SIZE"   : "1",
+        "RQ_MFB_BLOCK_SIZE"    : "8",
+
+        "RC_MFB_REGIONS"       : "4",
+        "RC_MFB_REGION_SIZE"   : "1",
+        "RC_MFB_BLOCK_SIZE"    : "8",
+
+        "CQ_MFB_REGIONS"       : "4",
+        "CQ_MFB_REGION_SIZE"   : "1",
+        "CQ_MFB_BLOCK_SIZE"    : "8",
+
+        "CC_MFB_REGIONS"       : "4",
+        "CC_MFB_REGION_SIZE"   : "1",
+        "CC_MFB_BLOCK_SIZE"    : "8",
+
+        "PCIE_ENDPOINT_MODE"   : 1,
+        "PCIE_ENDPOINTS"       : 4,
+        "PCIE_CONS"            : 2,
+
+        "DEVICE"               : "\\\"AGILEX\\\"",
+        "PCIE_ENDPOINT_TYPE"   : "\\\"R_TILE\\\"",
+        "__core_params__"      : {"PCIE_TYPE" : "R_TILE"},
+    },
 
     "ultrascale" : {
         "RQ_MFB_REGIONS"       : "2"                 ,
@@ -145,30 +220,15 @@ SETTINGS = {
         "DMA_PORTS"            : 16,
     },
     "_combinations_" : {
-        "INTEL_P_TILE"        : ("intel_p_tyle",                  ),
-        "INTEL_P_TILE_DMA_16" : ("intel_p_tyle", "dma_ports_16",  ),
-        "INTEL_P_TILE_BIFUR"  : ("intel_p_tyle_bifur",            ),
-        "INTEL_P_TILE_BIFUR2" : ("intel_p_tyle_bifur2",           ),
-        "XILINX"              : ("ultrascale",                    ) ,
-        "XILINX_DMA_16"       : ("ultrascale", "dma_ports_16",    ) ,
+        "INTEL_P_TILE"        : ("intel_p_tile",                ),
+        "INTEL_P_TILE_DMA_16" : ("intel_p_tile", "dma_ports_16",),
+        "INTEL_P_TILE_BIFUR"  : ("intel_p_tile_bifur",          ),
+        "INTEL_P_TILE_BIFUR2" : ("intel_p_tile_bifur2",         ),
+        "INTEL_R_TILE"        : ("intel_r_tile",                ),
+        "INTEL_R_TILE_DMA_16" : ("intel_r_tile", "dma_ports_16",),
+        "INTEL_R_TILE_BIFUR"  : ("intel_r_tile_bifur",          ),
+        "INTEL_R_TILE_BIFUR2" : ("intel_r_tile_bifur2",         ),
+        "XILINX"              : ("ultrascale",                  ),
+        "XILINX_DMA_16"       : ("ultrascale", "dma_ports_16",  ),
     },
 }
-
-# TODO: combination
-#bifur_r_tile{
-#    endpoint_mode 1;
-#    dma_port      1;
-#    endpoind      2;
-#    connections   1;
-#    endpoint_type R_TILE
-#    device        AGILEX
-#}
-
-#r_tile{
-#    endpoint_mode 0;
-#    dma_port      4;
-#    endpoind      1;
-#    connections   1;
-#    endpoint_type R_TILE
-#    device        AGILEX
-#}
