@@ -6,32 +6,16 @@
 
 source "./signals.fdo"
 
-add_wave "-noupdate -color yellow -label RST"   /testbench/RST
-add_wave "-noupdate -color yellow -label CLK"   /testbench/CLK
+add_wave "-noupdate -color yellow -label PCIE_USER_CLK"   /testbench/PCIE_USER_CLK
+add_wave "-noupdate -color yellow -label PCIE_USER_RESET" /testbench/PCIE_USER_RESET
+add_wave "-noupdate -color yellow -label DMA_CLK"   /testbench/DMA_CLK
+add_wave "-noupdate -color yellow -label DMA_RESET" /testbench/DMA_RESET
 
 all PCIE /testbench/DUT_U/VHDL_DUT_U
-
 all PCIE_CORE testbench/DUT_U/VHDL_DUT_U/pcie_core_i
-all PCIE_ADAPTER testbench/DUT_U/VHDL_DUT_U/pcie_core_i/pcie_adapter_g(0)/pcie_adapter_i
-all PTC testbench/DUT_U//VHDL_DUT_U/pcie_ctrl_g(0)/pcie_ctrl_i/ptc_g/ptc_i
 
-
-#add wave -divider "INTERFACES"
-#add wave -noupdate -group CQ_AXI -position insertpoint {sim:/testbench/cq_axi[0]/*}
-#add wave -noupdate -group CC_AXI -position insertpoint {sim:/testbench/cc_axi[0]/*}
-#add wave -noupdate -group RQ_AXI -position insertpoint {sim:/testbench/rq_axi[0]/*}
-#add wave -noupdate -group RC_AXI -position insertpoint {sim:/testbench/rc_axi[0]/*}
-
-#add wave -noupdate -group AVST_UP   -position insertpoint {sim:/testbench/avst_up[0]/*}
-#add wave -noupdate -group AVST_DOWN -position insertpoint {sim:/testbench/avst_down[0]/*}
-
-#add wave -noupdate -group RQ_MFB -position insertpoint {sim:/testbench/dma_rq_mfb[0]/*}
-#add wave -noupdate -group RQ_MVB -position insertpoint {sim:/testbench/dma_rq_mvb[0]/*}
-#add wave -noupdate -group RC_MFB -position insertpoint {sim:/testbench/dma_rc_mfb[0]/*}
-#add wave -noupdate -group RC_MVB -position insertpoint {sim:/testbench/dma_rc_mvb[0]/*}
-#
-#add wave -noupdate -group CQ_MFB -position insertpoint {sim:/testbench/dma_cq_mfb[0]/*}
-#add wave -noupdate -group CC_MFB -position insertpoint {sim:/testbench/dma_cc_mfb[0]/*}
-#
-#add wave -noupdate -group MI -position insertpoint {sim:/testbench/config_mi[0]/*}
-
+for {set it 0} {$it < 4} {incr it} {
+    all PCIE_ADAPTER\[$it\] testbench/DUT_U/VHDL_DUT_U/pcie_core_i/pcie_adapter_g($it)/pcie_adapter_i
+    all PTC\[$it\] testbench/DUT_U//VHDL_DUT_U/pcie_ctrl_g($it)/pcie_ctrl_i/ptc_g/ptc_i
+    all MTC\[$it\] testbench/DUT_U//VHDL_DUT_U/pcie_ctrl_g($it)/pcie_ctrl_i/mtc_i
+}

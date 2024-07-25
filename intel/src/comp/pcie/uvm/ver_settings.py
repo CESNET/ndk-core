@@ -35,7 +35,7 @@ SETTINGS = {
         "PCIE_ENDPOINT_TYPE"   : "\\\"P_TILE\\\""    ,
         "__core_params__"          : {"PCIE_TYPE" : "P_TILE"},
     },
-    "intel_p_tile" : {
+    "intel_p_tile_512" : {
         "RQ_MFB_REGIONS"       : "2"                 ,
         "RQ_MFB_REGION_SIZE"   : "1"                 ,
         "RQ_MFB_BLOCK_SIZE"    : "8"                 ,
@@ -55,12 +55,13 @@ SETTINGS = {
         "PCIE_ENDPOINT_MODE"   : 0,
         "PCIE_ENDPOINTS"       : 1,
         "PCIE_CONS"            : 1,
+        "DMA_PORTS"            : 2,
 
         "DEVICE"               : "\\\"AGILEX\\\"" ,
         "PCIE_ENDPOINT_TYPE"   : "\\\"P_TILE\\\""    ,
         "__core_params__"          : {"PCIE_TYPE" : "P_TILE"},
     },
-    "intel_p_tile_bifur" : {
+    "intel_p_tile_256_bif" : {
         "RQ_MFB_REGIONS"       : "2"                 ,
         "RQ_MFB_REGION_SIZE"   : "1"                 ,
         "RQ_MFB_BLOCK_SIZE"    : "8"                 ,
@@ -80,38 +81,13 @@ SETTINGS = {
         "PCIE_ENDPOINT_MODE"   : 1,
         "PCIE_ENDPOINTS"       : 2,
         "PCIE_CONS"            : 1,
+        "DMA_PORTS"            : 1,
 
         "DEVICE"               : "\\\"AGILEX\\\"" ,
         "PCIE_ENDPOINT_TYPE"   : "\\\"P_TILE\\\""    ,
         "__core_params__"          : {"PCIE_TYPE" : "P_TILE"},
     },
-    "intel_p_tile_bifur2" : {
-        "RQ_MFB_REGIONS"       : "2"                 ,
-        "RQ_MFB_REGION_SIZE"   : "1"                 ,
-        "RQ_MFB_BLOCK_SIZE"    : "8"                 ,
-
-        "RC_MFB_REGIONS"       : "2"                 ,
-        "RC_MFB_REGION_SIZE"   : "1"                 ,
-        "RC_MFB_BLOCK_SIZE"    : "8"                 ,
-
-        "CQ_MFB_REGIONS"       : "1"                 ,
-        "CQ_MFB_REGION_SIZE"   : "1"                 ,
-        "CQ_MFB_BLOCK_SIZE"    : "8"                 ,
-
-        "CC_MFB_REGIONS"       : "1"                 ,
-        "CC_MFB_REGION_SIZE"   : "1"                 ,
-        "CC_MFB_BLOCK_SIZE"    : "8"                 ,
-
-        "PCIE_ENDPOINT_MODE"   : 1,
-        "PCIE_ENDPOINTS"       : 4,
-        "PCIE_CONS"            : 2,
-
-        "DEVICE"               : "\\\"AGILEX\\\"" ,
-        "PCIE_ENDPOINT_TYPE"   : "\\\"P_TILE\\\""    ,
-        "__core_params__"          : {"PCIE_TYPE" : "P_TILE"},
-    },
-
-    "intel_r_tile" : {
+    "intel_r_tile_1024" : {
         "RQ_MFB_REGIONS"       : "2",
         "RQ_MFB_REGION_SIZE"   : "1",
         "RQ_MFB_BLOCK_SIZE"    : "8",
@@ -131,63 +107,66 @@ SETTINGS = {
         "PCIE_ENDPOINT_MODE"   : 0,
         "PCIE_ENDPOINTS"       : 1,
         "PCIE_CONS"            : 1,
+        "DMA_PORTS"            : 4,
 
         "DEVICE"               : "\\\"AGILEX\\\"",
         "PCIE_ENDPOINT_TYPE"   : "\\\"R_TILE\\\"",
         "__core_params__"      : {"PCIE_TYPE" : "R_TILE"},
     },
-    "intel_r_tile_bifur" : {
-        "RQ_MFB_REGIONS"       : "4",
+    "intel_r_tile_512_bif" : {
+        "RQ_MFB_REGIONS"       : "2",
         "RQ_MFB_REGION_SIZE"   : "1",
         "RQ_MFB_BLOCK_SIZE"    : "8",
 
-        "RC_MFB_REGIONS"       : "4",
+        "RC_MFB_REGIONS"       : "2",
         "RC_MFB_REGION_SIZE"   : "1",
         "RC_MFB_BLOCK_SIZE"    : "8",
 
-        "CQ_MFB_REGIONS"       : "4",
+        "CQ_MFB_REGIONS"       : "2",
         "CQ_MFB_REGION_SIZE"   : "1",
         "CQ_MFB_BLOCK_SIZE"    : "8",
 
-        "CC_MFB_REGIONS"       : "4",
+        "CC_MFB_REGIONS"       : "2",
         "CC_MFB_REGION_SIZE"   : "1",
         "CC_MFB_BLOCK_SIZE"    : "8",
 
         "PCIE_ENDPOINT_MODE"   : 1,
         "PCIE_ENDPOINTS"       : 2,
         "PCIE_CONS"            : 1,
+        "DMA_PORTS"            : 2,
 
         "DEVICE"               : "\\\"AGILEX\\\"",
         "PCIE_ENDPOINT_TYPE"   : "\\\"R_TILE\\\"",
         "__core_params__"      : {"PCIE_TYPE" : "R_TILE"},
     },
-    "intel_r_tile_bifur2" : {
-        "RQ_MFB_REGIONS"       : "4",
+    "intel_r_tile_512_bif_2cons" : {
+        "RQ_MFB_REGIONS"       : "2",
         "RQ_MFB_REGION_SIZE"   : "1",
         "RQ_MFB_BLOCK_SIZE"    : "8",
 
-        "RC_MFB_REGIONS"       : "4",
+        "RC_MFB_REGIONS"       : "2",
         "RC_MFB_REGION_SIZE"   : "1",
         "RC_MFB_BLOCK_SIZE"    : "8",
 
-        "CQ_MFB_REGIONS"       : "4",
+        "CQ_MFB_REGIONS"       : "2",
         "CQ_MFB_REGION_SIZE"   : "1",
         "CQ_MFB_BLOCK_SIZE"    : "8",
 
-        "CC_MFB_REGIONS"       : "4",
+        "CC_MFB_REGIONS"       : "2",
         "CC_MFB_REGION_SIZE"   : "1",
         "CC_MFB_BLOCK_SIZE"    : "8",
 
         "PCIE_ENDPOINT_MODE"   : 1,
         "PCIE_ENDPOINTS"       : 4,
         "PCIE_CONS"            : 2,
+        "DMA_PORTS"            : 1,
 
         "DEVICE"               : "\\\"AGILEX\\\"",
         "PCIE_ENDPOINT_TYPE"   : "\\\"R_TILE\\\"",
         "__core_params__"      : {"PCIE_TYPE" : "R_TILE"},
     },
 
-    "ultrascale" : {
+    "xilinx_usp_512" : {
         "RQ_MFB_REGIONS"       : "2"                 ,
         "RQ_MFB_REGION_SIZE"   : "1"                 ,
         "RQ_MFB_BLOCK_SIZE"    : "8"                 ,
@@ -216,19 +195,17 @@ SETTINGS = {
         "__core_params__"          : {"PCIE_TYPE" : "USP"}     ,
     },
 
-    "dma_ports_16" : {
-        "DMA_PORTS"            : 16,
+    "dma_ports_2" : {
+        "DMA_PORTS"            : 2,
     },
+    
     "_combinations_" : {
-        "INTEL_P_TILE"        : ("intel_p_tile",                ),
-        "INTEL_P_TILE_DMA_16" : ("intel_p_tile", "dma_ports_16",),
-        "INTEL_P_TILE_BIFUR"  : ("intel_p_tile_bifur",          ),
-        "INTEL_P_TILE_BIFUR2" : ("intel_p_tile_bifur2",         ),
-        "INTEL_R_TILE"        : ("intel_r_tile",                ),
-        "INTEL_R_TILE_DMA_16" : ("intel_r_tile", "dma_ports_16",),
-        "INTEL_R_TILE_BIFUR"  : ("intel_r_tile_bifur",          ),
-        "INTEL_R_TILE_BIFUR2" : ("intel_r_tile_bifur2",         ),
-        "XILINX"              : ("ultrascale",                  ),
-        "XILINX_DMA_16"       : ("ultrascale", "dma_ports_16",  ),
+        "P_TILE_512"           : ("intel_p_tile_512",              ),
+        "P_TILE_256_BIF"       : ("intel_p_tile_256_bif",          ),
+        "R_TILE_1024"          : ("intel_r_tile_1024",             ),
+        "R_TILE_512_BIF"       : ("intel_r_tile_512_bif",          ),
+        "R_TILE_512_BIF_2CONS" : ("intel_r_tile_512_bif_2cons",    ),
+        "USP_512"              : ("xilinx_usp_512",                ),
+        "USP_512_DMA_2"        : ("xilinx_usp_512", "dma_ports_2", ),
     },
 }
