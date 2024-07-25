@@ -52,7 +52,7 @@ class tag_register#(int unsigned TAG_WIDTH) extends uvm_object;
 
     task get_dma2pcie(input logic type_tr, int unsigned dma_port, logic [TAG_WIDTH-1:0] dma_tag, logic [8-1:0] dma_unit_id, output logic [TAG_WIDTH-1:0] pcie_tag);
         `uvm_info(this.get_full_name(), $sformatf("\nTAG TRANSLATE DMA TO PCIE\n\ttype %0d\n\tdma port %0d \n\tdma tag %0d(0x%h)\n\tunit id %0d(0x%h)",
-                                                 type_tr, dma_port, dma_tag, dma_tag, dma_unit_id, dma_unit_id), UVM_DEBUG);
+                                                 type_tr, dma_port, dma_tag, dma_tag, dma_unit_id, dma_unit_id), UVM_FULL);
         if (type_tr == 0) begin
 
             wait(dma2pcie.exists({dma_unit_id, dma_tag}));
@@ -67,7 +67,7 @@ class tag_register#(int unsigned TAG_WIDTH) extends uvm_object;
     function dma_info_t get_pcie2dma(logic [TAG_WIDTH-1:0] pcie_tag, int unsigned last);
         dma_info_t info;
 
-        `uvm_info(this.get_full_name(), $sformatf("\nTAG TRANSLATE PCIE TO DMA \n\tpcie tag %0d(0x%h)\n\tlast %0d", pcie_tag, pcie_tag, last), UVM_DEBUG);
+        `uvm_info(this.get_full_name(), $sformatf("\nTAG TRANSLATE PCIE TO DMA \n\tpcie tag %0d(0x%h)\n\tlast %0d", pcie_tag, pcie_tag, last), UVM_FULL);
 
 
         if (!pcie2dma.exists(pcie_tag)) begin

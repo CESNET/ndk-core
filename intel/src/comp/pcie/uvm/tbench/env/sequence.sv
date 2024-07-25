@@ -33,7 +33,7 @@ class sequence_base #(
 
     protected int unsigned stop;
     //RQ
-    uvm_pcie_top::sequence_dma_rq#(PCIE_ENDPOINTS*DMA_PORTS) dma_rq[PCIE_ENDPOINTS][DMA_PORTS];
+    uvm_pcie_top::sequence_dma_rq#(DMA_PORTS) dma_rq[PCIE_ENDPOINTS][DMA_PORTS];
     //RC
     uvm_sequence #(uvm_mfb::sequence_item #(RC_MFB_REGIONS, RC_MFB_REGION_SIZE, RC_MFB_BLOCK_SIZE, ITEM_WIDTH, RC_MFB_META_W)) m_mfb_rc[PCIE_ENDPOINTS][DMA_PORTS];
     uvm_sequence #(uvm_mvb::sequence_item #(RC_MFB_REGIONS, sv_dma_bus_pack::DMA_DOWNHDR_WIDTH))                               m_mvb_rc[PCIE_ENDPOINTS][DMA_PORTS];
@@ -75,7 +75,7 @@ class sequence_base #(
                 uvm_mfb::sequence_lib_tx  #(CQ_MFB_REGIONS, CQ_MFB_REGION_SIZE, CQ_MFB_BLOCK_SIZE, ITEM_WIDTH, CQ_MFB_META_W)              m_mfb_cq_lib;
 
                 //RQ
-                dma_rq[pcie][dma] = uvm_pcie_top::sequence_dma_rq#(PCIE_ENDPOINTS*DMA_PORTS)::type_id::create("dma_rq", p_sequencer.m_dma_rq[pcie][dma]);
+                dma_rq[pcie][dma] = uvm_pcie_top::sequence_dma_rq#(DMA_PORTS)::type_id::create("dma_rq", p_sequencer.m_dma_rq[pcie][dma]);
 
                 //RC
                 m_mfb_rc_lib  = uvm_mfb::sequence_lib_tx#(RC_MFB_REGIONS, RC_MFB_REGION_SIZE, RC_MFB_BLOCK_SIZE, ITEM_WIDTH, RC_MFB_META_W)::type_id::create({"m_mfb_rc_lib_", dma_string}, p_sequencer.m_dma_rc_mfb[pcie][dma]);

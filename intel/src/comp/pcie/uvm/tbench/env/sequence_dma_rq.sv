@@ -34,13 +34,14 @@ class sequence_dma_rq#(DMA_PORTS) extends uvm_sequence#(uvm_dma::sequence_item_r
         req = uvm_dma::sequence_item_rq::type_id::create("req", m_sequencer);
 
         for (int unsigned it = 0; it < transactions; it++) begin
-            wait(info.tags[unit_id].size() < 256);
+            wait(info.tags[unit_id].size() < (256/DMA_PORTS));
             //uvm_logic_vector::sequence_item #(1) hl_tr;
             start_item(req);
+
             assert(req.randomize() with {
                 req.hdr.unitid == unit_id;
                 if (DMA_PORTS > 1) {
-                    req.hdr.tag[sv_dma_bus_pack::DMA_REQUEST_TAG_W-1 -: DMA_PORTS > 1 ? $clog2(DMA_PORTS) : 1] == unit_id;
+                    req.hdr.tag[sv_dma_bus_pack::DMA_REQUEST_TAG_W-1 -: $clog2(DMA_PORTS) > 1 ? $clog2(DMA_PORTS) : 1] == unit_id[($clog2(DMA_PORTS) > 1 ? $clog2(DMA_PORTS) : 1) -1:0];
                 }
                 (req.hdr.type_ide == 0) -> !(req.hdr.tag inside {info.tags[unit_id]});
                 req.hdr.firstib inside {0};
