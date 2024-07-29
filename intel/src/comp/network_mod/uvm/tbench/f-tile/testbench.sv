@@ -1,9 +1,8 @@
-// tbench.sv: Testbench
-// Copyright (C) 2023 CESNET z. s. p. o.
-// Author(s): Radek Iša <isa@cesnet.cz>
+// testbench.sv: Testbench for Intel F-Tile
+// Copyright (C) 2024 CESNET z. s. p. o.
+// Author(s): Yaroslav Marushchenko <xmarus09@stud.fit.vutbr.cz>
 
 // SPDX-License-Identifier: BSD-3-Clause
-
 
 import uvm_pkg::*;
 `include "uvm_macros.svh"
@@ -12,9 +11,18 @@ import tbench_param::*;
 
 module testbench;
 
+    localparam int unsigned SEGMENTS = ((tbench_param::ETH_PORT_SPEED[0] == 400) ? 16 :
+                                        (tbench_param::ETH_PORT_SPEED[0] == 200) ? 8  :
+                                        (tbench_param::ETH_PORT_SPEED[0] == 100) ? 4  :
+                                        (tbench_param::ETH_PORT_SPEED[0] == 50 ) ? 2  :
+                                        (tbench_param::ETH_PORT_SPEED[0] == 40 ) ? 2  :
+                                        (tbench_param::ETH_PORT_SPEED[0] == 25 ) ? 1  :
+                                        (tbench_param::ETH_PORT_SPEED[0] == 10 ) ? 1  :
+                                                                                   0  );
+
     //TESTS
-    typedef test::base#(ETH_PORTS, ETH_PORT_CHAN, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, REGIONS, REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, MI_DATA_WIDTH, MI_ADDR_WIDTH) base;
-    typedef test::speed#(ETH_PORTS, ETH_PORT_CHAN, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, REGIONS, REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, MI_DATA_WIDTH, MI_ADDR_WIDTH) speed;
+    typedef test::base  #(ETH_CORE_ARCH, ETH_PORTS, ETH_PORT_CHAN, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, REGIONS, REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, MI_DATA_WIDTH, MI_ADDR_WIDTH) base;
+    typedef test::speed #(ETH_CORE_ARCH, ETH_PORTS, ETH_PORT_CHAN, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, REGIONS, REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, MI_DATA_WIDTH, MI_ADDR_WIDTH) speed;
     //typedef test::ex_test#(MFB_REGIONS, MFB_REGION_SIZE, MFB_BLOCK_SIZE, MFB_ITEM_WIDTH, MFB_META_WIDTH) ex_test;
     //typedef test::speed#(MFB_REGIONS, MFB_REGION_SIZE, MFB_BLOCK_SIZE, MFB_ITEM_WIDTH, MFB_META_WIDTH)   speed;
 
@@ -39,10 +47,8 @@ module testbench;
     reset_if rst_mi_pmd        (CLK_MI_PMD);
     reset_if rst_tsu           (CLK_TSU);
 
-    //intel_mac_seg_if #(SEGMENTS) eth_rx[tbench_param::ETH_PORTS] (CLK_ETH);
-    // dut.sv turn data from LSB to MSB.
-    avst_if #(tbench_param::ETH_PORT_CHAN[0], 1, tbench_param::REGION_SIZE * tbench_param::BLOCK_SIZE, tbench_param::ITEM_WIDTH, 6) eth_rx[tbench_param::ETH_PORTS] (CLK_ETH[0]);
-    avst_if #(tbench_param::ETH_PORT_CHAN[0], 1, tbench_param::REGION_SIZE * tbench_param::BLOCK_SIZE, tbench_param::ITEM_WIDTH, 1) eth_tx[tbench_param::ETH_PORTS] (CLK_ETH[0]);
+    intel_mac_seg_if #(SEGMENTS) eth_rx[tbench_param::ETH_PORTS] (CLK_ETH);
+    intel_mac_seg_if #(SEGMENTS) eth_tx[tbench_param::ETH_PORTS] (CLK_ETH);
 
     mfb_if #(tbench_param::REGIONS, tbench_param::REGION_SIZE, tbench_param::BLOCK_SIZE, tbench_param::ITEM_WIDTH, tbench_param::ETH_TX_HDR_WIDTH) usr_rx     [tbench_param::ETH_PORTS](CLK_USR);
     mfb_if #(tbench_param::REGIONS, tbench_param::REGION_SIZE, tbench_param::BLOCK_SIZE, tbench_param::ITEM_WIDTH, 0)                              usr_tx_data[tbench_param::ETH_PORTS](CLK_USR);
@@ -54,16 +60,11 @@ module testbench;
 
     mvb_if #(1, 64) tsu(CLK_TSU);
 
-    // bind interfaces
-    //bind NETWORK_MOD_LOGIC : $root.testbench.DUT_U.VHDL_DUT_U.eth_core_g[0].network_mod_logic_i probe_inf #(2*USER_REGIONS) probe_drop(1'b1, '0, CLK_USER);
-    //bind NETWORK_MOD_LOGIC : DUT_U.VHDL_DUT_U.eth_core_g[1].network_mod_logic_i probe_inf #(2*USER_REGIONS) probe_drop(1'b1, '0, CLK_USER);
-
-    //for (genvar eth_it = 0; eth_it < tbench_param::ETH_PORTS; eth_it++) begin
-    //    for (genvar port_eth_it = 0; port_eth_it < tbench_param::ETH_PORT_CHAN[eth_it]; port_eth_it++) begin
-    //        bind RX_MAC_LITE_BUFFER : DUT_U.VHDL_DUT_U.eth_core_g[eth_it].network_mod_logic_i.mac_lites_g[port_eth_it].rx_mac_lite_i.buffer_i probe_inf #(2*REGIONS) probe_drop(s_rx_src_rdy_orig_reg, {s_rx_eof_orig_reg, s_rx_force_drop_reg}, RX_CLK);
-    //    end
-    //end
-    fix_bind#( .PORTS (tbench_param::ETH_PORTS), .CHANNELS(tbench_param::ETH_PORT_CHAN[0]), .REGIONS(tbench_param::REGIONS)) bind_i();
+    fix_bind #(
+        .PORTS        (tbench_param::ETH_PORTS       ),
+        .CHANNELS     (tbench_param::ETH_PORT_CHAN[0]),
+        .REGIONS      (tbench_param::REGIONS         )
+    ) bind_i();
 
     // -------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // Define clock ticking
@@ -84,8 +85,8 @@ module testbench;
         automatic virtual mfb_if #(tbench_param::REGIONS, tbench_param::REGION_SIZE, tbench_param::BLOCK_SIZE, tbench_param::ITEM_WIDTH, tbench_param::ETH_TX_HDR_WIDTH) vif_usr_rx     [tbench_param::ETH_PORTS] = usr_rx;
         automatic virtual mfb_if #(tbench_param::REGIONS, tbench_param::REGION_SIZE, tbench_param::BLOCK_SIZE, tbench_param::ITEM_WIDTH, 0)                              vif_usr_tx_data[tbench_param::ETH_PORTS] = usr_tx_data;
         automatic virtual mvb_if #(tbench_param::REGIONS, tbench_param::ETH_RX_HDR_WIDTH)                                                                                vif_usr_tx_hdr [tbench_param::ETH_PORTS] = usr_tx_hdr;
-        automatic virtual avst_if #(tbench_param::ETH_PORT_CHAN[0], 1, tbench_param::REGION_SIZE * tbench_param::BLOCK_SIZE, tbench_param::ITEM_WIDTH, 6)                vif_eth_rx     [tbench_param::ETH_PORTS] = eth_rx;
-        automatic virtual avst_if #(tbench_param::ETH_PORT_CHAN[0], 1, tbench_param::REGION_SIZE * tbench_param::BLOCK_SIZE, tbench_param::ITEM_WIDTH, 1)                vif_eth_tx     [tbench_param::ETH_PORTS] = eth_tx;
+        automatic virtual intel_mac_seg_if #(SEGMENTS)                                                                                             vif_eth_rx     [tbench_param::ETH_PORTS] = eth_rx;
+        automatic virtual intel_mac_seg_if #(SEGMENTS)                                                                                             vif_eth_tx     [tbench_param::ETH_PORTS] = eth_tx;
 
         // SET INTERFACE
         uvm_config_db#(virtual reset_if)::set(null, "", "vif_rst_usr", rst_usr);
@@ -101,8 +102,8 @@ module testbench;
             uvm_config_db#(virtual mfb_if #(tbench_param::REGIONS, tbench_param::REGION_SIZE, tbench_param::BLOCK_SIZE, tbench_param::ITEM_WIDTH, 0)                             )::set(null, "", $sformatf("vif_usr_tx_data_%0d", it), vif_usr_tx_data[it]);
             uvm_config_db#(virtual mvb_if #(tbench_param::REGIONS, tbench_param::ETH_RX_HDR_WIDTH)                                                                               )::set(null, "", $sformatf("vif_usr_tx_hdr_%0d", it) , vif_usr_tx_hdr[it]);
 
-            uvm_config_db#(virtual avst_if #(tbench_param::ETH_PORT_CHAN[0], 1, tbench_param::REGION_SIZE * tbench_param::BLOCK_SIZE, tbench_param::ITEM_WIDTH, 6))::set(null, "", $sformatf("vif_eth_rx_%0d", it) , vif_eth_rx[it]);
-            uvm_config_db#(virtual avst_if #(tbench_param::ETH_PORT_CHAN[0], 1, tbench_param::REGION_SIZE * tbench_param::BLOCK_SIZE, tbench_param::ITEM_WIDTH, 1))::set(null, "", $sformatf("vif_eth_tx_%0d", it) , vif_eth_tx[it]);        
+            uvm_config_db#(virtual intel_mac_seg_if #(SEGMENTS))::set(null, "", $sformatf("vif_eth_rx_%0d", it) , vif_eth_rx[it]);
+            uvm_config_db#(virtual intel_mac_seg_if #(SEGMENTS))::set(null, "", $sformatf("vif_eth_tx_%0d", it) , vif_eth_tx[it]);        
         end
         uvm_config_db#(virtual mi_if #(tbench_param::MI_DATA_WIDTH, tbench_param::MI_ADDR_WIDTH))::set(null, "", "vif_mi"    , mi);
         uvm_config_db#(virtual mi_if #(tbench_param::MI_DATA_WIDTH, tbench_param::MI_ADDR_WIDTH))::set(null, "", "vif_mi_phy", mi_phy);
@@ -112,10 +113,15 @@ module testbench;
         // Configuration of database
         m_root = uvm_root::get();
         m_root.finish_on_completion = 0;
-        m_root.set_report_id_action_hier("ILLEGALNAME",UVM_NO_ACTION);
+        m_root.set_report_id_action_hier("ILLEGALNAME", UVM_NO_ACTION);
 
         uvm_config_db#(int)            ::set(null, "", "recording_detail", 0);
         uvm_config_db#(uvm_bitstream_t)::set(null, "", "recording_detail", 0);
+
+        uvm_network_mod_env::env #(tbench_param::ETH_CORE_ARCH, tbench_param::ETH_PORTS, tbench_param::ETH_PORT_CHAN, tbench_param::ETH_TX_HDR_WIDTH, tbench_param::ETH_RX_HDR_WIDTH, tbench_param::REGIONS, tbench_param::REGION_SIZE, tbench_param::BLOCK_SIZE, tbench_param::ITEM_WIDTH, tbench_param::MI_DATA_WIDTH, tbench_param::MI_ADDR_WIDTH)::type_id::set_inst_override(
+            uvm_network_mod_f_tile_env::env #(tbench_param::ETH_CORE_ARCH, tbench_param::ETH_PORTS, tbench_param::ETH_PORT_CHAN, tbench_param::ETH_TX_HDR_WIDTH, tbench_param::ETH_RX_HDR_WIDTH, tbench_param::REGIONS, tbench_param::REGION_SIZE, tbench_param::BLOCK_SIZE, tbench_param::ITEM_WIDTH, tbench_param::MI_DATA_WIDTH, tbench_param::MI_ADDR_WIDTH)::get_type(),
+            "uvm_test_top.m_env"
+        );
 
         run_test();
         $stop(2);
@@ -151,22 +157,22 @@ module testbench;
         .DEVICE           (tbench_param::DEVICE           ),
         .BOARD            (tbench_param::BOARD            )
     ) DUT_U (
-        .CLK_USR       (CLK_USR   ),
-        .CLK_ETH       (CLK_ETH   ),
-        .CLK_MI        (CLK_MI    ),
-        .CLK_MI_PHY    (CLK_MI_PHY),
-        .CLK_MI_PMD    (CLK_MI_PMD),
-        .CLK_TSU       (CLK_TSU   ),
+        .CLK_ETH    (CLK_ETH   ),
+        .CLK_USR    (CLK_USR   ),
+        .CLK_MI     (CLK_MI    ),
+        .CLK_MI_PHY (CLK_MI_PHY),
+        .CLK_MI_PMD (CLK_MI_PMD),
+        .CLK_TSU    (CLK_TSU   ),
 
-        .rst_usr      (rst_usr   ),
-        .rst_eth      (rst_eth   ),
-        .rst_mi       (rst_mi    ),
-        .rst_mi_phy   (rst_mi_phy),
-        .rst_mi_pmd   (rst_mi_pmd),
-        .rst_tsu      (rst_tsu   ),
+        .rst_usr    (rst_usr   ),
+        .rst_eth    (rst_eth   ),
+        .rst_mi     (rst_mi    ),
+        .rst_mi_phy (rst_mi_phy),
+        .rst_mi_pmd (rst_mi_pmd),
+        .rst_tsu    (rst_tsu   ),
 
-        .eth_rx       (eth_rx),
-        .eth_tx       (eth_tx),
+        .eth_rx (eth_rx),
+        .eth_tx (eth_tx),
 
         .usr_rx      (usr_rx     ),
         .usr_tx_data (usr_tx_data),
@@ -192,8 +198,8 @@ module testbench;
         .QSFP_PORTS       (tbench_param::QSFP_PORTS       ),
         .QSFP_I2C_PORTS   (tbench_param::QSFP_I2C_PORTS   ),
         .QSFP_I2C_TRISTATE(tbench_param::QSFP_I2C_TRISTATE),
-        .ETH_TX_HDR_WIDTH (tbench_param::ETH_TX_HDR_WIDTH),
-        .ETH_RX_HDR_WIDTH (tbench_param::ETH_RX_HDR_WIDTH),
+        .ETH_TX_HDR_WIDTH (tbench_param::ETH_TX_HDR_WIDTH ),
+        .ETH_RX_HDR_WIDTH (tbench_param::ETH_RX_HDR_WIDTH ),
         .REGIONS          (tbench_param::REGIONS          ),
         .REGION_SIZE      (tbench_param::REGION_SIZE      ),
         .BLOCK_SIZE       (tbench_param::BLOCK_SIZE       ),
@@ -223,8 +229,9 @@ module testbench;
         .rst_mi_pmd   (rst_mi_pmd),
         .rst_tsu      (rst_tsu   ),
 
-        .eth_rx       (eth_rx),
-        .eth_tx       (eth_tx),
+        // TODO
+        //.eth_rx       (eth_rx),
+        //.eth_tx       (eth_tx),
 
         .usr_rx      (usr_rx     ),
         .usr_tx_data (usr_tx_data),
@@ -236,5 +243,6 @@ module testbench;
 
         .tsu (tsu)
     );
+    
 endmodule
 

@@ -5,7 +5,8 @@
 //-- SPDX-License-Identifier: BSD-3-Clause
 
 
-class base#(
+class base #(
+    string ETH_CORE_ARCH,
     int unsigned ETH_PORTS        ,
     int unsigned ETH_PORT_CHAN[ETH_PORTS-1:0]    ,
     int unsigned ETH_TX_HDR_WIDTH,
@@ -19,12 +20,11 @@ class base#(
     int unsigned MI_DATA_WIDTH    ,
     int unsigned MI_ADDR_WIDTH)
 extends uvm_test;
-    typedef uvm_component_registry#(test::base#(ETH_PORTS, ETH_PORT_CHAN, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, REGIONS, REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, MI_DATA_WIDTH, MI_ADDR_WIDTH
-                            ), "test::base") type_id;
+    typedef uvm_component_registry #(test::base #(ETH_CORE_ARCH, ETH_PORTS, ETH_PORT_CHAN, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, REGIONS, REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, MI_DATA_WIDTH, MI_ADDR_WIDTH), "test::base") type_id;
 
-    uvm_network_mod_env::env#(ETH_PORTS, ETH_PORT_CHAN, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, REGIONS, REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, MI_DATA_WIDTH,
-                            MI_ADDR_WIDTH) m_env;
     localparam time timeout_max = 200us;
+
+    uvm_network_mod_env::env #(ETH_CORE_ARCH, ETH_PORTS, ETH_PORT_CHAN, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, REGIONS, REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, MI_DATA_WIDTH, MI_ADDR_WIDTH) m_env;
 
     // ------------------------------------------------------------------------
     // Functions
@@ -41,7 +41,7 @@ extends uvm_test;
     endfunction
 
     function void build_phase(uvm_phase phase);
-        m_env = uvm_network_mod_env::env#(ETH_PORTS, ETH_PORT_CHAN, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, REGIONS, REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, MI_DATA_WIDTH,
+        m_env = uvm_network_mod_env::env #(ETH_CORE_ARCH, ETH_PORTS, ETH_PORT_CHAN, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, REGIONS, REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, MI_DATA_WIDTH,
                             MI_ADDR_WIDTH)::type_id::create("m_env", this);
     endfunction
 
