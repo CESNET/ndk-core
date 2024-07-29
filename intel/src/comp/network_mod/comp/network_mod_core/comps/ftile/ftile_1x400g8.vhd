@@ -307,6 +307,9 @@ architecture FULL of FTILE_1x400g8 is
     signal mgmt_mac_loop    : std_logic;
     signal mgmt_pcs_control : std_logic_vector(16-1 downto 0);
     signal mgmt_pcs_status  : std_logic_vector(16-1 downto 0);
+    
+    -- For QuestaSim
+    signal mgmt_pcs_control_dummy : std_logic_vector(15-1 downto 0);
 
     -- Synchronization of REPEATER_CTRL
     signal sync_repeater_ctrl : std_logic;
@@ -356,7 +359,7 @@ begin
         PCS_RESET                => mgmt_pcs_reset, --TODO 
         PCS_LPBCK                => open,
         PCS_CONTROL(0)           => mgmt_mac_loop,
-        PCS_CONTROL(15 downto 1) => open,
+        PCS_CONTROL(15 downto 1) => mgmt_pcs_control_dummy,
         PCS_CONTROL_I            => mgmt_pcs_control,
         PCS_STATUS               => mgmt_pcs_status,
         -- PCS Lane align

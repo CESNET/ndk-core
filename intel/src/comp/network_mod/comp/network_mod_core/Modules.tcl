@@ -38,8 +38,10 @@ lappend COMPONENTS [list "TSU_FORMAT_CONV"      "$TSU_BASE/tsu_format_to_ns"    
 lappend MOD "$ENTITY_BASE/network_mod_core_ent.vhd"
 
 if { $ARCHGRP == "F_TILE"} {
-    lappend COMPONENTS [list "TX_FTILE_ADAPTER" "$TX_ADAPTER_BASE/mac_seg" "FULL"]
-    lappend COMPONENTS [list "RX_FTILE_ADAPTER" "$RX_ADAPTER_BASE/mac_seg" "FULL"]
+    lappend COMPONENTS [list "TX_FTILE_ADAPTER"    "$TX_ADAPTER_BASE/mac_seg"                "FULL"]
+    lappend COMPONENTS [list "RX_FTILE_ADAPTER"    "$RX_ADAPTER_BASE/mac_seg"                "FULL"]
+    lappend COMPONENTS [list "FIFOX"               "$FIFO_BASE/fifox"                        "FULL"]
+    lappend COMPONENTS [list "ASYNC_BUS_HANDSHAKE" "$OFM_PATH/comp/base/async/bus_handshake" "FULL"]
 
     # IP are now in card (400G1) top-level Modules.tcl
     # Uncomment for network module synthesis only!
@@ -78,8 +80,8 @@ if { $ARCHGRP == "F_TILE"} {
     # Source files for implemented component
     lappend MOD "$ENTITY_BASE/ftile_init.vhd"
     lappend MOD "$ENTITY_BASE/macseg_loop.vhd"
-    lappend MOD "$ENTITY_BASE/network_mod_core_ftile.vhd"
     lappend MOD "$ENTITY_BASE/comps/bridge_drp/bridge_drp.vhd"
+
     # Basic Ftile IP core components
     lappend MOD "$ENTITY_BASE/comps/ftile/ftile_1x400g8.vhd"
     lappend MOD "$ENTITY_BASE/comps/ftile/ftile_2x200g4.vhd"
@@ -92,6 +94,8 @@ if { $ARCHGRP == "F_TILE"} {
     # Multirate Ftile IP core components
     lappend MOD "$ENTITY_BASE/comps/ftile/ftile_multirate_eth_2x100g4.vhd"
     lappend MOD "$ENTITY_BASE/comps/ftile/ftile_multirate_eth_8x25g1_8x10g1.vhd"
+
+    lappend MOD "$ENTITY_BASE/network_mod_core_ftile.vhd"
 }
 
 if { $ARCHGRP == "E_TILE"} {

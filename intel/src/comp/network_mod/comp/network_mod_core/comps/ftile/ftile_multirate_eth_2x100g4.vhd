@@ -408,6 +408,9 @@ architecture FULL of FTILE_MULTIRATE_ETH_2x100G4 is
     signal ftile_tx_mac_ready      : std_logic;
     signal ftile_tx_mac_error      : std_logic_vector(MAC_ERROR_TX_WIDTH  -1 downto 0);
 
+    -- For QuestaSim
+    signal ftile_tx_mac_ready_dummy : std_logic_vector(4-1 downto 0);
+
     -- signals from mac output of IP core to Component Out
     signal ftile_rx_mac_data       : std_logic_vector(MAC_DATA_WIDTH      -1 downto 0);
     signal ftile_rx_mac_valid      : std_logic;
@@ -417,11 +420,17 @@ architecture FULL of FTILE_MULTIRATE_ETH_2x100G4 is
     signal ftile_rx_mac_error      : std_logic_vector(MAC_ERROR_RX_WIDTH  -1 downto 0);
     signal ftile_rx_mac_status     : std_logic_vector(MAC_STATUS_WIDTH    -1 downto 0);
 
+    -- For QuestaSim
+    signal ftile_rx_mac_valid_dummy : std_logic_vector(4-1 downto 0);
+
     signal mgmt_pcs_reset   : std_logic; -- not used
     signal mgmt_pma_reset   : std_logic;
     signal mgmt_mac_loop    : std_logic;
     signal mgmt_pcs_control : std_logic_vector(16-1 downto 0);
     signal mgmt_pcs_status  : std_logic_vector(16-1 downto 0);
+
+    -- For QuestaSim
+    signal mgmt_pcs_control_dummy : std_logic_vector(15-1 downto 0);
 
     -- Synchronization of REPEATER_CTRL
     -- signal sync_repeater_ctrl : std_logic_vector(REPEATER_CTRL'range);
@@ -472,7 +481,7 @@ begin
         PCS_RESET                => mgmt_pcs_reset, --TODO 
         PCS_LPBCK                => open,
         PCS_CONTROL(0)           => mgmt_mac_loop,
-        PCS_CONTROL(15 downto 1) => open,
+        PCS_CONTROL(15 downto 1) => mgmt_pcs_control_dummy,
         PCS_CONTROL_I            => mgmt_pcs_control,
         PCS_STATUS               => mgmt_pcs_status,
         -- PCS Lane align
@@ -886,12 +895,12 @@ begin
         i_tx_mac_inframe                 => ftile_tx_mac_inframe,
         i_tx_mac_eop_empty               => ftile_tx_mac_eop_empty,
         o_tx_mac_ready(0)                => ftile_tx_mac_ready,
-        o_tx_mac_ready(3 downto 1)       => open,              -- not used
+        o_tx_mac_ready(3 downto 1)       => ftile_tx_mac_ready_dummy, -- not used
         i_tx_mac_error                   => ftile_tx_mac_error,
         i_tx_mac_skip_crc                => (others => '0' ),
         o_rx_mac_data                    => ftile_rx_mac_data,
         o_rx_mac_valid(0)                => ftile_rx_mac_valid,
-        o_rx_mac_valid(3 downto 1)       => open,              -- not used
+        o_rx_mac_valid(3 downto 1)       => ftile_rx_mac_valid_dummy, -- not used
         o_rx_mac_inframe                 => ftile_rx_mac_inframe,
         o_rx_mac_eop_empty               => ftile_rx_mac_eop_empty,
         o_rx_mac_fcs_error               => ftile_rx_mac_fcs_error,
