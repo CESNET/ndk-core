@@ -40,9 +40,9 @@ module testbench;
     logic [PCIE_ENDPOINTS                                                                      -1 : 0] dma_avst_down_ready;
     logic [PCIE_ENDPOINTS*CQ_MFB_REGIONS                                                       -1 : 0] dma_avst_down_valid;
 
-    logic [PCIE_ENDPOINTS*CC_MFB_REGIONS*HDR_WIDTH    -1: 0] up_hdr   [PCIE_ENDPOINTS];
-    logic [PCIE_ENDPOINTS*CC_MFB_REGIONS*PREFIX_WIDTH -1: 0] up_prefix[PCIE_ENDPOINTS];
-    logic [PCIE_ENDPOINTS*CC_MFB_REGIONS              -1: 0] up_error [PCIE_ENDPOINTS];
+    logic [CC_MFB_REGIONS*HDR_WIDTH   -1 : 0] up_hdr   [PCIE_ENDPOINTS];
+    logic [CC_MFB_REGIONS*PREFIX_WIDTH-1 : 0] up_prefix[PCIE_ENDPOINTS];
+    logic [CC_MFB_REGIONS             -1 : 0] up_error [PCIE_ENDPOINTS];
 
     // -------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // Interfaces
