@@ -4,8 +4,10 @@
 
 //-- SPDX-License-Identifier: BSD-3-Clause
 
-class drop_cbs #(REGIONS) extends uvm_event_callback;
-    `uvm_object_param_utils(uvm_network_mod_env::drop_cbs#(REGIONS))
+class drop_cbs #(string ETH_CORE_ARCH, int unsigned REGIONS) extends uvm_event_callback;
+    `uvm_object_param_utils(uvm_network_mod_env::drop_cbs #(ETH_CORE_ARCH, REGIONS))
+
+    localparam int unsigned RESIZED_REGIONS = (ETH_CORE_ARCH == "F_TILE") ? 2*REGIONS : REGIONS;
 
     logic queue[$];
 
@@ -24,14 +26,14 @@ class drop_cbs #(REGIONS) extends uvm_event_callback;
     // post trigger method
     //---------------------------------------
     virtual function void post_trigger(uvm_event e, uvm_object data);
-        uvm_probe::data#(2*REGIONS) c_data;
-        logic [REGIONS-1:0] pkt_eof;
-        logic [REGIONS-1:0] pkt_drop;
+        uvm_probe::data#(2*RESIZED_REGIONS) c_data;
+        logic [RESIZED_REGIONS-1:0] pkt_eof;
+        logic [RESIZED_REGIONS-1:0] pkt_drop;
 
         $cast(c_data, data);
         {pkt_eof, pkt_drop} = c_data.data;
         
-        for (int unsigned it = 0; it < REGIONS; it++) begin
+        for (int unsigned it = 0; it < RESIZED_REGIONS; it++) begin
             if (pkt_eof[it] == 1) begin
                 queue.push_back(pkt_drop[it]);
             end
@@ -45,8 +47,8 @@ class drop_cbs #(REGIONS) extends uvm_event_callback;
 endclass
 
 
-class model#(ETH_PORTS, int unsigned ETH_PORT_CHAN[ETH_PORTS-1:0], REGIONS, ITEM_WIDTH, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH) extends uvm_component;
-    `uvm_component_param_utils(uvm_network_mod_env::model#(ETH_PORTS, ETH_PORT_CHAN, REGIONS, ITEM_WIDTH, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH));
+class model #(string ETH_CORE_ARCH, int unsigned ETH_PORTS, int unsigned ETH_PORT_CHAN[ETH_PORTS-1:0], REGIONS, ITEM_WIDTH, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH) extends uvm_component;
+    `uvm_component_param_utils(uvm_network_mod_env::model #(ETH_CORE_ARCH, ETH_PORTS, ETH_PORT_CHAN, REGIONS, ITEM_WIDTH, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH));
 
     uvm_tlm_analysis_fifo#(uvm_common::model_item#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))) eth_rx_data[ETH_PORTS];
     uvm_tlm_analysis_fifo#(uvm_common::model_item#(uvm_logic_vector::sequence_item#(6)))                eth_rx_hdr [ETH_PORTS];
@@ -59,7 +61,7 @@ class model#(ETH_PORTS, int unsigned ETH_PORT_CHAN[ETH_PORTS-1:0], REGIONS, ITEM
     uvm_analysis_port    #(uvm_common::model_item#(uvm_logic_vector::sequence_item#(ETH_RX_HDR_WIDTH))) usr_tx_hdr[ETH_PORTS];
 
     //SYNCHRONIZATION 
-    protected drop_cbs#(REGIONS) drop_sync[ETH_PORTS][];
+    protected drop_cbs #(ETH_CORE_ARCH, REGIONS) drop_sync[ETH_PORTS][];
 
     protected int unsigned eth_recv[ETH_PORTS];
     protected int unsigned eth_drop[ETH_PORTS];
@@ -100,7 +102,7 @@ class model#(ETH_PORTS, int unsigned ETH_PORT_CHAN[ETH_PORTS-1:0], REGIONS, ITEM
         for (int unsigned it = 0; it < ETH_PORTS; it++) begin
             drop_sync[it] = new[ETH_PORT_CHAN[it]];
             for (int unsigned jt = 0; jt < ETH_PORT_CHAN[it]; jt++) begin
-               drop_sync[it][jt] = drop_cbs#(REGIONS)::type_id::create("drop_sync", this);
+               drop_sync[it][jt] = drop_cbs #(ETH_CORE_ARCH, REGIONS)::type_id::create("drop_sync", this);
             end
         end
     endfunction
@@ -110,7 +112,7 @@ class model#(ETH_PORTS, int unsigned ETH_PORT_CHAN[ETH_PORTS-1:0], REGIONS, ITEM
 
         for (int unsigned it = 0; it < ETH_PORTS; it++) begin
             for (int unsigned jt = 0; jt < ETH_PORT_CHAN[it]; jt++) begin
-                uvm_probe::pool::get_global_pool().get({"probe_event_component_", $sformatf("testbench.DUT_U.VHDL_DUT_U.eth_core_g[%0d].network_mod_logic_i.rx_g[%0d].rx_mac_g.rx_mac_i.buffer_i", it, jt), ".probe_drop"}).add_callback(drop_sync[it][jt]);
+                uvm_probe::pool::get_global_pool().get({"probe_event_component_", $sformatf("testbench.DUT_U.DUT_BASE_U.VHDL_DUT_U.eth_core_g[%0d].network_mod_logic_i.rx_g[%0d].rx_mac_g.rx_mac_i.buffer_i", it, jt), ".probe_drop"}).add_callback(drop_sync[it][jt]);
             end
         end
     endfunction
@@ -160,8 +162,7 @@ class model#(ETH_PORTS, int unsigned ETH_PORT_CHAN[ETH_PORTS-1:0], REGIONS, ITEM
             end
             {dst_mac, src_mac, eth_type} = {>>{data.item.data[0: (48+48+16)/ITEM_WIDTH-1]}};
 
-            //hdr.data; 0=> malformed packet, 1=> CRC error,  2=> data.size() < 64, 3 => data_size > rx_max_frame_size, 4 => if eth_type <= 1500 then data.size() != eth_type;
-            error_frame  = |hdr.item.data;
+            error_frame  = !is_frame_valid(hdr.item.data);
             error_min_tu = length < 60;
             error_max_tu = length > 1526;
             error_crc    = 0;
@@ -275,5 +276,9 @@ class model#(ETH_PORTS, int unsigned ETH_PORT_CHAN[ETH_PORTS-1:0], REGIONS, ITEM
         end
     endtask
 
-endclass
+    virtual function logic is_frame_valid(logic [6-1 : 0] error_data);
+        //0=> malformed packet, 1=> CRC error,  2=> data.size() < 64, 3 => data_size > rx_max_frame_size, 4 => if eth_type <= 1500 then data.size() != eth_type;
+        return !(|error_data);
+    endfunction
 
+endclass

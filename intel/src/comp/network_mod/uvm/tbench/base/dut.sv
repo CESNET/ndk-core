@@ -1,74 +1,72 @@
-// dut.sv: Design under test
+// dut.sv: Base DUT
 // Copyright (C) 2023 CESNET z. s. p. o.
 // Author(s): Radek Iša <isa@cesnet.cz>
 
 // SPDX-License-Identifier: BSD-3-Clause
 
+module DUT_BASE #(
+    string       ETH_CORE_ARCH,
+    int unsigned ETH_PORTS,
+    int unsigned ETH_PORT_SPEED[ETH_PORTS-1 : 0],
 
-module DUT #(
-    string       ETH_CORE_ARCH    ,
-    int unsigned ETH_PORTS        ,
-    int unsigned ETH_PORT_SPEED[ETH_PORTS-1:0],
+    int unsigned ETH_PORT_CHAN  [ETH_PORTS-1 : 0],
+    int unsigned EHIP_PORT_TYPE [ETH_PORTS-1 : 0],
+    int unsigned ETH_PORT_RX_MTU[ETH_PORTS-1 : 0],
+    int unsigned ETH_PORT_TX_MTU[ETH_PORTS-1 : 0],
 
-    int unsigned ETH_PORT_CHAN[ETH_PORTS-1:0]    ,
-    int unsigned EHIP_PORT_TYPE[ETH_PORTS-1:0]   ,
-    int unsigned ETH_PORT_RX_MTU[ETH_PORTS-1:0]  ,
-    int unsigned ETH_PORT_TX_MTU[ETH_PORTS-1:0]  ,
-    int unsigned LANES            ,
-    int unsigned QSFP_PORTS       ,
-    int unsigned QSFP_I2C_PORTS   ,
+    int unsigned LANES,
+
+    int unsigned QSFP_PORTS,
+    int unsigned QSFP_I2C_PORTS,
     int unsigned QSFP_I2C_TRISTATE,
 
     int unsigned ETH_TX_HDR_WIDTH,
     int unsigned ETH_RX_HDR_WIDTH,
 
-    int unsigned REGIONS          ,
-    int unsigned REGION_SIZE      ,
-    int unsigned BLOCK_SIZE       ,
-    int unsigned ITEM_WIDTH       ,
+    int unsigned REGIONS,
+    int unsigned REGION_SIZE,
+    int unsigned BLOCK_SIZE,
+    int unsigned ITEM_WIDTH,
 
-    int unsigned MI_DATA_WIDTH    ,
-    int unsigned MI_ADDR_WIDTH    ,
+    int unsigned MI_DATA_WIDTH,
+    int unsigned MI_ADDR_WIDTH,
 
     int unsigned MI_DATA_WIDTH_PHY,
     int unsigned MI_ADDR_WIDTH_PHY,
 
-    int unsigned LANE_RX_POLARITY ,
-    int unsigned LANE_TX_POLARITY ,
-    int unsigned RESET_WIDTH      ,
-    string DEVICE           ,
+    int unsigned LANE_RX_POLARITY,
+    int unsigned LANE_TX_POLARITY,
+
+    int unsigned RESET_WIDTH,
+
+    string DEVICE,
     string BOARD
 )(
-    input wire logic CLK_USR   ,
-    input wire logic CLK_ETH[ETH_PORTS],
-    input wire logic CLK_MI    ,
+    input wire logic CLK_USR,
+    input wire logic CLK_MI,
     input wire logic CLK_MI_PHY,
     input wire logic CLK_MI_PMD,
-    input wire logic CLK_TSU   ,
+    input wire logic CLK_TSU,
 
-    reset_if.dut rst_usr   ,
+    reset_if.dut rst_usr,
     reset_if.dut rst_eth[ETH_PORTS],
-    reset_if.dut rst_mi    ,
+    reset_if.dut rst_mi,
     reset_if.dut rst_mi_phy,
     reset_if.dut rst_mi_pmd,
-    reset_if.dut rst_tsu   ,
+    reset_if.dut rst_tsu,
 
-    avst_if.dut_rx eth_rx[ETH_PORTS],
-    avst_if.dut_tx eth_tx[ETH_PORTS],
+    mfb_if.dut_rx usr_rx     [ETH_PORTS],
+    mfb_if.dut_tx usr_tx_data[ETH_PORTS],
+    mvb_if.dut_tx usr_tx_hdr [ETH_PORTS],
 
-    mfb_if.dut_rx  usr_rx     [ETH_PORTS],
-    mfb_if.dut_tx  usr_tx_data[ETH_PORTS],
-    mvb_if.dut_tx  usr_tx_hdr [ETH_PORTS],
+    mi_if.dut_slave mi,
+    mi_if.dut_slave mi_phy,
+    mi_if.dut_slave mi_pmd,
 
-    mi_if.dut_slave  mi,
-    mi_if.dut_slave  mi_phy,
-    mi_if.dut_slave  mi_pmd,
-
-    mvb_if.dut_rx   tsu
+    mvb_if.dut_rx tsu
 );
-
     wire logic [RESET_WIDTH-1 : 0] reset_user;
-    wire logic [ETH_PORTS-1 : 0]   reset_eth;
+    wire logic [ETH_PORTS  -1 : 0] reset_eth;
 
     //USR RX
     wire logic [ETH_PORTS*REGIONS*REGION_SIZE*BLOCK_SIZE*ITEM_WIDTH-1:0]  usr_rx_data;
@@ -119,7 +117,7 @@ module DUT #(
         assign usr_tx_data[eth_it].SOF_POS = usr_tx_data_sof_pos[(eth_it+1)*REGIONS*$clog2(REGION_SIZE) -1 -: REGIONS*$clog2(REGION_SIZE)];
         assign usr_tx_data[eth_it].EOF_POS = usr_tx_data_eof_pos[(eth_it+1)*REGIONS*$clog2(REGION_SIZE*BLOCK_SIZE) -1 -: REGIONS*$clog2(REGION_SIZE*BLOCK_SIZE)];
         assign usr_tx_data[eth_it].SRC_RDY = usr_tx_data_src_rdy[eth_it];
-        assign usr_tx_data_dst_rdy[eth_it]      = usr_tx_data[eth_it].DST_RDY;
+        assign usr_tx_data_dst_rdy[eth_it] = usr_tx_data[eth_it].DST_RDY;
 
         assign usr_tx_hdr[eth_it].DATA    = usr_tx_hdr_data   [(eth_it+1)*REGIONS*ETH_RX_HDR_WIDTH-1 -: REGIONS*ETH_RX_HDR_WIDTH];
         assign usr_tx_hdr[eth_it].VLD     = usr_tx_hdr_vld    [(eth_it+1)*REGIONS-1 -: REGIONS];
@@ -256,36 +254,4 @@ module DUT #(
     );
     assign tsu.DST_RDY = 1'b1;
 
-    //assign network interfaces
-    //for
-    for (genvar eth_it = 0; eth_it < ETH_PORTS; eth_it++) begin
-        localparam AVST_WIDTH = ETH_PORT_CHAN[0] * REGION_SIZE * BLOCK_SIZE;
-        logic [AVST_WIDTH*ITEM_WIDTH -1 : 0] avst_data;
-
-        for (genvar data_it = 0; data_it < AVST_WIDTH; data_it++) begin
-            assign avst_data[(AVST_WIDTH -data_it)*ITEM_WIDTH-1 -: ITEM_WIDTH] = eth_rx[eth_it].DATA[(data_it+1)*ITEM_WIDTH-1 -: ITEM_WIDTH];
-        end
-        assign VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.rx_avst_data  = avst_data;
-        assign VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.rx_avst_error = eth_rx[eth_it].META;
-        assign VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.rx_avst_empty = eth_rx[eth_it].EMPTY;
-        assign VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.rx_avst_sop   = eth_rx[eth_it].SOP;
-        assign VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.rx_avst_eop   = eth_rx[eth_it].EOP;
-        assign VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.rx_avst_valid = eth_rx[eth_it].VALID;
-        assign eth_rx[eth_it].READY = 1'b1; // it have to be allways ready
-
-        for (genvar data_it = 0; data_it < AVST_WIDTH; data_it++) begin
-            assign eth_tx[eth_it].DATA[(data_it+1)*ITEM_WIDTH-1 -: ITEM_WIDTH]
-                        = VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.tx_avst_data[(AVST_WIDTH -data_it)*ITEM_WIDTH-1 -: ITEM_WIDTH];
-        end
-        assign eth_tx[eth_it].META  = VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.tx_avst_error;
-        assign eth_tx[eth_it].EMPTY = VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.tx_avst_empty;
-        assign eth_tx[eth_it].SOP   = VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.tx_avst_sop;
-        assign eth_tx[eth_it].EOP   = VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.tx_avst_eop;
-        assign eth_tx[eth_it].VALID = VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.tx_avst_valid;
-        assign VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.tx_avst_ready[0] = eth_tx[eth_it].READY;
-
-        //etile
-        assign VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.etile_clk_out_vec[0] = CLK_ETH[eth_it];
-    end
 endmodule
-

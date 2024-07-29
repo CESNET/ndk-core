@@ -5,7 +5,8 @@
 //-- SPDX-License-Identifier: BSD-3-Clause
 
 
-class env#(
+class env #(
+    string ETH_CORE_ARCH,
     int unsigned ETH_PORTS        ,
 
     int unsigned ETH_PORT_CHAN[ETH_PORTS-1:0]    ,
@@ -24,6 +25,7 @@ class env#(
 
 ) extends uvm_env;
     `uvm_component_param_utils(uvm_network_mod_env::env#(
+        ETH_CORE_ARCH,
         ETH_PORTS        ,
         ETH_PORT_CHAN    ,
         ETH_TX_HDR_WIDTH ,
@@ -46,10 +48,6 @@ class env#(
     protected uvm_reset::agent m_mi_pmd_rst;
     protected uvm_reset::agent m_tsu_rst;
 
-    //ETH
-    protected uvm_logic_vector_array_avst::env_rx #(ETH_PORT_CHAN[0], 1, REGION_SIZE * BLOCK_SIZE, ITEM_WIDTH, 6, 0) m_eth_rx[ETH_PORTS];
-    protected uvm_logic_vector_array_avst::env_tx #(ETH_PORT_CHAN[0], 1, REGION_SIZE * BLOCK_SIZE, ITEM_WIDTH, 1, 0) m_eth_tx[ETH_PORTS];
-
     //USR
     protected uvm_logic_vector_array_mfb::env_rx#(REGIONS, REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, ETH_TX_HDR_WIDTH) m_usr_rx[ETH_PORTS];
     protected uvm_logic_vector_array_mfb::env_tx#(REGIONS, REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, 0)                m_usr_tx_data[ETH_PORTS];
@@ -64,7 +62,7 @@ class env#(
     protected uvm_logic_vector_mvb::env_rx      #(1, 64) m_tsu;
 
     // SCOREBOARD
-    protected scoreboard#(ETH_PORTS, ETH_PORT_CHAN, REGIONS, ITEM_WIDTH, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH) m_scoreboard;
+    protected scoreboard #(ETH_CORE_ARCH, ETH_PORTS, ETH_PORT_CHAN, REGIONS, ITEM_WIDTH, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH) m_scoreboard;
     protected uvm_mi::regmodel#(uvm_network_mod_env::regmodel #(ETH_PORTS, ETH_PORT_CHAN), MI_DATA_WIDTH, MI_ADDR_WIDTH) m_regmodel;
 
     // Constructor of environment.
@@ -130,8 +128,6 @@ class env#(
             uvm_logic_vector_array_mfb::config_item cfg_rx;
             uvm_logic_vector_array_mfb::config_item cfg_tx_data;
             uvm_logic_vector_mvb::config_item       cfg_tx_hdr;
-            uvm_logic_vector_array_avst::config_item cfg_eth_rx;
-            uvm_logic_vector_array_avst::config_item cfg_eth_tx;
 
             cfg_rx = new();
             cfg_rx.active = UVM_ACTIVE;
@@ -152,20 +148,6 @@ class env#(
             cfg_tx_hdr.interface_name = $sformatf("vif_usr_tx_hdr_%0d", it);
             uvm_config_db #(uvm_logic_vector_mvb::config_item)::set(this, $sformatf("m_usr_tx_hdr_%0d", it), "m_config", cfg_tx_hdr);
             m_usr_tx_hdr[it]  = uvm_logic_vector_mvb::env_tx#(REGIONS, ETH_RX_HDR_WIDTH)::type_id::create($sformatf("m_usr_tx_hdr_%0d", it), this);
-
-            cfg_eth_rx = new();
-            cfg_eth_rx.active = UVM_ACTIVE;
-            cfg_eth_rx.interface_name = $sformatf("vif_eth_rx_%0d", it);
-            cfg_eth_rx.meta_behav = uvm_logic_vector_array_avst::config_item::META_EOF;
-            uvm_config_db #(uvm_logic_vector_array_avst::config_item)::set(this, $sformatf("m_eth_rx_%0d", it), "m_config", cfg_eth_rx);
-            m_eth_rx[it] = uvm_logic_vector_array_avst::env_rx #(ETH_PORT_CHAN[0], 1, REGION_SIZE * BLOCK_SIZE, ITEM_WIDTH, 6, 0)::type_id::create($sformatf("m_eth_rx_%0d", it), this);
-
-            cfg_eth_tx = new();
-            cfg_eth_tx.active = UVM_ACTIVE;
-            cfg_eth_tx.interface_name = $sformatf("vif_eth_tx_%0d", it);
-            cfg_eth_tx.meta_behav = uvm_logic_vector_array_avst::config_item::META_EOF;
-            uvm_config_db #(uvm_logic_vector_array_avst::config_item)::set(this, $sformatf("m_eth_tx_%0d", it), "m_config", cfg_eth_tx);
-            m_eth_tx[it] = uvm_logic_vector_array_avst::env_tx #(ETH_PORT_CHAN[0], 1, REGION_SIZE * BLOCK_SIZE, ITEM_WIDTH, 1, 0)::type_id::create($sformatf("m_eth_tx_%0d", it), this);
         end
 
         cfg_mi  = new();
@@ -193,22 +175,22 @@ class env#(
         uvm_config_db #(uvm_logic_vector_mvb::config_item)::set(this, "m_tsu", "m_config", cfg_tsu);
         m_tsu  = uvm_logic_vector_mvb::env_rx#(1, 64)::type_id::create("m_tsu", this);
 
-        m_scoreboard = scoreboard#(ETH_PORTS, ETH_PORT_CHAN, REGIONS, ITEM_WIDTH, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH)::type_id::create("m_scoreboard", this);
+        m_scoreboard = scoreboard#(ETH_CORE_ARCH, ETH_PORTS, ETH_PORT_CHAN, REGIONS, ITEM_WIDTH, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH)::type_id::create("m_scoreboard", this);
         m_sequencer  = sequencer#(ETH_PORTS, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, ITEM_WIDTH, REGIONS, REGION_SIZE, BLOCK_SIZE, ETH_PORT_CHAN, MI_DATA_WIDTH, MI_ADDR_WIDTH)::type_id::create("m_sequencer", this);
     endfunction
 
     // Connect agent's ports with ports from scoreboard.
     function void connect_phase(uvm_phase phase);
-
         super.connect_phase(phase);
 
         for (int unsigned it = 0; it < ETH_PORTS; it++) begin
-            m_eth_rx[it].analysis_port_data.connect(m_scoreboard.eth_rx_data[it]);
-            m_eth_rx[it].analysis_port_meta.connect(m_scoreboard.eth_rx_hdr[it]);
+            m_usr_rst.sync_connect(m_usr_rx     [it].reset_sync);
+            m_usr_rst.sync_connect(m_usr_tx_data[it].reset_sync);
+            m_usr_rst.sync_connect(m_usr_tx_hdr [it].reset_sync);
+        end
+        m_tsu_rst.sync_connect(m_tsu.reset_sync);
 
-            m_eth_tx[it].analysis_port_data.connect(m_scoreboard.eth_tx_data[it]);
-            m_eth_tx[it].analysis_port_meta.connect(m_scoreboard.eth_tx_hdr[it]);
-
+        for (int unsigned it = 0; it < ETH_PORTS; it++) begin
             m_usr_rx[it].analysis_port_data.connect(m_scoreboard.usr_rx_data[it]);
             m_usr_rx[it].analysis_port_meta.connect(m_scoreboard.usr_rx_hdr[it]);
 
@@ -228,10 +210,6 @@ class env#(
             m_sequencer.port[it].usr_rx_meta = m_usr_rx[it].m_sequencer.m_meta;
             m_sequencer.port[it].usr_tx_data = m_usr_tx_data[it].m_sequencer;
             m_sequencer.port[it].usr_tx_hdr  = m_usr_tx_hdr[it].m_sequencer;
-
-            m_sequencer.port[it].eth_rx_data = m_eth_rx[it].m_sequencer.m_data;
-            m_sequencer.port[it].eth_rx_meta = m_eth_rx[it].m_sequencer.m_meta;
-            m_sequencer.port[it].eth_tx      = m_eth_tx[it].m_sequencer;
         end
     endfunction
 endclass
