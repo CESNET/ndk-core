@@ -67,6 +67,12 @@ generic (
     HBM_SIZE_WIDTH     : natural := 3;
     -- HBM parameters: width of AXI resp signal
     HBM_RESP_WIDTH     : natural := 2;
+     -- HBM parameters: width of AXI prot signal
+    HBM_PROT_WIDTH     : natural := 3;
+     -- HBM parameters: width of AXI qos signal
+    HBM_QOS_WIDTH      : natural := 4;
+     -- HBM parameters: width of AXI user signal
+    HBM_USER_WIDTH     : natural := 1;
     -- MEM parameters: number of external memory ports (EMIFs)
     MEM_PORTS          : natural := 1;
     -- MEM parameters: width of AVMM address signal
@@ -316,9 +322,9 @@ port (
     -- =========================================================================
     -- HBM AXI INTERFACES (clocked at HBM_CLK)
     -- =========================================================================
-    HBM_CLK                 : in  std_logic;
-    HBM_RESET               : in  std_logic;
-    HBM_INIT_DONE           : in  std_logic;
+    HBM_CLK                 : in  std_logic_vector(HBM_PORTS-1 downto 0);
+    HBM_RESET               : in  std_logic_vector(HBM_PORTS-1 downto 0);
+    HBM_INIT_DONE           : in  std_logic_vector(HBM_PORTS-1 downto 0);
 
     HBM_AXI_ARADDR          : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_ADDR_WIDTH-1 downto 0) := (others => (others => '0'));
     HBM_AXI_ARBURST         : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_BURST_WIDTH-1 downto 0) := (others => (others => '0'));
@@ -327,6 +333,9 @@ port (
     HBM_AXI_ARSIZE          : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_SIZE_WIDTH-1 downto 0) := (others => (others => '0'));
     HBM_AXI_ARVALID         : out std_logic_vector(HBM_PORTS-1 downto 0) := (others => '0');
     HBM_AXI_ARREADY         : in  std_logic_vector(HBM_PORTS-1 downto 0);
+    HBM_AXI_ARPROT          : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_PROT_WIDTH-1 downto 0) := (others => (others => '0'));
+    HBM_AXI_ARQOS           : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_QOS_WIDTH-1 downto 0) := (others => (others => '0'));
+    HBM_AXI_ARUSER          : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_USER_WIDTH-1 downto 0) := (others => (others => '0'));
 
     HBM_AXI_RDATA           : in  slv_array_t(HBM_PORTS-1 downto 0)(HBM_DATA_WIDTH-1 downto 0);
     HBM_AXI_RDATA_PARITY    : in  slv_array_t(HBM_PORTS-1 downto 0)((HBM_DATA_WIDTH/8)-1 downto 0);
@@ -343,6 +352,9 @@ port (
     HBM_AXI_AWSIZE          : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_SIZE_WIDTH-1 downto 0) := (others => (others => '0'));
     HBM_AXI_AWVALID         : out std_logic_vector(HBM_PORTS-1 downto 0) := (others => '0');
     HBM_AXI_AWREADY         : in  std_logic_vector(HBM_PORTS-1 downto 0);
+    HBM_AXI_AWPROT          : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_PROT_WIDTH-1 downto 0) := (others => (others => '0'));
+    HBM_AXI_AWQOS           : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_QOS_WIDTH-1 downto 0) := (others => (others => '0'));
+    HBM_AXI_AWUSER          : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_USER_WIDTH-1 downto 0) := (others => (others => '0'));
 
     HBM_AXI_WDATA           : out slv_array_t(HBM_PORTS-1 downto 0)(HBM_DATA_WIDTH-1 downto 0) := (others => (others => '0'));
     HBM_AXI_WDATA_PARITY    : out slv_array_t(HBM_PORTS-1 downto 0)((HBM_DATA_WIDTH/8)-1 downto 0) := (others => (others => '0'));
