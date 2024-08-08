@@ -12,28 +12,34 @@ class transaction_checker #(REGIONS, REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, META_W
 
     // Inputs
     uvm_tlm_analysis_fifo #(uvm_avst::sequence_item #(REGIONS, REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, META_WIDTH)) avst_in;
-    uvm_tlm_analysis_fifo #(uvm_avst_crdt::sequence_item)                                                        avst_crdt_in;
 
-    credit_counter m_credit_counter;
+    uvm_tlm_analysis_fifo #(uvm_avst_crdt::sequence_item #(2)) avst_crdt_hdr_in [3];
+    uvm_tlm_analysis_fifo #(uvm_avst_crdt::sequence_item #(4)) avst_crdt_data_in[3];
 
-    // AVST items => logic vector items => credit items converting logic
+    balance_counter m_balance_counter;
+
+    // AVST items => logic vector items => balance items converting logic
     protected uvm_logic_vector_array_avst::monitor_logic_vector #(REGIONS, REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, META_WIDTH, READY_LATENCY) m_monitor;
     protected valuer #(META_WIDTH) m_valuer;
-    protected uvm_tlm_analysis_fifo #(credit_item) credit_fifo;
+    protected uvm_tlm_analysis_fifo #(balance_item) cost_fifo;
 
     // Constructor
     function new(string name = "transaction_checker", uvm_component parent = null);
         super.new(name, parent);
 
-        avst_in      = new("avst_in", this);
-        avst_crdt_in = new("avst_crdt_in", this);
-        credit_fifo  = new("credit_fifo", this);
+        avst_in   = new("avst_in", this);
+        cost_fifo = new("cost_fifo", this);
+
+        for (int unsigned i = 0; i < 3; i++) begin
+            avst_crdt_hdr_in [i] = new($sformatf("avst_crdt_hdr_in_%0d", i), this);
+            avst_crdt_data_in[i] = new($sformatf("avst_crdt_data_in_%0d", i), this);
+        end
     endfunction
 
     function void build_phase(uvm_phase phase);
         super.build_phase(phase);
 
-        m_credit_counter = credit_counter::type_id::create("m_credit_counter", this);
+        m_balance_counter = balance_counter::type_id::create("m_balance_counter", this);
         m_valuer = valuer #(META_WIDTH)::type_id::create("m_valuer", this);
         m_monitor = uvm_logic_vector_array_avst::monitor_logic_vector #(REGIONS, REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, META_WIDTH, READY_LATENCY)::type_id::create("m_monitor", this);
     endfunction
@@ -42,28 +48,34 @@ class transaction_checker #(REGIONS, REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, META_W
         super.connect_phase(phase);
 
         m_monitor.analysis_port.connect(m_valuer.analysis_export);
-        m_valuer.analysis_port.connect(credit_fifo.analysis_export);
+        m_valuer.analysis_port.connect(cost_fifo.analysis_export);
     endfunction
 
     task run_phase(uvm_phase phase);
         uvm_avst::sequence_item #(REGIONS, REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, META_WIDTH) avst_item;
-        uvm_avst_crdt::sequence_item                                                        avst_crdt_item;
 
-        credit_item total_cost;
-        credit_item item_cost;
+        uvm_avst_crdt::sequence_item #(2) avst_crdt_hdr_item [3];
+        uvm_avst_crdt::sequence_item #(4) avst_crdt_data_item[3];
 
-        total_cost = credit_item::type_id::create("total_cost");
+        balance_item total_cost;
+        balance_item item_cost;
+
+        total_cost = balance_item::type_id::create("total_cost");
 
         forever begin
-            avst_in     .get(avst_item);
-            avst_crdt_in.get(avst_crdt_item);
+            avst_in.get(avst_item);
+
+            for (int unsigned i = 0; i < 3; i++) begin
+                avst_crdt_hdr_in [i].get(avst_crdt_hdr_item [i]);
+                avst_crdt_data_in[i].get(avst_crdt_data_item[i]);
+            end
 
             total_cost.reset();
 
             // Write AVST item to monitor
             m_monitor.write(avst_item);
-            while (credit_fifo.used() > 0) begin // Get all credit items
-                credit_fifo.get(item_cost);
+            while (cost_fifo.used() > 0) begin // Get all balance items
+                cost_fifo.get(item_cost);
 
                 total_cost.header.p   += item_cost.header.p;
                 total_cost.header.np  += item_cost.header.np;
@@ -74,17 +86,20 @@ class transaction_checker #(REGIONS, REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, META_W
             end
 
             if (!total_cost.is_zero()) begin
-                assert(m_credit_counter.is_init_done())
+                assert(m_balance_counter.is_init_done())
                 else begin
                     `uvm_error(this.get_full_name(), "\n\tUser can't send the transaction while initializing phase is in progress!")
                 end
-                assert(m_credit_counter.try_reduce_balance(total_cost))
+                assert(m_balance_counter.try_reduce_balance(total_cost))
                 else begin
                     `uvm_error(this.get_full_name(), "\n\tUser has insufficient number of credits to send the transaction!")
                 end
             end
 
-            m_credit_counter.avst_crdt_in.write(avst_crdt_item);
+            for (int unsigned i = 0; i < 3; i++) begin
+                m_balance_counter.avst_crdt_hdr_in [i].write(avst_crdt_hdr_item [i]);
+                m_balance_counter.avst_crdt_data_in[i].write(avst_crdt_data_item[i]);
+            end
         end
     endtask
 

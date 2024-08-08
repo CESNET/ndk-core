@@ -1,4 +1,4 @@
-// valuer.sv: Converts logic vector sequence items into credit items
+// valuer.sv: Converts logic vector sequence items into balance items
 // Copyright (C) 2024 CESNET z. s. p. o.
 // Author(s): Yaroslav Marushchenko <xmarus09@stud.fit.vutbr.cz>
 
@@ -11,7 +11,7 @@ class valuer #(META_WIDTH) extends uvm_subscriber #(uvm_logic_vector::sequence_i
     localparam int unsigned PREFIX_WIDTH = 32;
 
     // Output
-    uvm_analysis_port #(credit_item) analysis_port;
+    uvm_analysis_port #(balance_item) analysis_port;
 
     // Constructor
     function new(string name = "transaction_checker", uvm_component parent = null);
@@ -21,12 +21,12 @@ class valuer #(META_WIDTH) extends uvm_subscriber #(uvm_logic_vector::sequence_i
     endfunction
 
     function void write(uvm_logic_vector::sequence_item #(META_WIDTH) t);
-        credit_item cost = get_transaction_cost(t);
+        balance_item cost = get_transaction_cost(t);
         analysis_port.write(cost);
     endfunction
 
-    function credit_item get_transaction_cost(uvm_logic_vector::sequence_item #(META_WIDTH) item);
-        credit_item cost;
+    function balance_item get_transaction_cost(uvm_logic_vector::sequence_item #(META_WIDTH) item);
+        balance_item cost;
 
         logic [HDR_WIDTH   -1 : 0] hdr;
         logic [PREFIX_WIDTH-1 : 0] prefix;
@@ -48,7 +48,7 @@ class valuer #(META_WIDTH) extends uvm_subscriber #(uvm_logic_vector::sequence_i
         { error, prefix, hdr } = item.data;
         { fmt, pcie_type, r0, tc, r1, attr0, r2, th, td, ep, attr1, at, length } = hdr[32*4-1 -: 32];
 
-        cost = credit_item::type_id::create("cost");
+        cost = balance_item::type_id::create("cost");
 
         // Completion with Data
         if ({ fmt, pcie_type } === 8'b01001010) begin
