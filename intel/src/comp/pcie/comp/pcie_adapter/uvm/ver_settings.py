@@ -160,9 +160,7 @@ SETTINGS = {
     ("agilex_dev"    ,                      ),
     (                           "intel_256",),
     ("agilex_dev"    ,          "intel_256",),
-    (                 "r_tile"             ,),
     ("agilex_dev"    ,"r_tile"             ,),
-    (                 "r_tile", "intel_256",),
     ("agilex_dev"    ,"r_tile", "intel_256",),
     ),
 }

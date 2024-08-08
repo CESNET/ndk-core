@@ -42,7 +42,7 @@ class logic_vector_array_sequence#(ITEM_WIDTH) extends uvm_sequence #(uvm_logic_
 endclass
 
 
-class crdt_sequence#(CC_MFB_REGIONS, CC_MFB_REGION_SIZE, CC_MFB_BLOCK_SIZE, CC_MFB_ITEM_WIDTH, AVST_UP_META_W, PCIE_MPS_DW) extends uvm_sequence #(uvm_avst_crdt::sequence_item);
+class crdt_sequence#(CC_MFB_REGIONS, CC_MFB_REGION_SIZE, CC_MFB_BLOCK_SIZE, CC_MFB_ITEM_WIDTH, AVST_UP_META_W, PCIE_MPS_DW) extends uvm_sequence #(uvm_crdt::sequence_item);
     `uvm_object_param_utils(uvm_pcie_adapter::crdt_sequence#(CC_MFB_REGIONS, CC_MFB_REGION_SIZE, CC_MFB_BLOCK_SIZE, CC_MFB_ITEM_WIDTH, AVST_UP_META_W, PCIE_MPS_DW))
 
     uvm_pcie_adapter::tr_planner #(CC_MFB_REGIONS, CC_MFB_REGION_SIZE, CC_MFB_BLOCK_SIZE, CC_MFB_ITEM_WIDTH, AVST_UP_META_W) tr_plan;
@@ -63,7 +63,7 @@ class crdt_sequence#(CC_MFB_REGIONS, CC_MFB_REGION_SIZE, CC_MFB_BLOCK_SIZE, CC_M
         logic hdr_valid = 1'b0;
         logic init = 1'b0;
 
-        req = uvm_avst_crdt::sequence_item::type_id::create("req");
+        req = uvm_crdt::sequence_item::type_id::create("req");
         void'(std::randomize(cnt) with {cnt inside {[SEED_MIN : SEED_MAX]}; });
 
         forever begin
@@ -160,7 +160,6 @@ class crdt_sequence#(CC_MFB_REGIONS, CC_MFB_REGION_SIZE, CC_MFB_BLOCK_SIZE, CC_M
                     endcase
 
                     finish_item(req);
-                    get_response(rsp);
                 end
 
             end else begin
@@ -202,7 +201,6 @@ class crdt_sequence#(CC_MFB_REGIONS, CC_MFB_REGION_SIZE, CC_MFB_BLOCK_SIZE, CC_M
                     init = 1'b1;
                 end
                 finish_item(req);
-                get_response(rsp);
             end
         end
     endtask

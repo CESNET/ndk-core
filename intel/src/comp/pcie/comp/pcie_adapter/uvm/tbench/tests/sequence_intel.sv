@@ -23,10 +23,10 @@ class sequence_intel#(CQ_MFB_REGIONS, CC_MFB_REGIONS, RQ_MFB_REGIONS, RC_MFB_REG
     uvm_logic_vector_array::sequence_lib#(CC_MFB_ITEM_WIDTH) m_mfb_cc_data_lib;
 
     // Credit Control Sequences
-    uvm_avst_crdt::sequence_lib m_crdt_up_lib;
-    uvm_avst_crdt::sequence_lib m_crdt_down_lib;
+    uvm_crdt::sequence_lib m_crdt_up_lib;
+    uvm_crdt::sequence_lib m_crdt_down_lib;
     // Credit Control stop Sequences
-    uvm_avst_crdt::sequence_stop m_crdt_down_stop;
+    uvm_crdt::sequence_stop m_crdt_down_stop;
     uvm_pcie_adapter::crdt_sequence #(CC_MFB_REGIONS, CC_MFB_REGION_SIZE, CC_MFB_BLOCK_SIZE, CC_MFB_ITEM_WIDTH, AVST_UP_META_W, PCIE_MPS_DW) m_crdt_up;
 
     // Low level sequence libraries
@@ -44,9 +44,9 @@ class sequence_intel#(CQ_MFB_REGIONS, CC_MFB_REGIONS, RQ_MFB_REGIONS, RC_MFB_REG
 
         m_reset = uvm_reset::sequence_start::type_id::create("m_reset_seq");
 
-        m_crdt_up_lib    = uvm_avst_crdt::sequence_lib::type_id::create("m_crdt_up_lib");
-        m_crdt_down_lib  = uvm_avst_crdt::sequence_lib::type_id::create("m_crdt_down_lib");
-        m_crdt_down_stop = uvm_avst_crdt::sequence_stop::type_id::create("m_crdt_down_stop");
+        m_crdt_up_lib    = uvm_crdt::sequence_lib::type_id::create("m_crdt_up_lib");
+        m_crdt_down_lib  = uvm_crdt::sequence_lib::type_id::create("m_crdt_down_lib");
+        m_crdt_down_stop = uvm_crdt::sequence_stop::type_id::create("m_crdt_down_stop");
         m_crdt_up        = uvm_pcie_adapter::crdt_sequence#(CC_MFB_REGIONS, CC_MFB_REGION_SIZE, CC_MFB_BLOCK_SIZE, CC_MFB_ITEM_WIDTH, AVST_UP_META_W, PCIE_MPS_DW)::type_id::create("m_crdt_up");
 
         m_avst_down_data_lib = uvm_logic_vector_array::sequence_lib#(CQ_MFB_ITEM_WIDTH)::type_id::create("m_avst_down_data_lib");

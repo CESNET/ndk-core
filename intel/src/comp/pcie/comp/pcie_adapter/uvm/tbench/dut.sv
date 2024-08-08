@@ -13,8 +13,8 @@ module DUT (
     avst_if.dut_rx avst_down,
     avst_if.dut_tx avst_up,
     // Credit control
-    avst_crdt_if.dut_tx crdt_down,
-    avst_crdt_if.dut_rx crdt_up,
+    crdt_if.dut_tx crdt_down,
+    crdt_if.dut_rx crdt_up,
     // For Xilinx
     axi_if.dut_rx cq_axi,
     axi_if.dut_tx cc_axi,
