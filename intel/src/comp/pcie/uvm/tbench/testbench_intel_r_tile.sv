@@ -56,8 +56,11 @@ module testbench;
     avst_if #(CQ_MFB_REGIONS, CQ_MFB_REGION_SIZE, CQ_MFB_BLOCK_SIZE, ITEM_WIDTH, AVST_DOWN_META_W) avst_down[PCIE_ENDPOINTS](PCIE_USER_CLK);
     avst_if #(CC_MFB_REGIONS, CC_MFB_REGION_SIZE, CC_MFB_BLOCK_SIZE, ITEM_WIDTH, AVST_UP_META_W)   avst_up[PCIE_ENDPOINTS](PCIE_USER_CLK);
     // For Intel (AVALON) R-Tile
-    avst_crdt_if avst_crdt_up  [PCIE_ENDPOINTS](PCIE_USER_CLK);
-    avst_crdt_if avst_crdt_down[PCIE_ENDPOINTS](PCIE_USER_CLK);
+    avst_crdt_if #(2) avst_crdt_up_hdr [PCIE_ENDPOINTS][3](PCIE_USER_CLK);
+    avst_crdt_if #(4) avst_crdt_up_data[PCIE_ENDPOINTS][3](PCIE_USER_CLK);
+
+    avst_crdt_if #(2) avst_crdt_down_hdr [PCIE_ENDPOINTS][3](PCIE_USER_CLK);
+    avst_crdt_if #(4) avst_crdt_down_data[PCIE_ENDPOINTS][3](PCIE_USER_CLK);
     // For Intel and Xilinx (MFB)
     mfb_if #(RQ_MFB_REGIONS, RQ_MFB_REGION_SIZE, RQ_MFB_BLOCK_SIZE, ITEM_WIDTH, RQ_MFB_META_W)  dma_rq_mfb[PCIE_ENDPOINTS][DMA_PORTS](DMA_CLK);
     mvb_if #(RQ_MFB_REGIONS, sv_dma_bus_pack::DMA_UPHDR_WIDTH)                                  dma_rq_mvb[PCIE_ENDPOINTS][DMA_PORTS](DMA_CLK);
@@ -119,8 +122,11 @@ module testbench;
         automatic virtual avst_if #(CC_MFB_REGIONS, CC_MFB_REGION_SIZE, CC_MFB_BLOCK_SIZE, ITEM_WIDTH, AVST_UP_META_W)   v_avst_up[PCIE_ENDPOINTS]   = avst_up;
 
         // AVALON credit interface
-        automatic virtual avst_crdt_if v_avst_crdt_up  [PCIE_ENDPOINTS] = avst_crdt_up;
-        automatic virtual avst_crdt_if v_avst_crdt_down[PCIE_ENDPOINTS] = avst_crdt_down;
+        automatic virtual avst_crdt_if #(2) v_avst_crdt_up_hdr [PCIE_ENDPOINTS][3] = avst_crdt_up_hdr;
+        automatic virtual avst_crdt_if #(4) v_avst_crdt_up_data[PCIE_ENDPOINTS][3] = avst_crdt_up_data;
+
+        automatic virtual avst_crdt_if #(2) v_avst_crdt_down_hdr [PCIE_ENDPOINTS][3] = avst_crdt_down_hdr;
+        automatic virtual avst_crdt_if #(4) v_avst_crdt_down_data[PCIE_ENDPOINTS][3] = avst_crdt_down_data;
 
         // DMA
         automatic virtual mfb_if #(RQ_MFB_REGIONS, RQ_MFB_REGION_SIZE, RQ_MFB_BLOCK_SIZE, ITEM_WIDTH, RQ_MFB_META_W) v_rq_mfb[PCIE_ENDPOINTS][DMA_PORTS] = dma_rq_mfb;
@@ -147,8 +153,13 @@ module testbench;
             uvm_config_db#(virtual avst_if #(CQ_MFB_REGIONS, CQ_MFB_REGION_SIZE, CQ_MFB_BLOCK_SIZE, ITEM_WIDTH, AVST_DOWN_META_W))::set(null, "", {"vif_pcie_", i_string, "_down"}, v_avst_down[pcie_e]);
             uvm_config_db#(virtual avst_if #(CC_MFB_REGIONS, CC_MFB_REGION_SIZE, CC_MFB_BLOCK_SIZE, ITEM_WIDTH, AVST_UP_META_W))::set(null, "", {"vif_pcie_", i_string, "_up"}, v_avst_up[pcie_e]);
 
-            uvm_config_db #(virtual avst_crdt_if)::set(null, "", { "vif_pcie_", i_string, "_crdt_up"   }, v_avst_crdt_up  [pcie_e]);
-            uvm_config_db #(virtual avst_crdt_if)::set(null, "", { "vif_pcie_", i_string, "_crdt_down" }, v_avst_crdt_down[pcie_e]);
+            for (int unsigned i = 0; i < 3; i++) begin
+                uvm_config_db #(virtual avst_crdt_if #(2))::set(null, "", { "vif_pcie_", i_string, $sformatf("_crdt_up_hdr_%0d",  i) }, v_avst_crdt_up_hdr [pcie_e][i]);
+                uvm_config_db #(virtual avst_crdt_if #(4))::set(null, "", { "vif_pcie_", i_string, $sformatf("_crdt_up_data_%0d", i) }, v_avst_crdt_up_data[pcie_e][i]);
+
+                uvm_config_db #(virtual avst_crdt_if #(2))::set(null, "", { "vif_pcie_", i_string, $sformatf("_crdt_down_hdr_%0d",  i) }, v_avst_crdt_down_hdr [pcie_e][i]);
+                uvm_config_db #(virtual avst_crdt_if #(4))::set(null, "", { "vif_pcie_", i_string, $sformatf("_crdt_down_data_%0d", i) }, v_avst_crdt_down_data[pcie_e][i]);
+            end
 
             for (int dma = 0; dma < DMA_PORTS; dma++) begin
                 string dma_string;
@@ -213,6 +224,27 @@ module testbench;
 
         // Logical endpoints (bifurcation)
         for (genvar pcie_e = 0; pcie_e < PCIE_ENDPOINTS; pcie_e++) begin
+            // UP HDR
+            wire logic [3  -1 : 0] up_hdr_init;
+            wire logic [3  -1 : 0] up_hdr_update;
+            wire logic [3*2-1 : 0] up_hdr_update_cnt;
+            wire logic [3  -1 : 0] up_hdr_init_ack;
+            // UP DATA
+            wire logic [3  -1 : 0] up_data_init;
+            wire logic [3  -1 : 0] up_data_update;
+            wire logic [3*4-1 : 0] up_data_update_cnt;
+            wire logic [3  -1 : 0] up_data_init_ack;
+            // UP HDR
+            wire logic [3  -1 : 0] down_hdr_init;
+            wire logic [3  -1 : 0] down_hdr_update;
+            wire logic [3*2-1 : 0] down_hdr_update_cnt;
+            wire logic [3  -1 : 0] down_hdr_init_ack;
+            // UP HDR
+            wire logic [3  -1 : 0] down_data_init;
+            wire logic [3  -1 : 0] down_data_update;
+            wire logic [3*4-1 : 0] down_data_update_cnt;
+            wire logic [3  -1 : 0] down_data_init_ack;
+
             assign DUT_U.VHDL_DUT_U.pcie_core_i.pcie_link_up_comb[pcie_e]  = '1;
 
             for (genvar pcie_r = 0; pcie_r < CQ_MFB_REGIONS; pcie_r++) begin
@@ -247,6 +279,64 @@ module testbench;
             assign DUT_U.VHDL_DUT_U.pcie_core_i.pcie_avst_up_ready[pcie_e] = avst_up[pcie_e].READY;
 
             assign avst_up[pcie_e].EMPTY = '0;
+
+            // ---------------------------- //
+            // Connection of credit signals //
+            // ---------------------------- //
+
+            // UP HDR
+            assign up_hdr_init_ack = DUT_U.VHDL_DUT_U.pcie_core_i.crdt_g[pcie_e].crdt_i.PCIE_HCRDT_UP_INIT_ACK;
+            // UP DATA
+            assign up_data_init_ack = DUT_U.VHDL_DUT_U.pcie_core_i.crdt_g[pcie_e].crdt_i.PCIE_DCRDT_UP_INIT_ACK;
+            // DOWN HDR
+            assign down_hdr_init       = DUT_U.VHDL_DUT_U.pcie_core_i.crdt_g[pcie_e].crdt_i.PCIE_HCRDT_DW_INIT;
+            assign down_hdr_update     = DUT_U.VHDL_DUT_U.pcie_core_i.crdt_g[pcie_e].crdt_i.PCIE_HCRDT_DW_UPDATE;
+            assign down_hdr_update_cnt = DUT_U.VHDL_DUT_U.pcie_core_i.crdt_g[pcie_e].crdt_i.PCIE_HCRDT_DW_UPDATE_CNT;
+            // DOWN DATA
+            assign down_data_init       = DUT_U.VHDL_DUT_U.pcie_core_i.crdt_g[pcie_e].crdt_i.PCIE_DCRDT_DW_INIT;
+            assign down_data_update     = DUT_U.VHDL_DUT_U.pcie_core_i.crdt_g[pcie_e].crdt_i.PCIE_DCRDT_DW_UPDATE;
+            assign down_data_update_cnt = DUT_U.VHDL_DUT_U.pcie_core_i.crdt_g[pcie_e].crdt_i.PCIE_DCRDT_DW_UPDATE_CNT;
+
+            for (genvar i = 0; i < 3; i++) begin
+                // UP HDR
+                assign up_hdr_init      [i]              = avst_crdt_up_hdr[pcie_e][i].INIT;
+                assign up_hdr_update    [i]              = avst_crdt_up_hdr[pcie_e][i].UPDATE;
+                assign up_hdr_update_cnt[2*(i+1)-1 -: 2] = avst_crdt_up_hdr[pcie_e][i].UPDATE_CNT;
+                // UP DATA
+                assign up_data_init      [i]              = avst_crdt_up_data[pcie_e][i].INIT;
+                assign up_data_update    [i]              = avst_crdt_up_data[pcie_e][i].UPDATE;
+                assign up_data_update_cnt[4*(i+1)-1 -: 4] = avst_crdt_up_data[pcie_e][i].UPDATE_CNT;
+                // DOWN HDR
+                assign down_hdr_init_ack[i] = avst_crdt_down_hdr[pcie_e][i].INIT_ACK;
+                // DOWN DATA
+                assign down_data_init_ack[i] = avst_crdt_down_data[pcie_e][i].INIT_ACK;
+               
+                // UP HDR
+                assign avst_crdt_up_hdr[pcie_e][i].INIT_ACK = up_hdr_init_ack[i];
+                // UP DATA
+                assign avst_crdt_up_data[pcie_e][i].INIT_ACK = up_data_init_ack[i];
+                // DOWN HDR
+                assign avst_crdt_down_hdr[pcie_e][i].INIT       = down_hdr_init      [i];
+                assign avst_crdt_down_hdr[pcie_e][i].UPDATE     = down_hdr_update    [i];
+                assign avst_crdt_down_hdr[pcie_e][i].UPDATE_CNT = down_hdr_update_cnt[2*(i+1)-1 -: 2];
+                // DOWN HDR
+                assign avst_crdt_down_data[pcie_e][i].INIT       = down_data_init      [i];
+                assign avst_crdt_down_data[pcie_e][i].UPDATE     = down_data_update    [i];
+                assign avst_crdt_down_data[pcie_e][i].UPDATE_CNT = down_data_update_cnt[4*(i+1)-1 -: 4];
+            end
+
+            // UP HDR
+            assign DUT_U.VHDL_DUT_U.pcie_core_i.crdt_g[pcie_e].crdt_i.PCIE_HCRDT_UP_INIT       = up_hdr_init;
+            assign DUT_U.VHDL_DUT_U.pcie_core_i.crdt_g[pcie_e].crdt_i.PCIE_HCRDT_UP_UPDATE     = up_hdr_update;
+            assign DUT_U.VHDL_DUT_U.pcie_core_i.crdt_g[pcie_e].crdt_i.PCIE_HCRDT_UP_UPDATE_CNT = up_hdr_update_cnt;
+            // UP DATA
+            assign DUT_U.VHDL_DUT_U.pcie_core_i.crdt_g[pcie_e].crdt_i.PCIE_DCRDT_UP_INIT       = up_data_init;
+            assign DUT_U.VHDL_DUT_U.pcie_core_i.crdt_g[pcie_e].crdt_i.PCIE_DCRDT_UP_UPDATE     = up_data_update;
+            assign DUT_U.VHDL_DUT_U.pcie_core_i.crdt_g[pcie_e].crdt_i.PCIE_DCRDT_UP_UPDATE_CNT = up_data_update_cnt;
+            // DOWN HDR
+            assign DUT_U.VHDL_DUT_U.pcie_core_i.crdt_g[pcie_e].crdt_i.PCIE_HCRDT_DW_INIT_ACK = down_hdr_init_ack;
+            // DOWN DATA
+            assign DUT_U.VHDL_DUT_U.pcie_core_i.crdt_g[pcie_e].crdt_i.PCIE_DCRDT_DW_INIT_ACK = down_data_init_ack;
         end
     endgenerate
 
@@ -255,28 +345,6 @@ module testbench;
             initial begin
                 // Rewrite AVST valid signal
                 force DUT_U.VHDL_DUT_U.pcie_core_i.pcie_adapter_g[pcie_e].pcie_adapter_i.AVST_DOWN_VALID = avst_down[pcie_e].VALID;
-
-                // ---------------------------- //
-                // Connection of credit signals //
-                // ---------------------------- //
-
-                force DUT_U.VHDL_DUT_U.pcie_core_i.pcie_adapter_g[pcie_e].pcie_adapter_i.CRDT_UP_INIT_DONE = avst_crdt_up[pcie_e].INIT_DONE;
-                force DUT_U.VHDL_DUT_U.pcie_core_i.pcie_adapter_g[pcie_e].pcie_adapter_i.CRDT_UP_UPDATE    = avst_crdt_up[pcie_e].UPDATE;   
-                force DUT_U.VHDL_DUT_U.pcie_core_i.pcie_adapter_g[pcie_e].pcie_adapter_i.CRDT_UP_CNT_PH    = avst_crdt_up[pcie_e].CNT_PH;   
-                force DUT_U.VHDL_DUT_U.pcie_core_i.pcie_adapter_g[pcie_e].pcie_adapter_i.CRDT_UP_CNT_NPH   = avst_crdt_up[pcie_e].CNT_NPH;  
-                force DUT_U.VHDL_DUT_U.pcie_core_i.pcie_adapter_g[pcie_e].pcie_adapter_i.CRDT_UP_CNT_CPLH  = avst_crdt_up[pcie_e].CNT_CPLH; 
-                force DUT_U.VHDL_DUT_U.pcie_core_i.pcie_adapter_g[pcie_e].pcie_adapter_i.CRDT_UP_CNT_PD    = avst_crdt_up[pcie_e].CNT_PD;   
-                force DUT_U.VHDL_DUT_U.pcie_core_i.pcie_adapter_g[pcie_e].pcie_adapter_i.CRDT_UP_CNT_NPD   = avst_crdt_up[pcie_e].CNT_NPD;  
-                force DUT_U.VHDL_DUT_U.pcie_core_i.pcie_adapter_g[pcie_e].pcie_adapter_i.CRDT_UP_CNT_CPLD  = avst_crdt_up[pcie_e].CNT_CPLD; 
-
-                force DUT_U.VHDL_DUT_U.pcie_core_i.pcie_adapter_g[pcie_e].pcie_adapter_i.CRDT_DOWN_INIT_DONE = avst_crdt_down[pcie_e].INIT_DONE;
-                force avst_crdt_down[pcie_e].UPDATE    = DUT_U.VHDL_DUT_U.pcie_core_i.pcie_adapter_g[pcie_e].pcie_adapter_i.CRDT_DOWN_UPDATE;   
-                force avst_crdt_down[pcie_e].CNT_PH    = DUT_U.VHDL_DUT_U.pcie_core_i.pcie_adapter_g[pcie_e].pcie_adapter_i.CRDT_DOWN_CNT_PH;   
-                force avst_crdt_down[pcie_e].CNT_NPH   = DUT_U.VHDL_DUT_U.pcie_core_i.pcie_adapter_g[pcie_e].pcie_adapter_i.CRDT_DOWN_CNT_NPH;  
-                force avst_crdt_down[pcie_e].CNT_CPLH  = DUT_U.VHDL_DUT_U.pcie_core_i.pcie_adapter_g[pcie_e].pcie_adapter_i.CRDT_DOWN_CNT_CPLH; 
-                force avst_crdt_down[pcie_e].CNT_PD    = DUT_U.VHDL_DUT_U.pcie_core_i.pcie_adapter_g[pcie_e].pcie_adapter_i.CRDT_DOWN_CNT_PD;   
-                force avst_crdt_down[pcie_e].CNT_NPD   = DUT_U.VHDL_DUT_U.pcie_core_i.pcie_adapter_g[pcie_e].pcie_adapter_i.CRDT_DOWN_CNT_NPD;  
-                force avst_crdt_down[pcie_e].CNT_CPLD  = DUT_U.VHDL_DUT_U.pcie_core_i.pcie_adapter_g[pcie_e].pcie_adapter_i.CRDT_DOWN_CNT_CPLD;
             end
         end
     endgenerate

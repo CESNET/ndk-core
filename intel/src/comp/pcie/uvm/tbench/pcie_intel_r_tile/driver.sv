@@ -10,7 +10,7 @@ class driver extends uvm_pcie_intel::driver;
     localparam int unsigned HDR_WIDTH    = 128;
     localparam int unsigned PREFIX_WIDTH = 32;
 
-    mailbox #(credit_item) m_mailbox;
+    mailbox #(balance_item) m_mailbox;
     event approve;
 
     function new(string name = "driver", uvm_component parent = null);
@@ -29,7 +29,7 @@ class driver extends uvm_pcie_intel::driver;
             `uvm_fatal(this.get_full_name(), "\n\tCannot get request header fifo");
         end
 
-        assert(uvm_config_db #(mailbox #(credit_item))::get(this, "", "mailbox", m_mailbox))
+        assert(uvm_config_db #(mailbox #(balance_item))::get(this, "", "mailbox", m_mailbox))
         else begin
             `uvm_fatal(this.get_full_name(), "\n\tCannot get mailbox");
         end
@@ -55,19 +55,19 @@ class driver extends uvm_pcie_intel::driver;
     endtask
 
     task wait_for_approval(uvm_pcie::header header);
-        credit_item cost = get_transaction_cost(header);
+        balance_item cost = get_transaction_cost(header);
         m_mailbox.put(cost);
         wait(approve.triggered);
     endtask
 
-    function credit_item get_transaction_cost(uvm_pcie::header header);
-        credit_item cost;
+    function balance_item get_transaction_cost(uvm_pcie::header header);
+        balance_item cost;
 
         logic [3 -1 : 0] fmt       = header.fmt;
         logic [5 -1 : 0] pcie_type = header.pcie_type;
         logic [10-1 : 0] length    = header.length;
 
-        cost = credit_item::type_id::create("cost");
+        cost = balance_item::type_id::create("cost");
 
         // Completion with Data
         if ({ fmt, pcie_type } === 8'b01001010) begin

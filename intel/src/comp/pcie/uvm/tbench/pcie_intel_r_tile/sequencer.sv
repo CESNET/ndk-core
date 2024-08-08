@@ -4,42 +4,35 @@
 
 // SPDX-License-Identifier: BSD-3-Clause
 
-class sequencer extends uvm_avst_crdt::sequencer;
-    `uvm_component_utils(uvm_pcie_intel_r_tile::sequencer)
+class sequencer #(int unsigned UPDATE_CNT_WIDTH) extends uvm_avst_crdt::sequencer #(UPDATE_CNT_WIDTH);
+    `uvm_component_param_utils(uvm_pcie_intel_r_tile::sequencer #(UPDATE_CNT_WIDTH))
 
-    // Input fifo
-    uvm_tlm_analysis_fifo #(credit_item) credit_fifo_in;
+    // Reset
+    uvm_reset::sync_terminate reset_sync;
 
-    // Credits in total
-    credit_item total;
+    // Input export
+    uvm_analysis_imp #(int unsigned, sequencer #(UPDATE_CNT_WIDTH)) analysis_export;
+
+    // Total balance to return
+    int unsigned total;
 
     // Constructor
     function new(string name = "sequencer", uvm_component parent = null);
         super.new(name, parent);
+        reset_sync = new();
 
-        credit_fifo_in = new("credit_fifo_in", this);
-        total = credit_item::type_id::create("total", this);
+        analysis_export = new("analysis_export", this);
+
+        total = 0;
     endfunction
 
-    task run_phase(uvm_phase phase);
-        credit_item item;
-
-        forever begin
-            credit_fifo_in.get(item);
-
-            if (reset_sync.has_been_reset()) begin
-                credit_fifo_in.flush();
-                total.reset();
-                continue;
-            end
-
-            total.header.p   += item.header.p;
-            total.header.np  += item.header.np;
-            total.header.cpl += item.header.cpl;
-            total.data.p     += item.data.p;
-            total.data.np    += item.data.np;
-            total.data.cpl   += item.data.cpl;
+    function void write(int unsigned t);
+        if (reset_sync.has_been_reset()) begin
+            total = 0;
+            return;
         end
-    endtask
+
+        total += t;
+    endfunction
 
 endclass

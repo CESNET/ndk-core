@@ -1,4 +1,4 @@
-// credit_item.sv: Item of AVST credits
+// credit_item.sv: Item of AVST credit
 // Copyright (C) 2024 CESNET z. s. p. o.
 // Author(s): Yaroslav Marushchenko <xmarus09@stud.fit.vutbr.cz>
 
@@ -11,38 +11,14 @@ class credit_item extends uvm_sequence_item;
     // Properties //
     // ---------- //
 
-    typedef struct {
-        rand int unsigned p;
-        rand int unsigned np;
-        rand int unsigned cpl;
-    } credit_element_t;
-
-    rand credit_element_t header;
-    rand credit_element_t data;
+    rand logic        init;
+    rand logic        init_ack;
+    rand logic        update;
+    rand int unsigned update_cnt;
 
     // Constructor
     function new(string name = "credit_item");
         super.new(name);
-
-        reset();
-    endfunction
-
-    function void reset();
-        header.p   = 0;
-        header.np  = 0;
-        header.cpl = 0;
-        data.p     = 0;
-        data.np    = 0;
-        data.cpl   = 0;
-    endfunction
-
-    function logic is_zero();
-        return (header.p   == 0 &&
-                header.np  == 0 &&
-                header.cpl == 0 &&
-                data.p     == 0 &&
-                data.np    == 0 &&
-                data.cpl   == 0);
     endfunction
 
     // -------------------- //
@@ -58,8 +34,10 @@ class credit_item extends uvm_sequence_item;
         end
 
         super.do_copy(rhs);
-        header = rhs_.header;
-        data   = rhs_.data;
+        init       = rhs_.init;
+        init_ack   = rhs_.init_ack;
+        update     = rhs_.update;
+        update_cnt = rhs_.update_cnt;
     endfunction
 
     function bit do_compare(uvm_object rhs, uvm_comparer comparer);
@@ -72,21 +50,21 @@ class credit_item extends uvm_sequence_item;
 
         return (
             super.do_compare(rhs, comparer) &&
-            (data   == rhs_.data)           &&
-            (header == rhs_.header)
+            (init       === rhs_.init      ) &&
+            (init_ack   === rhs_.init_ack  ) &&
+            (update     === rhs_.update    ) &&
+            (update_cnt ==  rhs_.update_cnt)
         );
     endfunction
 
     function string convert2string();
-        string output_string = "";
+        string output_string;
 
-        $sformat(output_string, "\n\tHEADER:\n\t\tP: %0d\n\t\tNP: %0d\n\t\tCPL: %0d\n\tDATA\n\t\tP: %0d\n\t\tNP: %0d\n\t\tCPL: %0d\n",
-            header.p,
-            header.np,
-            header.cpl,
-            data.p,
-            data.np,
-            data.cpl
+        output_string = $sformatf("\n\tINIT %0b\n\tINIT_ACK %0b\n\tUPDATE %0b\n\tUPDATE_CNT %0d\n",
+            init,
+            init_ack,
+            update,
+            update_cnt
         );
 
         return output_string;

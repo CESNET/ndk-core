@@ -1,135 +1,92 @@
-// credit_counter.sv: Counter of AVST credits
+// credit_counter.sv: Counter of AVST credit
 // Copyright (C) 2024 CESNET z. s. p. o.
 // Author(s): Yaroslav Marushchenko <xmarus09@stud.fit.vutbr.cz>
 
 // SPDX-License-Identifier: BSD-3-Clause
 
-class credit_counter extends uvm_component;
+class credit_counter extends uvm_subscriber #(credit_item);
     `uvm_component_utils(uvm_pcie_intel_r_tile::credit_counter)
-
-    // Input fifo
-    uvm_tlm_analysis_fifo #(uvm_avst_crdt::sequence_item) avst_crdt_in;
 
     // --------- //
     // Variables //
     // --------- //
 
-    protected logic init_done;
+    typedef enum {
+        IDLE,
+        INITIALIZING,
+        INIT_DONE
+    } state_e;
+
+    protected state_e state;
     protected logic infinite_credits;
-    protected credit_item balance;
+    protected int unsigned count;
 
     // Constructor
     function new(string name = "credit_counter", uvm_component parent = null);
         super.new(name, parent);
 
-        avst_crdt_in = new("avst_crdt_in", this);
+        state            = IDLE;
+        infinite_credits = 0;
+        count            = 0;
     endfunction
 
-    task run_phase(uvm_phase phase);
-        uvm_avst_crdt::sequence_item avst_crdt_item;
-
-        balance = credit_item::type_id::create("balance");
-        infinite_credits = 0;
-        init_done        = 0;
-
-        forever begin
-            avst_crdt_in.get(avst_crdt_item);
-
-            // Initialization
-            if (init_done == 0 && avst_crdt_item.init_done === 1'b1) begin // End of initialization
-                // 0 credits => inifinite credits
-                if (balance.is_zero()) begin
-                    infinite_credits = 1;
-                end
-
-                init_done = 1;
-            end
-            else if (init_done == 1 && avst_crdt_item.init_done === 1'b0) begin // Start of initialization
-                balance.reset();
-                infinite_credits = 0;
-                init_done        = 0;
-            end
-
-            // Skip credit incrementing
-            if (infinite_credits) begin
-                continue;
-            end
-
-            // Header
-            if (avst_crdt_item.update[0] === 1'b1) begin
-                balance.header.p += avst_crdt_item.cnt_ph;
-            end
-            if (avst_crdt_item.update[1] === 1'b1) begin
-                balance.header.np += avst_crdt_item.cnt_nph;
-            end
-            if (avst_crdt_item.update[2] === 1'b1) begin
-                balance.header.cpl += avst_crdt_item.cnt_cplh;
-            end
-            // Data
-            if (avst_crdt_item.update[3] === 1'b1) begin
-                balance.data.p += avst_crdt_item.cnt_pd;
-            end
-            if (avst_crdt_item.update[4] === 1'b1) begin
-                balance.data.np += avst_crdt_item.cnt_npd;
-            end
-            if (avst_crdt_item.update[5] === 1'b1) begin
-                balance.data.cpl += avst_crdt_item.cnt_cpld;
+    function void write(credit_item t);
+        if (t.init === 1'b1 && t.init_ack === 1'b1) begin // Start of initialization
+            state            = INITIALIZING;
+            infinite_credits = 0;
+            count            = 0;
+        end
+        else if (state == INITIALIZING && t.init === 1'b0) begin // End of initialization
+            state = INIT_DONE;
+            // 0 credits => inifinite credits
+            if (count == 0) begin
+                infinite_credits = 1;
             end
         end
-    endtask
+
+        if (state == INITIALIZING || state == INIT_DONE) begin
+            if (t.update === 1'b1 && !infinite_credits) begin
+                count += t.update_cnt;
+            end
+        end
+    endfunction
 
     function logic is_init_done();
-        return init_done;
+        return (state == INIT_DONE);
     endfunction
 
     task wait_for_init_done();
-        wait(init_done);
+        wait(state == INIT_DONE);
     endtask
 
-    task reduce_balance(credit_item cost);
+    task reduce(int unsigned cost);
         if (infinite_credits) begin
             return;
         end
 
-        wait(balance.header.p   >= cost.header.p   &&
-             balance.header.np  >= cost.header.np  &&
-             balance.header.cpl >= cost.header.cpl &&
-             balance.data.p     >= cost.data.p     &&
-             balance.data.np    >= cost.data.np    &&
-             balance.data.cpl   >= cost.data.cpl);
-
-        balance.header.p   -= cost.header.p;
-        balance.header.np  -= cost.header.np;
-        balance.header.cpl -= cost.header.cpl;
-        balance.data.p     -= cost.data.p;
-        balance.data.np    -= cost.data.np;
-        balance.data.cpl   -= cost.data.cpl;
+        wait(count >= cost);
+        count -= cost;
     endtask
 
-    function logic try_reduce_balance(credit_item cost);
+    function logic is_enough(int unsigned cost);
         if (infinite_credits) begin
             return 1;
         end
 
-        if (balance.header.p   >= cost.header.p   &&
-            balance.header.np  >= cost.header.np  &&
-            balance.header.cpl >= cost.header.cpl &&
-            balance.data.p     >= cost.data.p     &&
-            balance.data.np    >= cost.data.np    &&
-            balance.data.cpl   >= cost.data.cpl)
-        begin
-            balance.header.p   -= cost.header.p;
-            balance.header.np  -= cost.header.np;
-            balance.header.cpl -= cost.header.cpl;
-            balance.data.p     -= cost.data.p;
-            balance.data.np    -= cost.data.np;
-            balance.data.cpl   -= cost.data.cpl;
+        return (count >= cost);
+    endfunction
 
+    function logic try_reduce(int unsigned cost);
+        if (infinite_credits) begin
             return 1;
         end
-        else begin
-            return 0;
+
+        if (is_enough(cost)) begin
+            count -= cost;
+            return 1;
         end
+
+        return 0;
     endfunction
 
 endclass
