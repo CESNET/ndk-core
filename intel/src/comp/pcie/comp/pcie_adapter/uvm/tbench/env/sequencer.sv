@@ -27,8 +27,8 @@ class virt_sequencer#(CQ_MFB_REGIONS, CC_MFB_REGIONS, RQ_MFB_REGIONS, RC_MFB_REG
     // AVALON Ready Sequencer
     uvm_avst::sequencer #(CC_MFB_REGIONS, CC_MFB_REGION_SIZE, CC_MFB_BLOCK_SIZE, CC_MFB_ITEM_WIDTH, AVST_UP_META_W)  m_avst_up_rdy_sqr;
     // Credit Control Sequencers
-    uvm_avst_crdt::sequencer m_crdt_up_sqr;
-    uvm_avst_crdt::sequencer m_crdt_down_sqr;
+    uvm_crdt::sequencer m_crdt_up_sqr;
+    uvm_crdt::sequencer m_crdt_down_sqr;
     // AXI Ready Sequencers
     uvm_axi::sequencer #(AXI_DATA_WIDTH, AXI_CCUSER_WIDTH, CC_MFB_REGIONS) m_axi_cc_rdy_sqr;
     uvm_axi::sequencer #(AXI_DATA_WIDTH, AXI_RQUSER_WIDTH, RQ_MFB_REGIONS) m_axi_rq_rdy_sqr;

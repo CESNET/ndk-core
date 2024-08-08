@@ -22,8 +22,8 @@ module testbench;
     avst_if #(CQ_MFB_REGIONS, CQ_MFB_REGION_SIZE, CQ_MFB_BLOCK_SIZE, CQ_MFB_ITEM_WIDTH, AVST_DOWN_META_W) avst_down(CLK);
     avst_if #(CC_MFB_REGIONS, CC_MFB_REGION_SIZE, CC_MFB_BLOCK_SIZE, CC_MFB_ITEM_WIDTH, AVST_UP_META_W)   avst_up(CLK);
     // For Credit control
-    avst_crdt_if crdt_down(CLK);
-    avst_crdt_if crdt_up(CLK);
+    crdt_if crdt_down(CLK);
+    crdt_if crdt_up(CLK);
     // For Xilinx (AXI)
     axi_if #(AXI_DATA_WIDTH, AXI_CQUSER_WIDTH) cq_axi(CLK);
     axi_if #(AXI_DATA_WIDTH, AXI_CCUSER_WIDTH) cc_axi(CLK);
@@ -48,8 +48,8 @@ module testbench;
         uvm_config_db#(virtual avst_if #(CQ_MFB_REGIONS, CQ_MFB_REGION_SIZE, CQ_MFB_BLOCK_SIZE, CQ_MFB_ITEM_WIDTH, AVST_DOWN_META_W))::set(null, "", "vif_avst_down", avst_down);
         uvm_config_db#(virtual avst_if #(CC_MFB_REGIONS, CC_MFB_REGION_SIZE, CC_MFB_BLOCK_SIZE, CC_MFB_ITEM_WIDTH, AVST_UP_META_W))::set(null, "", "vif_avst_up", avst_up);
         // Credit control interface
-        uvm_config_db#(virtual avst_crdt_if)::set(null, "", "vif_crdt_down", crdt_down);
-        uvm_config_db#(virtual avst_crdt_if)::set(null, "", "vif_crdt_up", crdt_up);
+        uvm_config_db#(virtual crdt_if)::set(null, "", "vif_crdt_down", crdt_down);
+        uvm_config_db#(virtual crdt_if)::set(null, "", "vif_crdt_up", crdt_up);
         // AXI interface
         uvm_config_db#(virtual axi_if #(AXI_DATA_WIDTH, AXI_CQUSER_WIDTH))::set(null, "", "vif_cq_axi", cq_axi);
         uvm_config_db#(virtual axi_if #(AXI_DATA_WIDTH, AXI_CCUSER_WIDTH))::set(null, "", "vif_cc_axi", cc_axi);

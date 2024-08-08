@@ -25,8 +25,8 @@ class env #(CQ_MFB_REGIONS, CC_MFB_REGIONS, RQ_MFB_REGIONS, RC_MFB_REGIONS, CQ_M
     uvm_logic_vector_array_avst::env_rx #(CQ_MFB_REGIONS, CQ_MFB_REGION_SIZE, CQ_MFB_BLOCK_SIZE, CQ_MFB_ITEM_WIDTH, AVST_DOWN_META_W, READY_LATENCY) m_avst_down_env;
     uvm_logic_vector_array_avst::env_tx #(CC_MFB_REGIONS, CC_MFB_REGION_SIZE, CC_MFB_BLOCK_SIZE, CC_MFB_ITEM_WIDTH, AVST_UP_META_W  , 3) m_avst_up_env;
     // Credit Control (INTEL)
-    uvm_avst_crdt::agent_rx m_crdt_agent_up;
-    uvm_avst_crdt::agent_tx m_crdt_agent_down;
+    uvm_crdt::agent_rx m_crdt_agent_up;
+    uvm_crdt::agent_tx m_crdt_agent_down;
     // AXI interface (XILINX)
     uvm_logic_vector_array_axi::env_rx #(AXI_DATA_WIDTH, AXI_CQUSER_WIDTH, CQ_MFB_ITEM_WIDTH, CQ_MFB_REGIONS, CQ_MFB_BLOCK_SIZE, CQ_AXI_STRADDLING)     m_axi_cq_env;
     uvm_logic_vector_array_axi::env_tx #(AXI_DATA_WIDTH, AXI_CCUSER_WIDTH, CC_MFB_ITEM_WIDTH, CC_MFB_REGIONS, CC_MFB_BLOCK_SIZE, CC_AXI_STRADDLING)     m_axi_cc_env;
@@ -47,8 +47,8 @@ class env #(CQ_MFB_REGIONS, CC_MFB_REGIONS, RQ_MFB_REGIONS, RC_MFB_REGIONS, CQ_M
     uvm_logic_vector_array_avst::config_item m_avst_down_cfg;
     uvm_logic_vector_array_avst::config_item m_avst_up_cfg;
     // Credit Control configuration
-    uvm_avst_crdt::config_item               m_crdt_down_cfg;
-    uvm_avst_crdt::config_item               m_crdt_up_cfg;
+    uvm_crdt::config_item               m_crdt_down_cfg;
+    uvm_crdt::config_item               m_crdt_up_cfg;
     // AXI configuration
     uvm_logic_vector_array_axi::config_item  m_axi_cq_cfg;
     uvm_logic_vector_array_axi::config_item  m_axi_cc_cfg;
@@ -188,8 +188,8 @@ class env #(CQ_MFB_REGIONS, CC_MFB_REGIONS, RQ_MFB_REGIONS, RC_MFB_REGIONS, CQ_M
         uvm_config_db #(uvm_logic_vector_array_avst::config_item)::set(this, "m_avst_down_env", "m_config", m_avst_down_cfg);
         uvm_config_db #(uvm_logic_vector_array_avst::config_item)::set(this, "m_avst_up_env", "m_config", m_avst_up_cfg);
         // Credit Control
-        uvm_config_db #(uvm_avst_crdt::config_item)::set(this, "m_crdt_agent_up", "m_config", m_crdt_up_cfg);
-        uvm_config_db #(uvm_avst_crdt::config_item)::set(this, "m_crdt_agent_down", "m_config", m_crdt_down_cfg);
+        uvm_config_db #(uvm_crdt::config_item)::set(this, "m_crdt_agent_up", "m_config", m_crdt_up_cfg);
+        uvm_config_db #(uvm_crdt::config_item)::set(this, "m_crdt_agent_down", "m_config", m_crdt_down_cfg);
         // AXI
         uvm_config_db #(uvm_logic_vector_array_axi::config_item)::set(this, "m_axi_cq_env", "m_config", m_axi_cq_cfg);
         uvm_config_db #(uvm_logic_vector_array_axi::config_item)::set(this, "m_axi_cc_env", "m_config", m_axi_cc_cfg);
@@ -207,8 +207,8 @@ class env #(CQ_MFB_REGIONS, CC_MFB_REGIONS, RQ_MFB_REGIONS, RC_MFB_REGIONS, CQ_M
         m_avst_down_env = uvm_logic_vector_array_avst::env_rx #(CQ_MFB_REGIONS, CQ_MFB_REGION_SIZE, CQ_MFB_BLOCK_SIZE, CQ_MFB_ITEM_WIDTH, AVST_DOWN_META_W, READY_LATENCY)::type_id::create("m_avst_down_env", this);
         m_avst_up_env   = uvm_logic_vector_array_avst::env_tx #(CC_MFB_REGIONS, CC_MFB_REGION_SIZE, CC_MFB_BLOCK_SIZE, CC_MFB_ITEM_WIDTH, AVST_UP_META_W  , 3)::type_id::create("m_avst_up_env", this);
         // Credit Control agent
-        m_crdt_agent_up   = uvm_avst_crdt::agent_rx::type_id::create("m_crdt_agent_up", this);
-        m_crdt_agent_down = uvm_avst_crdt::agent_tx::type_id::create("m_crdt_agent_down", this);
+        m_crdt_agent_up   = uvm_crdt::agent_rx::type_id::create("m_crdt_agent_up", this);
+        m_crdt_agent_down = uvm_crdt::agent_tx::type_id::create("m_crdt_agent_down", this);
         // Create AXI environments
         m_axi_cq_env    = uvm_logic_vector_array_axi::env_rx #(AXI_DATA_WIDTH, AXI_CQUSER_WIDTH, CQ_MFB_ITEM_WIDTH, CQ_MFB_REGIONS, CQ_MFB_BLOCK_SIZE, CQ_AXI_STRADDLING)::type_id::create("m_axi_cq_env", this);
         m_axi_cc_env    = uvm_logic_vector_array_axi::env_tx #(AXI_DATA_WIDTH, AXI_CCUSER_WIDTH, CC_MFB_ITEM_WIDTH, CC_MFB_REGIONS, CC_MFB_BLOCK_SIZE, CC_AXI_STRADDLING)::type_id::create("m_axi_cc_env", this);
