@@ -12,14 +12,14 @@ package uvm_network_mod_f_tile_env;
     `include "uvm_macros.svh"
     import uvm_pkg::*;
 
-    parameter int unsigned SEGMENTS = ((tbench_param::ETH_PORT_SPEED[0] == 400) ? 16 :
-                                       (tbench_param::ETH_PORT_SPEED[0] == 200) ? 8  :
-                                       (tbench_param::ETH_PORT_SPEED[0] == 100) ? 4  :
-                                       (tbench_param::ETH_PORT_SPEED[0] == 50 ) ? 2  :
-                                       (tbench_param::ETH_PORT_SPEED[0] == 40 ) ? 2  :
-                                       (tbench_param::ETH_PORT_SPEED[0] == 25 ) ? 1  :
-                                       (tbench_param::ETH_PORT_SPEED[0] == 10 ) ? 1  :
-                                                                                  0  );
+    parameter int unsigned SEGMENTS = ((test::ETH_PORT_SPEED[0] == 400) ? 16 :
+                                       (test::ETH_PORT_SPEED[0] == 200) ? 8  :
+                                       (test::ETH_PORT_SPEED[0] == 100) ? 4  :
+                                       (test::ETH_PORT_SPEED[0] == 50 ) ? 2  :
+                                       (test::ETH_PORT_SPEED[0] == 40 ) ? 2  :
+                                       (test::ETH_PORT_SPEED[0] == 25 ) ? 1  :
+                                       (test::ETH_PORT_SPEED[0] == 10 ) ? 1  :
+                                                                          0  );
 
     `include "sequencer_port.sv"
     `include "sequence.sv"

@@ -7,6 +7,8 @@
 class env #(
     string ETH_CORE_ARCH,
     int unsigned ETH_PORTS,
+
+    int unsigned ETH_PORT_SPEED[ETH_PORTS-1:0],
     int unsigned ETH_PORT_CHAN[ETH_PORTS-1 : 0],
 
     int unsigned ETH_TX_HDR_WIDTH,
@@ -22,6 +24,7 @@ class env #(
 ) extends uvm_network_mod_env::env #(
         ETH_CORE_ARCH,
         ETH_PORTS,
+        ETH_PORT_SPEED,
         ETH_PORT_CHAN,
         ETH_TX_HDR_WIDTH,
         ETH_RX_HDR_WIDTH,
@@ -32,7 +35,7 @@ class env #(
         MI_DATA_WIDTH,
         MI_ADDR_WIDTH
     );
-    `uvm_component_param_utils(uvm_network_mod_f_tile_env::env #(ETH_CORE_ARCH, ETH_PORTS, ETH_PORT_CHAN, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, REGIONS, REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, MI_DATA_WIDTH, MI_ADDR_WIDTH))
+    `uvm_component_param_utils(uvm_network_mod_f_tile_env::env #(ETH_CORE_ARCH, ETH_PORTS, ETH_PORT_SPEED, ETH_PORT_CHAN, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, REGIONS, REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, MI_DATA_WIDTH, MI_ADDR_WIDTH))
 
     // Intel Mac Seg environments
     protected uvm_logic_vector_array_intel_mac_seg::env_rx #(SEGMENTS) m_eth_rx[ETH_PORTS];
@@ -56,8 +59,8 @@ class env #(
             this
         );
 
-        uvm_network_mod_env::model #(ETH_CORE_ARCH, ETH_PORTS, ETH_PORT_CHAN, REGIONS, ITEM_WIDTH, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH)::type_id::set_inst_override(
-            uvm_network_mod_f_tile_env::model #(ETH_CORE_ARCH, ETH_PORTS, ETH_PORT_CHAN, REGIONS, ITEM_WIDTH, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH)::get_type(),
+        uvm_network_mod_env::model #(ETH_CORE_ARCH, ETH_PORTS, ETH_PORT_SPEED, ETH_PORT_CHAN, REGIONS, ITEM_WIDTH, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH)::type_id::set_inst_override(
+            uvm_network_mod_f_tile_env::model #(ETH_CORE_ARCH, ETH_PORTS, ETH_PORT_SPEED, ETH_PORT_CHAN, REGIONS, ITEM_WIDTH, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH)::get_type(),
             "m_scoreboard.m_model",
             this
         );

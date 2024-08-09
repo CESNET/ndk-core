@@ -8,6 +8,8 @@
 class env #(
     string ETH_CORE_ARCH,
     int unsigned ETH_PORTS,
+
+    int unsigned ETH_PORT_SPEED[ETH_PORTS-1:0],
     int unsigned ETH_PORT_CHAN[ETH_PORTS-1 : 0],
 
     int unsigned ETH_TX_HDR_WIDTH,
@@ -23,6 +25,7 @@ class env #(
 ) extends uvm_network_mod_env::env #(
         ETH_CORE_ARCH,
         ETH_PORTS,
+        ETH_PORT_SPEED,
         ETH_PORT_CHAN,
         ETH_TX_HDR_WIDTH,
         ETH_RX_HDR_WIDTH,
@@ -33,7 +36,7 @@ class env #(
         MI_DATA_WIDTH,
         MI_ADDR_WIDTH
     );
-    `uvm_component_param_utils(uvm_network_mod_e_tile_env::env #(ETH_CORE_ARCH, ETH_PORTS, ETH_PORT_CHAN, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, REGIONS, REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, MI_DATA_WIDTH, MI_ADDR_WIDTH))
+    `uvm_component_param_utils(uvm_network_mod_e_tile_env::env #(ETH_CORE_ARCH, ETH_PORTS, ETH_PORT_SPEED, ETH_PORT_CHAN, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, REGIONS, REGION_SIZE, BLOCK_SIZE, ITEM_WIDTH, MI_DATA_WIDTH, MI_ADDR_WIDTH))
 
     // Intel AVST environments
     protected uvm_logic_vector_array_avst::env_rx #(ETH_PORT_CHAN[0], 1, REGION_SIZE * BLOCK_SIZE, ITEM_WIDTH, 6, 0) m_eth_rx[ETH_PORTS];

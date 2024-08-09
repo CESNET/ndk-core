@@ -121,85 +121,41 @@ module DUT #(
         .tsu (tsu)
     );
 
-    localparam int unsigned DATA_WIDTH        = 64;
-    localparam int unsigned INFRAME_WIDTH     = 1;
-    localparam int unsigned EOP_EMPTY_WIDTH   = 3;
-    localparam int unsigned FCS_ERROR_WIDTH   = 1;
-    localparam int unsigned ERROR_WIDTH       = 2;
-    localparam int unsigned STATUS_DATA_WIDTH = 3;
-    localparam int unsigned SEGMENTS          = ((ETH_PORT_SPEED[0] == 400) ? 16 :
-                                                 (ETH_PORT_SPEED[0] == 200) ? 8  :
-                                                 (ETH_PORT_SPEED[0] == 100) ? 4  :
-                                                 (ETH_PORT_SPEED[0] == 50 ) ? 2  :
-                                                 (ETH_PORT_SPEED[0] == 40 ) ? 2  :
-                                                 (ETH_PORT_SPEED[0] == 25 ) ? 1  :
-                                                 (ETH_PORT_SPEED[0] == 10 ) ? 1  :
-                                                                              0  );
+    // localparam int unsigned DATA_WIDTH        = 64;
+    // localparam int unsigned INFRAME_WIDTH     = 1;
+    // localparam int unsigned EOP_EMPTY_WIDTH   = 3;
+    // localparam int unsigned FCS_ERROR_WIDTH   = 1;
+    // localparam int unsigned ERROR_WIDTH       = 2;
+    // localparam int unsigned STATUS_DATA_WIDTH = 3;
+    // localparam int unsigned SEGMENTS          = ((ETH_PORT_SPEED[0] == 400) ? 16 :
+    //                                              (ETH_PORT_SPEED[0] == 200) ? 8  :
+    //                                              (ETH_PORT_SPEED[0] == 100) ? 4  :
+    //                                              (ETH_PORT_SPEED[0] == 50 ) ? 2  :
+    //                                              (ETH_PORT_SPEED[0] == 40 ) ? 2  :
+    //                                              (ETH_PORT_SPEED[0] == 25 ) ? 1  :
+    //                                              (ETH_PORT_SPEED[0] == 10 ) ? 1  :
+    //                                                                           0  );
 
     generate;
         for (genvar eth_it = 0; eth_it < ETH_PORTS; eth_it++) begin
-            localparam ETH_PORT_CHAN_LOCAL = ETH_PORT_CHAN[eth_it]; // MUST BE 1
+            localparam int unsigned ETH_PORT_CHAN_LOCAL = ETH_PORT_CHAN[eth_it];
+            initial assert(ETH_PORT_CHAN_LOCAL == 1); // TODO
 
             // RX serialized signals
-            wire logic [ETH_PORT_CHAN_LOCAL*SEGMENTS*DATA_WIDTH       -1 : 0] rx_data;
-            wire logic [ETH_PORT_CHAN_LOCAL*SEGMENTS*INFRAME_WIDTH    -1 : 0] rx_inframe;
-            wire logic [ETH_PORT_CHAN_LOCAL*SEGMENTS*EOP_EMPTY_WIDTH  -1 : 0] rx_eop_empty;
-            wire logic [ETH_PORT_CHAN_LOCAL*SEGMENTS*FCS_ERROR_WIDTH  -1 : 0] rx_fcs_error;
-            wire logic [ETH_PORT_CHAN_LOCAL*SEGMENTS*ERROR_WIDTH      -1 : 0] rx_error;
-            wire logic [ETH_PORT_CHAN_LOCAL*SEGMENTS*STATUS_DATA_WIDTH-1 : 0] rx_status_data;
-
-            // RX convertors
-            CONVERTOR_RX #(
-                .ITEMS      (ETH_PORT_CHAN_LOCAL),
-                .ITEM_WIDTH (SEGMENTS*DATA_WIDTH)
-            ) CONVERTOR_RX_DATA_U (
-                .LOGIC_VECTOR_IN (rx_data),
-                .SLV_ARRAY_OUT   (DUT_BASE_U.VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.ftile_rx_mac_data)
-            );
-            CONVERTOR_RX #(
-                .ITEMS      (ETH_PORT_CHAN_LOCAL),
-                .ITEM_WIDTH (SEGMENTS*INFRAME_WIDTH)
-            ) CONVERTOR_RX_INFRAME_U (
-                .LOGIC_VECTOR_IN (rx_inframe),
-                .SLV_ARRAY_OUT   (DUT_BASE_U.VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.ftile_rx_mac_inframe)
-            );
-            CONVERTOR_RX #(
-                .ITEMS      (ETH_PORT_CHAN_LOCAL),
-                .ITEM_WIDTH (SEGMENTS*EOP_EMPTY_WIDTH)
-            ) CONVERTOR_RX_EOP_EMPTY_U (
-                .LOGIC_VECTOR_IN (rx_eop_empty),
-                .SLV_ARRAY_OUT   (DUT_BASE_U.VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.ftile_rx_mac_eop_empty)
-            );
-            CONVERTOR_RX #(
-                .ITEMS      (ETH_PORT_CHAN_LOCAL),
-                .ITEM_WIDTH (SEGMENTS*FCS_ERROR_WIDTH)
-            ) CONVERTOR_RX_FCS_ERROR_U (
-                .LOGIC_VECTOR_IN (rx_fcs_error),
-                .SLV_ARRAY_OUT   (DUT_BASE_U.VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.ftile_rx_mac_fcs_error)
-            );
-            CONVERTOR_RX #(
-                .ITEMS      (ETH_PORT_CHAN_LOCAL),
-                .ITEM_WIDTH (SEGMENTS*ERROR_WIDTH)
-            ) CONVERTOR_RX_ERROR_U (
-                .LOGIC_VECTOR_IN (rx_error),
-                .SLV_ARRAY_OUT   (DUT_BASE_U.VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.ftile_rx_mac_error)
-            );
-            CONVERTOR_RX #(
-                .ITEMS      (ETH_PORT_CHAN_LOCAL),
-                .ITEM_WIDTH (SEGMENTS*STATUS_DATA_WIDTH)
-            ) CONVERTOR_RX_STATUS_DATA_U (
-                .LOGIC_VECTOR_IN (rx_status_data),
-                .SLV_ARRAY_OUT   (DUT_BASE_U.VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.ftile_rx_mac_status)
-            );
-
-            // RX connections
-            assign rx_data                                                                        = eth_rx[eth_it].DATA;
-            assign rx_inframe                                                                     = eth_rx[eth_it].INFRAME;
-            assign rx_eop_empty                                                                   = eth_rx[eth_it].EOP_EMPTY;
-            assign rx_fcs_error                                                                   = eth_rx[eth_it].FCS_ERROR;
-            assign rx_error                                                                       = eth_rx[eth_it].ERROR;
-            assign rx_status_data                                                                 = eth_rx[eth_it].STATUS_DATA;
-            assign DUT_BASE_U.VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.ftile_rx_mac_valid = eth_rx[eth_it].VALID;
+            // wire logic [ETH_PORT_CHAN_LOCAL*SEGMENTS*DATA_WIDTH       -1 : 0] rx_data;
+            // wire logic [ETH_PORT_CHAN_LOCAL*SEGMENTS*INFRAME_WIDTH    -1 : 0] rx_inframe;
+            // wire logic [ETH_PORT_CHAN_LOCAL*SEGMENTS*EOP_EMPTY_WIDTH  -1 : 0] rx_eop_empty;
+            // wire logic [ETH_PORT_CHAN_LOCAL*SEGMENTS*FCS_ERROR_WIDTH  -1 : 0] rx_fcs_error;
+            // wire logic [ETH_PORT_CHAN_LOCAL*SEGMENTS*ERROR_WIDTH      -1 : 0] rx_error;
+            // wire logic [ETH_PORT_CHAN_LOCAL*SEGMENTS*STATUS_DATA_WIDTH-1 : 0] rx_status_data;
+            //
+            // // RX connections
+            // assign rx_data        = eth_rx[eth_it].DATA;
+            // assign rx_inframe     = eth_rx[eth_it].INFRAME;
+            // assign rx_eop_empty   = eth_rx[eth_it].EOP_EMPTY;
+            // assign rx_fcs_error   = eth_rx[eth_it].FCS_ERROR;
+            // assign rx_error       = eth_rx[eth_it].ERROR;
+            // assign rx_status_data = eth_rx[eth_it].STATUS_DATA;
 
             // TX connections
             assign eth_tx[eth_it].DATA      = {>>{DUT_BASE_U.VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.ftile_tx_adapt_data}};
@@ -207,10 +163,22 @@ module DUT #(
             assign eth_tx[eth_it].EOP_EMPTY = {>>{DUT_BASE_U.VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.ftile_tx_adapt_eop_empty}};
             assign eth_tx[eth_it].FCS_ERROR = {>>{DUT_BASE_U.VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.ftile_tx_adapt_error}}; // Both have the same width
             assign eth_tx[eth_it].VALID     = DUT_BASE_U.VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.ftile_tx_adapt_valid;
-            assign DUT_BASE_U.VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.ftile_tx_mac_ready[0] = eth_tx[eth_it].READY;
 
-            // CLK connection
-            assign DUT_BASE_U.VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.ftile_clk_out_vec[0] = CLK_ETH[eth_it];
+            initial begin
+                // RX connections
+                force DUT_BASE_U.VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.verification_probe_i.mac_data      = eth_rx[eth_it].DATA;
+                force DUT_BASE_U.VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.verification_probe_i.mac_inframe   = eth_rx[eth_it].INFRAME;
+                force DUT_BASE_U.VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.verification_probe_i.mac_eop_empty = eth_rx[eth_it].EOP_EMPTY;
+                force DUT_BASE_U.VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.verification_probe_i.mac_fcs_error = eth_rx[eth_it].FCS_ERROR;
+                force DUT_BASE_U.VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.verification_probe_i.mac_error     = eth_rx[eth_it].ERROR;
+                force DUT_BASE_U.VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.verification_probe_i.mac_status    = eth_rx[eth_it].STATUS_DATA;
+                force DUT_BASE_U.VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.verification_probe_i.mac_valid     = eth_rx[eth_it].VALID;
+
+                // TX READY connection
+                force DUT_BASE_U.VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.ftile_tx_mac_ready[0] = eth_tx[eth_it].READY;
+                // CLK connection
+                force DUT_BASE_U.VHDL_DUT_U.eth_core_g[eth_it].network_mod_core_i.ftile_clk_out_vec[0] = CLK_ETH[eth_it];
+            end
         end
     endgenerate
 
