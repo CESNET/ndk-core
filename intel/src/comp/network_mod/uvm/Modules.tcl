@@ -20,8 +20,7 @@ lappend COMPONENTS \
 lappend COMPONENTS [ list "RX_MAC_LITE_SV" "$OFM_PATH/comp/nic/mac_lite/rx_mac_lite/uvm" "FULL"]
 lappend COMPONENTS [ list "TX_MAC_LITE_SV" "$OFM_PATH/comp/nic/mac_lite/tx_mac_lite/uvm" "FULL"]
 
-lappend MOD "$ENTITY_BASE/tbench/pkg.sv"           \
-            "$ENTITY_BASE/tbench/fix_bind.sv"      \
+lappend MOD "$ENTITY_BASE/tbench/fix_bind.sv"      \
             "$ENTITY_BASE/tbench/base/dut.sv"      \
             "$ENTITY_BASE/tbench/base/property.sv" \
             "$ENTITY_BASE/tbench/base/env/pkg.sv"  \
@@ -32,11 +31,7 @@ if {$ARCHGRP == "E_TILE"} {
                 "$ENTITY_BASE/tbench/e-tile/dut.sv"       \
                 "$ENTITY_BASE/tbench/e-tile/testbench.sv"
 } elseif {$ARCHGRP == "F_TILE"} {
-    lappend PACKAGES "$OFM_PATH/comp/base/pkg/math_pack.vhd" \
-                     "$OFM_PATH/comp/base/pkg/type_pack.vhd"
-
-    lappend MOD "$ENTITY_BASE/tbench/f-tile/env/pkg.sv"       \
-                "$ENTITY_BASE/tbench/f-tile/convertor_rx.vhd" \
-                "$ENTITY_BASE/tbench/f-tile/dut.sv"           \
+    lappend MOD "$ENTITY_BASE/tbench/f-tile/env/pkg.sv"   \
+                "$ENTITY_BASE/tbench/f-tile/dut.sv"       \
                 "$ENTITY_BASE/tbench/f-tile/testbench.sv"
 }

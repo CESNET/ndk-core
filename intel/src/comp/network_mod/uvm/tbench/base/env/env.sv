@@ -9,6 +9,7 @@ class env #(
     string ETH_CORE_ARCH,
     int unsigned ETH_PORTS        ,
 
+    int unsigned ETH_PORT_SPEED[ETH_PORTS-1:0],
     int unsigned ETH_PORT_CHAN[ETH_PORTS-1:0]    ,
 
     int unsigned ETH_TX_HDR_WIDTH,
@@ -26,15 +27,16 @@ class env #(
 ) extends uvm_env;
     `uvm_component_param_utils(uvm_network_mod_env::env#(
         ETH_CORE_ARCH,
-        ETH_PORTS        ,
-        ETH_PORT_CHAN    ,
-        ETH_TX_HDR_WIDTH ,
-        ETH_RX_HDR_WIDTH ,
-        REGIONS          ,
-        REGION_SIZE      ,
-        BLOCK_SIZE       ,
-        ITEM_WIDTH       ,
-        MI_DATA_WIDTH    ,
+        ETH_PORTS,
+        ETH_PORT_SPEED,
+        ETH_PORT_CHAN,
+        ETH_TX_HDR_WIDTH,
+        ETH_RX_HDR_WIDTH,
+        REGIONS,
+        REGION_SIZE,
+        BLOCK_SIZE,
+        ITEM_WIDTH,
+        MI_DATA_WIDTH,
         MI_ADDR_WIDTH
     ));
 
@@ -62,7 +64,7 @@ class env #(
     protected uvm_logic_vector_mvb::env_rx      #(1, 64) m_tsu;
 
     // SCOREBOARD
-    protected scoreboard #(ETH_CORE_ARCH, ETH_PORTS, ETH_PORT_CHAN, REGIONS, ITEM_WIDTH, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH) m_scoreboard;
+    protected scoreboard #(ETH_CORE_ARCH, ETH_PORTS, ETH_PORT_SPEED, ETH_PORT_CHAN, REGIONS, ITEM_WIDTH, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH) m_scoreboard;
     protected uvm_mi::regmodel#(uvm_network_mod_env::regmodel #(ETH_PORTS, ETH_PORT_CHAN), MI_DATA_WIDTH, MI_ADDR_WIDTH) m_regmodel;
 
     // Constructor of environment.
@@ -175,7 +177,7 @@ class env #(
         uvm_config_db #(uvm_logic_vector_mvb::config_item)::set(this, "m_tsu", "m_config", cfg_tsu);
         m_tsu  = uvm_logic_vector_mvb::env_rx#(1, 64)::type_id::create("m_tsu", this);
 
-        m_scoreboard = scoreboard#(ETH_CORE_ARCH, ETH_PORTS, ETH_PORT_CHAN, REGIONS, ITEM_WIDTH, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH)::type_id::create("m_scoreboard", this);
+        m_scoreboard = scoreboard#(ETH_CORE_ARCH, ETH_PORTS, ETH_PORT_SPEED, ETH_PORT_CHAN, REGIONS, ITEM_WIDTH, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH)::type_id::create("m_scoreboard", this);
         m_sequencer  = sequencer#(ETH_PORTS, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH, ITEM_WIDTH, REGIONS, REGION_SIZE, BLOCK_SIZE, ETH_PORT_CHAN, MI_DATA_WIDTH, MI_ADDR_WIDTH)::type_id::create("m_sequencer", this);
     endfunction
 

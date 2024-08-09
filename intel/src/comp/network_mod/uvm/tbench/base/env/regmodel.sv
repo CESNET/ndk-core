@@ -84,7 +84,7 @@ endclass
 
 
 class regmodel #(ETH_PORTS, int unsigned ETH_PORT_CHAN[ETH_PORTS-1:0]) extends uvm_reg_block;
-    `uvm_object_param_utils(uvm_network_mod_env::regmodel #(ETH_PORTS, ETH_PORT_CHAN[ETH_PORTS-1:0]))
+    `uvm_object_param_utils(uvm_network_mod_env::regmodel #(ETH_PORTS, ETH_PORT_CHAN))
 
     rand reg_model_port#(ETH_PORT_CHAN[0]) port[ETH_PORTS];
 

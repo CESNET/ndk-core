@@ -177,7 +177,7 @@ class virt_sequence_port #(
                 tx_stats.reset();
             join
 
-            #(40ns);
+            //#(40ns);
 
             fork
                 rx_stats.start(null);

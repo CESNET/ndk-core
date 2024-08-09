@@ -5,8 +5,8 @@
 //-- SPDX-License-Identifier: BSD-3-Clause
 
 
-class scoreboard #(ETH_CORE_ARCH, ETH_PORTS, int unsigned ETH_PORT_CHAN[ETH_PORTS-1:0], REGIONS, ITEM_WIDTH, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH) extends uvm_scoreboard;
-    `uvm_component_param_utils(uvm_network_mod_env::scoreboard #(ETH_CORE_ARCH, ETH_PORTS, ETH_PORT_CHAN, REGIONS, ITEM_WIDTH, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH));
+class scoreboard #(ETH_CORE_ARCH, ETH_PORTS, int unsigned ETH_PORT_SPEED[ETH_PORTS-1:0], int unsigned ETH_PORT_CHAN[ETH_PORTS-1:0], REGIONS, ITEM_WIDTH, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH) extends uvm_scoreboard;
+    `uvm_component_param_utils(uvm_network_mod_env::scoreboard #(ETH_CORE_ARCH, ETH_PORTS, ETH_PORT_SPEED, ETH_PORT_CHAN, REGIONS, ITEM_WIDTH, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH));
 
     //eports
     uvm_analysis_export #(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)) eth_rx_data[ETH_PORTS];
@@ -36,7 +36,7 @@ class scoreboard #(ETH_CORE_ARCH, ETH_PORTS, int unsigned ETH_PORT_CHAN[ETH_PORT
     protected uvm_logic_vector_array::meter#(ITEM_WIDTH) m_usr_rx_meter[ETH_PORTS];
     protected uvm_logic_vector_array::meter#(ITEM_WIDTH) m_usr_tx_meter[ETH_PORTS];
 
-    protected model #(ETH_CORE_ARCH, ETH_PORTS, ETH_PORT_CHAN, REGIONS, ITEM_WIDTH, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH) m_model;
+    protected model #(ETH_CORE_ARCH, ETH_PORTS, ETH_PORT_SPEED, ETH_PORT_CHAN, REGIONS, ITEM_WIDTH, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH) m_model;
     // Constructor of environment.
     function new(string name, uvm_component parent);
         super.new(name, parent);
@@ -96,7 +96,7 @@ class scoreboard #(ETH_CORE_ARCH, ETH_PORTS, int unsigned ETH_PORT_CHAN[ETH_PORT
             m_usr_tx_meter[it] = uvm_logic_vector_array::meter#(ITEM_WIDTH)::type_id::create($sformatf("m_usr_tx_meter_%0d", it), this);
         end
 
-        m_model = model#(ETH_CORE_ARCH, ETH_PORTS, ETH_PORT_CHAN, REGIONS, ITEM_WIDTH, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH)::type_id::create("m_model", this);
+        m_model = model#(ETH_CORE_ARCH, ETH_PORTS, ETH_PORT_SPEED, ETH_PORT_CHAN, REGIONS, ITEM_WIDTH, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH)::type_id::create("m_model", this);
     endfunction
 
     // Connect agent's ports with ports from scoreboard.
