@@ -14,21 +14,21 @@ class scoreboard #(ETH_STREAMS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS,
     //RESET --
     typedef scoreboard #(ETH_STREAMS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, ITEM_WIDTH) this_type;
     uvm_analysis_imp_reset#(uvm_reset::sequence_item, this_type) analysis_imp_reset;
- 
+
     //// ETH I/O
     localparam ETH_TX_LENGTH_WIDTH  = 16;
     localparam ETH_TX_CHANNEL_WIDTH = 8;
-    uvm_common::fifo_model_input#(uvm_logic_vector::sequence_item#(ETH_RX_HDR_WIDTH)) eth_mvb_rx[ETH_STREAMS];
-    uvm_common::fifo_model_input#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)) eth_mfb_rx[ETH_STREAMS];
-    uvm_analysis_export #(uvm_logic_vector::sequence_item#(ETH_TX_HDR_WIDTH))   eth_mvb_tx[ETH_STREAMS];
-    uvm_analysis_export #(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))   eth_mfb_tx[ETH_STREAMS];
+    uvm_analysis_export #(uvm_logic_vector::sequence_item#(ETH_RX_HDR_WIDTH)) eth_mvb_rx[ETH_STREAMS];
+    uvm_analysis_export #(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)) eth_mfb_rx[ETH_STREAMS];
+    uvm_analysis_export #(uvm_logic_vector::sequence_item#(ETH_TX_HDR_WIDTH)) eth_mvb_tx[ETH_STREAMS];
+    uvm_analysis_export #(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)) eth_mfb_tx[ETH_STREAMS];
     // DMA I/O
     localparam DMA_RX_MVB_WIDTH = $clog2(DMA_PKT_MTU+1)+DMA_HDR_META_WIDTH+$clog2(DMA_TX_CHANNELS);
     localparam DMA_TX_MVB_WIDTH = $clog2(DMA_PKT_MTU+1)+DMA_HDR_META_WIDTH+$clog2(DMA_RX_CHANNELS) + 1;
-    uvm_common::fifo_model_input#(uvm_logic_vector::sequence_item#(DMA_RX_MVB_WIDTH)) dma_mvb_rx[DMA_STREAMS];
-    uvm_common::fifo_model_input#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)) dma_mfb_rx[DMA_STREAMS];
-    uvm_analysis_export #(uvm_logic_vector::sequence_item#(DMA_TX_MVB_WIDTH))   dma_mvb_tx[DMA_STREAMS];
-    uvm_analysis_export #(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))   dma_mfb_tx[DMA_STREAMS];
+    uvm_analysis_export #(uvm_logic_vector::sequence_item#(DMA_RX_MVB_WIDTH)) dma_mvb_rx[DMA_STREAMS];
+    uvm_analysis_export #(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)) dma_mfb_rx[DMA_STREAMS];
+    uvm_analysis_export #(uvm_logic_vector::sequence_item#(DMA_TX_MVB_WIDTH)) dma_mvb_tx[DMA_STREAMS];
+    uvm_analysis_export #(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)) dma_mfb_tx[DMA_STREAMS];
 
     //////////////////////////
     // CONNECTION to internal fifos
@@ -61,8 +61,8 @@ class scoreboard #(ETH_STREAMS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS,
             string it_num;
             it_num.itoa(it);
 
-            eth_mvb_rx[it] = uvm_common::fifo_model_input#(uvm_logic_vector::sequence_item#(ETH_RX_HDR_WIDTH))::type_id::create({"eth_mvb_rx_", it_num}, this);
-            eth_mfb_rx[it] = uvm_common::fifo_model_input#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))::type_id::create({"eth_mfb_rx_", it_num}, this);
+            eth_mvb_rx[it] = new({"eth_mvb_rx_", it_num}, this);
+            eth_mfb_rx[it] = new({"eth_mfb_rx_", it_num}, this);
             eth_mvb_tx[it] = new({"eth_mvb_tx_", it_num}, this);
             eth_mfb_tx[it] = new({"eth_mfb_tx_", it_num}, this);
 
@@ -79,8 +79,8 @@ class scoreboard #(ETH_STREAMS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS,
             string it_num;
             it_num.itoa(it);
 
-            dma_mvb_rx[it] = uvm_common::fifo_model_input#(uvm_logic_vector::sequence_item#(DMA_RX_MVB_WIDTH))::type_id::create({"dma_mvb_rx_", it_num}, this);
-            dma_mfb_rx[it] = uvm_common::fifo_model_input#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))::type_id::create({"dma_mfb_rx_", it_num}, this);
+            dma_mvb_rx[it] = new({"dma_mvb_rx_", it_num}, this);
+            dma_mfb_rx[it] = new({"dma_mfb_rx_", it_num}, this);
             dma_mvb_tx[it] = new({"dma_mvb_tx_", it_num}, this);
             dma_mfb_tx[it] = new({"dma_mfb_tx_", it_num}, this);
 
@@ -121,8 +121,8 @@ class scoreboard #(ETH_STREAMS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS,
             string it_num;
             it_num.itoa(it);
             //INPUT TO MODEL
-            m_model.eth_mvb_rx[it] = eth_mvb_rx[it];
-            m_model.eth_mfb_rx[it] = eth_mfb_rx[it];
+            eth_mvb_rx[it].connect(m_model.eth_mvb_rx[it].analysis_export);
+            eth_mfb_rx[it].connect(m_model.eth_mfb_rx[it].analysis_export);
             //INPUT TO SC
             eth_mvb_tx[it].connect(eth_mvb_cmp[it].analysis_imp_dut);
             eth_mfb_tx[it].connect(eth_mfb_cmp[it].analysis_imp_dut);
@@ -136,8 +136,8 @@ class scoreboard #(ETH_STREAMS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS,
             string it_num;
             it_num.itoa(it);
             // INPUT TO MODEL
-            m_model.dma_mvb_rx[it] = dma_mvb_rx[it];
-            m_model.dma_mfb_rx[it] = dma_mfb_rx[it];
+            dma_mvb_rx[it].connect(m_model.dma_mvb_rx[it].analysis_export);
+            dma_mfb_rx[it].connect(m_model.dma_mfb_rx[it].analysis_export);
             // INPUT TO SCOREBOARD
             dma_mvb_tx[it].connect(dma_mvb_cmp[it].analysis_imp_dut);
             dma_mfb_tx[it].connect(dma_mfb_cmp[it].analysis_imp_dut);

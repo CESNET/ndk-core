@@ -9,7 +9,7 @@
 */
 
 
-class packet_header #(WIDTH, CHANNELS, PKT_MTU);
+class packet_header #(WIDTH, CHANNELS, PKT_MTU) extends uvm_common::sequence_item;
     logic [WIDTH-1:0]             meta;
     logic [$clog2(CHANNELS)-1:0]  channel;
     logic [$clog2(PKT_MTU+1)-1:0] packet_size;
@@ -18,6 +18,7 @@ class packet_header #(WIDTH, CHANNELS, PKT_MTU);
     function string convert2string();
         string msg;
 
+        msg = super.convert2string();
         msg = {msg, $sformatf("\n\tPacket form %h", {discard, channel, meta, packet_size})}; 
         msg = {msg, $sformatf("\n\tmeta %h\n\tchannel %0d\n\tpacket size %0d\n\tdiscard %b", meta, channel, packet_size, discard)};
         return msg;
@@ -35,18 +36,18 @@ class model #(ETH_STREAMS, ETH_RX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_T
     localparam ETH_TX_LENGTH_WIDTH  = 16;
     localparam ETH_TX_CHANNEL_WIDTH = 8;
     // ETH_RX
-    uvm_common::fifo #(uvm_common::model_item#(uvm_logic_vector::sequence_item#(ETH_RX_HDR_WIDTH)))                eth_mvb_rx[ETH_STREAMS];
-    uvm_common::fifo #(uvm_common::model_item#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)))                eth_mfb_rx[ETH_STREAMS];
+    uvm_tlm_analysis_fifo #(uvm_logic_vector::sequence_item#(ETH_RX_HDR_WIDTH))                eth_mvb_rx[ETH_STREAMS];
+    uvm_tlm_analysis_fifo #(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))                eth_mfb_rx[ETH_STREAMS];
     // ETH_TX
-    uvm_analysis_port #(uvm_common::model_item#(uvm_app_core::packet_header #(0, 2**ETH_TX_CHANNEL_WIDTH, 2**ETH_TX_LENGTH_WIDTH-1))) eth_mvb_tx[ETH_STREAMS];
-    uvm_analysis_port #(uvm_common::model_item#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)))                                  eth_mfb_tx[ETH_STREAMS];
+    uvm_analysis_port #(uvm_app_core::packet_header #(0, 2**ETH_TX_CHANNEL_WIDTH, 2**ETH_TX_LENGTH_WIDTH-1)) eth_mvb_tx[ETH_STREAMS];
+    uvm_analysis_port #(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))                                  eth_mfb_tx[ETH_STREAMS];
     localparam DMA_RX_MVB_WIDTH = $clog2(DMA_PKT_MTU+1)+DMA_HDR_META_WIDTH+$clog2(DMA_TX_CHANNELS);
     // DMA RX
-    uvm_common::fifo #(uvm_common::model_item#(uvm_logic_vector::sequence_item#(DMA_RX_MVB_WIDTH)))                dma_mvb_rx[DMA_STREAMS];
-    uvm_common::fifo #(uvm_common::model_item#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)))                dma_mfb_rx[DMA_STREAMS];
+    uvm_tlm_analysis_fifo #(uvm_logic_vector::sequence_item#(DMA_RX_MVB_WIDTH))                dma_mvb_rx[DMA_STREAMS];
+    uvm_tlm_analysis_fifo #(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))                dma_mfb_rx[DMA_STREAMS];
     // DMA TX
-    uvm_analysis_port #(uvm_common::model_item#(uvm_app_core::packet_header #(DMA_HDR_META_WIDTH, DMA_RX_CHANNELS, DMA_PKT_MTU))) dma_mvb_tx[DMA_STREAMS];
-    uvm_analysis_port #(uvm_common::model_item#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)))                              dma_mfb_tx[DMA_STREAMS];
+    uvm_analysis_port #(uvm_app_core::packet_header #(DMA_HDR_META_WIDTH, DMA_RX_CHANNELS, DMA_PKT_MTU)) dma_mvb_tx[DMA_STREAMS];
+    uvm_analysis_port #(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))                              dma_mfb_tx[DMA_STREAMS];
 
     function new(string name, uvm_component parent = null);
         super.new(name, parent);
@@ -54,16 +55,16 @@ class model #(ETH_STREAMS, ETH_RX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_T
             string it_num;
             it_num.itoa(it);
 
-            eth_mvb_rx[it] = null;
-            eth_mfb_rx[it] = null;
+            eth_mvb_rx[it] = new({"eth_mvb_rx", $sformatf("_%0d", it)}, this);
+            eth_mfb_rx[it] = new({"eth_mfb_rx", $sformatf("_%0d", it)}, this);
         end
 
         for (int unsigned it = 0; it < DMA_STREAMS; it++) begin
             string it_num;
             it_num.itoa(it);
 
-            dma_mvb_rx[it] = null;
-            dma_mfb_rx[it] = null;
+            dma_mvb_rx[it] = new({"dma_mvb_rx", $sformatf("_%0d", it)}, this);
+            dma_mfb_rx[it] = new({"dma_mfb_rx", $sformatf("_%0d", it)}, this);
         end
     endfunction
 

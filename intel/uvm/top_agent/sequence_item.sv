@@ -5,7 +5,7 @@
 //-- SPDX-License-Identifier: BSD-3-Clause
 
 
-virtual class sequence_item#(int unsigned ITEM_WIDTH, int unsigned META_WIDTH) extends uvm_sequence_item;
+virtual class sequence_item#(int unsigned ITEM_WIDTH, int unsigned META_WIDTH) extends uvm_common::sequence_item;
 
     rand logic [ITEM_WIDTH-1:0]      data[];
 
@@ -27,6 +27,7 @@ virtual class sequence_item#(int unsigned ITEM_WIDTH, int unsigned META_WIDTH) e
             return;
         end
 
+        super.do_copy(rhs);
         data = rhs_.data;
     endfunction
 
@@ -46,7 +47,7 @@ virtual class sequence_item#(int unsigned ITEM_WIDTH, int unsigned META_WIDTH) e
     endfunction
 
     function string convert2string();
-        string msg = "\n";
+        string msg = super.convert2string();
 
         for (int unsigned it = 0; it < data.size(); it++) begin
             if (it % 32 == 0) begin
@@ -210,7 +211,7 @@ class sequence_eth_item#(int unsigned CHANNELS, int unsigned LENGTH_WIDTH, int u
 
     // Visualize the sequence item to string
     function string convert2string();
-        string msg = "\n";
+        string msg = super.convert2string();
 
         msg = {msg, $sformatf("\tchannel       %0d\n", channel     )};
         msg = {msg, $sformatf("\terror         %b\n", error        )};
@@ -319,7 +320,7 @@ class sequence_dma_item#(int unsigned CHANNELS, int unsigned LENGTH_WIDTH, int u
 
     // Visualize the sequence item to string
     function string convert2string();
-        string msg = "\n";
+        string msg = super.convert2string();
 
         msg = {msg, $sformatf("\tPACK FORM %h\n",      this.item2meta())};
         msg = {msg, $sformatf("\tchannel       %0d\n", channel )};

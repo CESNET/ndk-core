@@ -25,7 +25,7 @@ class env #(ETH_STREAMS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_ST
     uvm_app_core_top_agent::agent#(sequence_item_eth_rx, MFB_ITEM_WIDTH, ETH_RX_HDR_WIDTH) m_eth_rx[ETH_STREAMS];
     protected uvm_logic_vector_mvb::env_rx#(REGIONS, ETH_RX_HDR_WIDTH)                                                     m_eth_mvb_rx[ETH_STREAMS];
     protected uvm_logic_vector_array_mfb::env_rx#(REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, MFB_ITEM_WIDTH, 0)                m_eth_mfb_rx[ETH_STREAMS];
-    uvm_logic_vector_array_mfb::env_tx#(REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, MFB_ITEM_WIDTH, ETH_TX_HDR_WIDTH) m_eth_mfb_tx[ETH_STREAMS];
+    uvm_logic_vector_array_mfb::env_tx#(REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, MFB_ITEM_WIDTH, ETH_TX_HDR_WIDTH)           m_eth_mfb_tx[ETH_STREAMS];
     // DMA I/O
     uvm_app_core_top_agent::agent#(sequence_item_dma_rx, MFB_ITEM_WIDTH, DMA_RX_MVB_WIDTH)                    m_dma_rx[DMA_STREAMS];
     protected uvm_logic_vector_mvb::env_rx#(REGIONS, DMA_RX_MVB_WIDTH)                                        m_dma_mvb_rx[DMA_STREAMS];
@@ -217,8 +217,8 @@ class env #(ETH_STREAMS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_ST
         for (int unsigned it = 0; it < ETH_STREAMS; it++) begin
             string it_num;
             it_num.itoa(it);
-            m_eth_mvb_rx[it].analysis_port.connect(m_scoreboard.eth_mvb_rx[it].analysis_export);
-            m_eth_mfb_rx[it].analysis_port_data.connect(m_scoreboard.eth_mfb_rx[it].analysis_export);
+            m_eth_mvb_rx[it].analysis_port.connect(m_scoreboard.eth_mvb_rx[it]);
+            m_eth_mfb_rx[it].analysis_port_data.connect(m_scoreboard.eth_mfb_rx[it]);
             m_eth_mfb_tx[it].analysis_port_data.connect(m_scoreboard.eth_mfb_tx[it]);
             m_eth_mfb_tx[it].analysis_port_meta.connect(m_scoreboard.eth_mvb_tx[it]);
 
@@ -234,8 +234,8 @@ class env #(ETH_STREAMS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_ST
         for (int unsigned it = 0; it < DMA_STREAMS; it++) begin
             string it_num;
             it_num.itoa(it);
-            m_dma_mvb_rx[it].analysis_port.connect(m_scoreboard.dma_mvb_rx[it].analysis_export);
-            m_dma_mfb_rx[it].analysis_port_data.connect(m_scoreboard.dma_mfb_rx[it].analysis_export);
+            m_dma_mvb_rx[it].analysis_port.connect(m_scoreboard.dma_mvb_rx[it]);
+            m_dma_mfb_rx[it].analysis_port_data.connect(m_scoreboard.dma_mfb_rx[it]);
             m_dma_mvb_tx[it].analysis_port.connect(m_scoreboard.dma_mvb_tx[it]);
             m_dma_mfb_tx[it].analysis_port_data.connect(m_scoreboard.dma_mfb_tx[it]);
 
