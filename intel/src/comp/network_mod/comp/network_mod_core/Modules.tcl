@@ -95,6 +95,9 @@ if { $ARCHGRP == "F_TILE"} {
     lappend MOD "$ENTITY_BASE/comps/ftile/ftile_multirate_eth_2x100g4.vhd"
     lappend MOD "$ENTITY_BASE/comps/ftile/ftile_multirate_eth_8x25g1_8x10g1.vhd"
 
+    # Verification probe
+    lappend MOD "$ENTITY_BASE/comps/ftile_ver_probe/ftile_ver_probe.vhd"
+
     lappend MOD "$ENTITY_BASE/network_mod_core_ftile.vhd"
 }
 
