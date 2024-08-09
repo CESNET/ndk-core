@@ -204,6 +204,15 @@ architecture FULL of NETWORK_MOD_CORE is
     signal ftile_rx_mac_error     : slv_array_t     (ETH_PORT_CHAN-1 downto 0)(RX_MAC_ERROR_WIDTH    -1 downto 0);
     signal ftile_rx_mac_status    : slv_array_t     (ETH_PORT_CHAN-1 downto 0)(RX_MAC_STATUS_WIDTH   -1 downto 0);
 
+    -- Verification probe signals
+    signal ver_probe_ftile_rx_mac_data      : slv_array_t     (ETH_PORT_CHAN-1 downto 0)(MAC_DATA_WIDTH        -1 downto 0);
+    signal ver_probe_ftile_rx_mac_valid     : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
+    signal ver_probe_ftile_rx_mac_inframe   : slv_array_t     (ETH_PORT_CHAN-1 downto 0)(MAC_INFRAME_WIDTH     -1 downto 0);
+    signal ver_probe_ftile_rx_mac_eop_empty : slv_array_t     (ETH_PORT_CHAN-1 downto 0)(MAC_EOP_EMPTY_WIDTH   -1 downto 0);
+    signal ver_probe_ftile_rx_mac_fcs_error : slv_array_t     (ETH_PORT_CHAN-1 downto 0)(RX_MAC_FCS_ERROR_WIDTH-1 downto 0);
+    signal ver_probe_ftile_rx_mac_error     : slv_array_t     (ETH_PORT_CHAN-1 downto 0)(RX_MAC_ERROR_WIDTH    -1 downto 0);
+    signal ver_probe_ftile_rx_mac_status    : slv_array_t     (ETH_PORT_CHAN-1 downto 0)(RX_MAC_STATUS_WIDTH   -1 downto 0);
+
     begin
 
         mi_splitter_i : entity work.MI_SPLITTER_PLUS_GEN
@@ -757,6 +766,34 @@ architecture FULL of NETWORK_MOD_CORE is
         end generate;
     end generate ftile_8x10g1_g;
 
+    verification_probe_i : entity work.NETWORK_MOD_CORE_FTILE_VER_PROBE
+    generic map(
+        CHANNELS        => ETH_PORT_CHAN,
+        DATA_WIDTH      => MAC_DATA_WIDTH,
+        INFRAME_WIDTH   => MAC_INFRAME_WIDTH,
+        EOP_EMPTY_WIDTH => MAC_EOP_EMPTY_WIDTH,
+        FCS_ERROR_WIDTH => RX_MAC_FCS_ERROR_WIDTH,
+        ERROR_WIDTH     => RX_MAC_ERROR_WIDTH,
+        STATUS_WIDTH    => RX_MAC_STATUS_WIDTH
+    )
+    port map(
+        IN_MAC_DATA      => ftile_rx_mac_data,
+        IN_MAC_INFRAME   => ftile_rx_mac_inframe,
+        IN_MAC_EOP_EMPTY => ftile_rx_mac_eop_empty,
+        IN_MAC_FCS_ERROR => ftile_rx_mac_fcs_error,
+        IN_MAC_ERROR     => ftile_rx_mac_error,
+        IN_MAC_STATUS    => ftile_rx_mac_status,
+        IN_MAC_VALID     => ftile_rx_mac_valid,
+
+        OUT_MAC_DATA      => ver_probe_ftile_rx_mac_data,
+        OUT_MAC_INFRAME   => ver_probe_ftile_rx_mac_inframe,
+        OUT_MAC_EOP_EMPTY => ver_probe_ftile_rx_mac_eop_empty,
+        OUT_MAC_FCS_ERROR => ver_probe_ftile_rx_mac_fcs_error,
+        OUT_MAC_ERROR     => ver_probe_ftile_rx_mac_error,
+        OUT_MAC_STATUS    => ver_probe_ftile_rx_mac_status,
+        OUT_MAC_VALID     => ver_probe_ftile_rx_mac_valid
+    );
+
     adapts_g : for i in ETH_PORT_CHAN-1 downto 0 generate
         -- =========================================================================
         -- ADAPTERS
@@ -769,13 +806,13 @@ architecture FULL of NETWORK_MOD_CORE is
         port map(
             CLK              => ftile_clk_out,
             RESET            => RESET_ETH,
-            IN_MAC_DATA      => ftile_rx_mac_data(i),
-            IN_MAC_INFRAME   => ftile_rx_mac_inframe(i),
-            IN_MAC_EOP_EMPTY => ftile_rx_mac_eop_empty(i),
-            IN_MAC_FCS_ERROR => ftile_rx_mac_fcs_error(i),
-            IN_MAC_ERROR     => ftile_rx_mac_error(i),
-            IN_MAC_STATUS    => ftile_rx_mac_status(i),
-            IN_MAC_VALID     => ftile_rx_mac_valid(i),
+            IN_MAC_DATA      => ver_probe_ftile_rx_mac_data(i),
+            IN_MAC_INFRAME   => ver_probe_ftile_rx_mac_inframe(i),
+            IN_MAC_EOP_EMPTY => ver_probe_ftile_rx_mac_eop_empty(i),
+            IN_MAC_FCS_ERROR => ver_probe_ftile_rx_mac_fcs_error(i),
+            IN_MAC_ERROR     => ver_probe_ftile_rx_mac_error(i),
+            IN_MAC_STATUS    => ver_probe_ftile_rx_mac_status(i),
+            IN_MAC_VALID     => ver_probe_ftile_rx_mac_valid(i),
             OUT_MFB_DATA     => TX_MFB_DATA(i),
             OUT_MFB_ERROR    => TX_MFB_ERROR(i),
             OUT_MFB_SOF      => TX_MFB_SOF(i),
