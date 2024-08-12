@@ -14,24 +14,23 @@ class env #(ETH_STREAMS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_ST
     `uvm_component_param_utils(uvm_app_core::env#(ETH_STREAMS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU,
             REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, MFB_ITEM_WIDTH, MEM_PORTS, MEM_ADDR_WIDTH, MEM_BURST_WIDTH, MEM_DATA_WIDTH, MI_DATA_WIDTH, MI_ADDR_WIDTH))
 
-    localparam DMA_RX_MVB_WIDTH = $clog2(DMA_PKT_MTU+1)+DMA_HDR_META_WIDTH+$clog2(DMA_TX_CHANNELS);
-    localparam DMA_TX_MVB_WIDTH = $clog2(DMA_PKT_MTU+1)+DMA_HDR_META_WIDTH+$clog2(DMA_RX_CHANNELS) + 1;
+    localparam DMA_RX_MVB_WIDTH = $clog2(DMA_PKT_MTU+1)+DMA_HDR_META_WIDTH+$clog2(DMA_RX_CHANNELS);
+    localparam DMA_TX_MVB_WIDTH = $clog2(DMA_PKT_MTU+1)+DMA_HDR_META_WIDTH+$clog2(DMA_TX_CHANNELS) + 1;
 
     //META TO ITEM
     typedef uvm_app_core_top_agent::sequence_eth_item#(2**8, 16, MFB_ITEM_WIDTH)                                                   sequence_item_eth_rx;
     typedef uvm_app_core_top_agent::sequence_dma_item#(DMA_TX_CHANNELS, $clog2(DMA_PKT_MTU+1), DMA_HDR_META_WIDTH, MFB_ITEM_WIDTH) sequence_item_dma_rx;
 
+    //TOP Sequencer
+    uvm_app_core::sequencer#(DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_PKT_MTU, DMA_HDR_META_WIDTH, DMA_STREAMS, ETH_TX_HDR_WIDTH,  MFB_ITEM_WIDTH, ETH_STREAMS, REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE) m_sequencer;
+
     // ETHERNET I/O
-    uvm_app_core_top_agent::agent#(sequence_item_eth_rx, MFB_ITEM_WIDTH, ETH_RX_HDR_WIDTH) m_eth_rx[ETH_STREAMS];
-    protected uvm_logic_vector_mvb::env_rx#(REGIONS, ETH_RX_HDR_WIDTH)                                                     m_eth_mvb_rx[ETH_STREAMS];
-    protected uvm_logic_vector_array_mfb::env_rx#(REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, MFB_ITEM_WIDTH, 0)                m_eth_mfb_rx[ETH_STREAMS];
-    uvm_logic_vector_array_mfb::env_tx#(REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, MFB_ITEM_WIDTH, ETH_TX_HDR_WIDTH)           m_eth_mfb_tx[ETH_STREAMS];
+    uvm_app_core_top_agent::agent#(sequence_item_eth_rx, MFB_ITEM_WIDTH, ETH_RX_HDR_WIDTH)                        m_eth_rx[ETH_STREAMS];
+    uvm_logic_vector_array_mfb::env_tx#(REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, MFB_ITEM_WIDTH, ETH_TX_HDR_WIDTH)  m_eth_mfb_tx[ETH_STREAMS];
     // DMA I/O
     uvm_app_core_top_agent::agent#(sequence_item_dma_rx, MFB_ITEM_WIDTH, DMA_RX_MVB_WIDTH)                    m_dma_rx[DMA_STREAMS];
-    protected uvm_logic_vector_mvb::env_rx#(REGIONS, DMA_RX_MVB_WIDTH)                                        m_dma_mvb_rx[DMA_STREAMS];
-    protected uvm_logic_vector_array_mfb::env_rx#(REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, MFB_ITEM_WIDTH, 0)   m_dma_mfb_rx[DMA_STREAMS];
-    uvm_logic_vector_mvb::env_tx#(REGIONS, DMA_TX_MVB_WIDTH)                                        m_dma_mvb_tx[DMA_STREAMS];
-    uvm_logic_vector_array_mfb::env_tx#(REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, MFB_ITEM_WIDTH, 0)   m_dma_mfb_tx[DMA_STREAMS];
+    uvm_logic_vector_mvb::env_tx#(REGIONS, DMA_TX_MVB_WIDTH)                                                  m_dma_mvb_tx[DMA_STREAMS];
+    uvm_logic_vector_array_mfb::env_tx#(REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, MFB_ITEM_WIDTH, 0)             m_dma_mfb_tx[DMA_STREAMS];
     //RESET
     uvm_reset::env#(4)         m_resets_gen;
     uvm_reset::agent           m_resets_mi;
@@ -44,6 +43,13 @@ class env #(ETH_STREAMS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_ST
 
     //SCOREBOARD
     scoreboard #(ETH_STREAMS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, MFB_ITEM_WIDTH) m_scoreboard;
+
+    // ETH lower agetns. Convert ETH to ETH_MFB and ETH_MVB
+    protected uvm_logic_vector_mvb::env_rx#(REGIONS, ETH_RX_HDR_WIDTH)                                        m_eth_mvb_rx[ETH_STREAMS];
+    protected uvm_logic_vector_array_mfb::env_rx#(REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, MFB_ITEM_WIDTH, 0)   m_eth_mfb_rx[ETH_STREAMS];
+    // DMA lower agetns. Convert DMA to DMA_MFB and DMA_MVB
+    protected uvm_logic_vector_mvb::env_rx#(REGIONS, DMA_RX_MVB_WIDTH)                                        m_dma_mvb_rx[DMA_STREAMS];
+    protected uvm_logic_vector_array_mfb::env_rx#(REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, MFB_ITEM_WIDTH, 0)   m_dma_mfb_rx[DMA_STREAMS];
 
     function new(string name, uvm_component parent = null);
         super.new(name, parent);
@@ -58,6 +64,8 @@ class env #(ETH_STREAMS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_ST
         uvm_reset::env_config_item#(MEM_PORTS) m_resets_mem_config;
         uvm_app_core_top_agent::config_item    m_eth_rx_config;
         uvm_app_core_top_agent::config_item    m_dma_rx_config;
+
+        m_sequencer = uvm_app_core::sequencer#(DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_PKT_MTU, DMA_HDR_META_WIDTH, DMA_STREAMS, ETH_TX_HDR_WIDTH,  MFB_ITEM_WIDTH, ETH_STREAMS, REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE)::type_id::create("m_sequencer", this);
 
         ///////////////
         // ETH CONFIG
@@ -214,6 +222,15 @@ class env #(ETH_STREAMS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_ST
         //connect regmodel to model
         m_scoreboard.regmodel_set(m_regmodel.m_regmodel);
 
+
+        m_sequencer.m_regmodel = m_regmodel.m_regmodel;
+        m_sequencer.m_resets_gen = m_resets_gen.m_sequencer;
+        m_sequencer.m_resets_mi  = m_resets_mi .m_sequencer;
+        m_sequencer.m_resets_dma = m_resets_dma.m_sequencer;
+        m_sequencer.m_resets_app = m_resets_app.m_sequencer;
+        m_sequencer.m_resets_mem = m_resets_mem.m_sequencer;
+
+
         for (int unsigned it = 0; it < ETH_STREAMS; it++) begin
             string it_num;
             it_num.itoa(it);
@@ -229,6 +246,9 @@ class env #(ETH_STREAMS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_ST
             m_resets_app.sync_connect(m_eth_mvb_rx[it].reset_sync);
             m_resets_app.sync_connect(m_eth_mfb_rx[it].reset_sync);
             m_resets_app.sync_connect(m_eth_mfb_tx[it].reset_sync);
+
+            m_sequencer.m_eth_rx[it] = m_eth_rx[it].m_sequencer;
+            m_sequencer.m_eth_tx[it] = m_eth_mfb_tx[it].m_sequencer;
        end
 
         for (int unsigned it = 0; it < DMA_STREAMS; it++) begin
@@ -247,6 +267,10 @@ class env #(ETH_STREAMS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_ST
             m_resets_app.sync_connect(m_dma_mvb_rx[it].reset_sync);
             m_resets_app.sync_connect(m_dma_mfb_tx[it].reset_sync);
             m_resets_app.sync_connect(m_dma_mvb_tx[it].reset_sync);
+
+            m_sequencer.m_dma_rx    [it] = m_dma_rx    [it].m_sequencer;
+            m_sequencer.m_dma_mvb_tx[it] = m_dma_mvb_tx[it].m_sequencer;
+            m_sequencer.m_dma_mfb_tx[it] = m_dma_mfb_tx[it].m_sequencer;
         end
     endfunction
 

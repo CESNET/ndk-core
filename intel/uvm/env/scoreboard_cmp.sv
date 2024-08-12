@@ -72,9 +72,9 @@ class scoreboard_channel_header #(HDR_WIDTH, META_WIDTH, CHANNELS, PKT_MTU) exte
         logic discard;
 
         if (META_WIDTH == 0) begin
-            {discard, channel, packet_size} = tr_dut.data;
+            {discard, channel, packet_size} = tr.data;
         end else begin
-            {discard, channel, meta, packet_size} = tr_dut.data;
+            {discard, channel, meta, packet_size} = tr.data;
         end
 
         error_msg = "";

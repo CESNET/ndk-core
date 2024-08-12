@@ -25,6 +25,7 @@ package uvm_app_core;
     `include "model.sv"
     `include "scoreboard_cmp.sv"
     `include "scoreboard.sv"
+    `include "sequencer.sv"
     `include "env.sv"
 
     `include "sequence.sv"
