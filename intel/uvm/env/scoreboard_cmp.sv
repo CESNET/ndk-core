@@ -77,7 +77,7 @@ class scoreboard_channel_header #(HDR_WIDTH, META_WIDTH, CHANNELS, PKT_MTU) exte
             {discard, channel, meta, packet_size} = tr.data;
         end
 
-        error_msg = "";
+        error_msg = tr.time2string();
         error_msg = {error_msg, $sformatf("\n\t\tdiscard %b", discard)};
         error_msg = {error_msg, $sformatf("\n\t\tchannel %0d", channel)};
         error_msg = {error_msg, $sformatf("\n\t\tmeta    %h",  meta)};
