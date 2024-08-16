@@ -8,33 +8,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
 */
 
-class scoreboard_channel_mfb #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH) extends uvm_common::comparer_base_unordered#(packet #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH), uvm_logic_vector_array::sequence_item#(ITEM_WIDTH));
-    `uvm_component_param_utils(uvm_app_core::scoreboard_channel_mfb #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH))
-
-    function new(string name, uvm_component parent = null);
-        super.new(name, parent);
-    endfunction
-
-    virtual function int unsigned compare(MODEL_ITEM tr_model, DUT_ITEM tr_dut);
-        return (tr_model.data === tr_dut.data);
-    endfunction
-
-    virtual function string model_item2string(MODEL_ITEM tr);
-        return tr.convert2string();
-    endfunction
-
-    virtual function string dut_item2string(DUT_ITEM tr);
-        return tr.convert2string();
-    endfunction
-endclass
-
-
-class scoreboard_channel_header #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH) extends uvm_common::comparer_base_unordered #(packet #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH), uvm_logic_vector::sequence_item#(META_WIDTH + $clog2(CHANNELS) + $clog2(PKT_MTU+1) + 1));
-    `uvm_component_param_utils(uvm_app_core::scoreboard_channel_header #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH))
-
-    function new(string name, uvm_component parent = null);
-        super.new(name, parent);
-    endfunction
+class scoreboard_cmp_header #(type MODEL_ITEM, type DUT_ITEM, int unsigned META_WIDTH, int unsigned CHANNELS, int unsigned PKT_MTU);
 
     virtual function int unsigned compare(MODEL_ITEM tr_model, DUT_ITEM tr_dut);
         int unsigned eq = 1;
@@ -59,10 +33,8 @@ class scoreboard_channel_header #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH) ext
         return eq;
     endfunction
 
-
     virtual function string model_item2string(MODEL_ITEM tr);
         string msg; //ETH [%0d] header
-
         msg = tr.time2string();
         msg = {msg, $sformatf("\n\t\tdiscard %b",  tr.discard)};
         msg = {msg, $sformatf("\n\t\tchannel %0d", tr.channel)};
@@ -92,6 +64,137 @@ class scoreboard_channel_header #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH) ext
         error_msg = {error_msg, $sformatf("\n\t\tpacket_size %0d", packet_size)};
 
         return error_msg;
+    endfunction
+endclass
+
+class scoreboard_channel_mfb_unordered #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH) extends uvm_common::comparer_base_unordered#(packet #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH), uvm_logic_vector_array::sequence_item#(ITEM_WIDTH));
+    `uvm_component_param_utils(uvm_app_core::scoreboard_channel_mfb_unordered #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH))
+
+    function new(string name, uvm_component parent = null);
+        super.new(name, parent);
+    endfunction
+
+    virtual function int unsigned compare(MODEL_ITEM tr_model, DUT_ITEM tr_dut);
+        return (tr_model.data === tr_dut.data);
+    endfunction
+
+    virtual function string model_item2string(MODEL_ITEM tr);
+        return tr.convert2string();
+    endfunction
+
+    virtual function string dut_item2string(DUT_ITEM tr);
+        return tr.convert2string();
+    endfunction
+endclass
+
+class scoreboard_channel_mfb_ordered #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH) extends uvm_common::comparer_base_ordered#(packet #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH), uvm_logic_vector_array::sequence_item#(ITEM_WIDTH));
+    `uvm_component_param_utils(uvm_app_core::scoreboard_channel_mfb_ordered #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH))
+
+    function new(string name, uvm_component parent = null);
+        super.new(name, parent);
+    endfunction
+
+    virtual function int unsigned compare(MODEL_ITEM tr_model, DUT_ITEM tr_dut);
+        return (tr_model.data === tr_dut.data);
+    endfunction
+
+    virtual function string model_item2string(MODEL_ITEM tr);
+        return tr.convert2string();
+    endfunction
+
+    virtual function string dut_item2string(DUT_ITEM tr);
+        return tr.convert2string();
+    endfunction
+endclass
+
+class scoreboard_channel_mfb_tagged #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH) extends uvm_common::comparer_base_tagged#(packet #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH), uvm_logic_vector_array::sequence_item#(ITEM_WIDTH));
+    `uvm_component_param_utils(uvm_app_core::scoreboard_channel_mfb_tagged #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH))
+
+    function new(string name, uvm_component parent = null);
+        super.new(name, parent);
+    endfunction
+
+    virtual function int unsigned compare(MODEL_ITEM tr_model, DUT_ITEM tr_dut);
+        return (tr_model.data === tr_dut.data);
+    endfunction
+
+    virtual function string model_item2string(MODEL_ITEM tr);
+        return tr.convert2string();
+    endfunction
+
+    virtual function string dut_item2string(DUT_ITEM tr);
+        return tr.convert2string();
+    endfunction
+endclass
+
+
+class scoreboard_channel_header_unordered #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH) extends uvm_common::comparer_base_unordered #(packet #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH), uvm_logic_vector::sequence_item#(META_WIDTH + $clog2(CHANNELS) + $clog2(PKT_MTU+1) + 1));
+    `uvm_component_param_utils(uvm_app_core::scoreboard_channel_header_unordered #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH))
+
+    protected scoreboard_cmp_header #(MODEL_ITEM, DUT_ITEM, META_WIDTH, CHANNELS, PKT_MTU) cmp;
+
+    function new(string name, uvm_component parent = null);
+        super.new(name, parent);
+        cmp = new();
+    endfunction
+
+    virtual function int unsigned compare(MODEL_ITEM tr_model, DUT_ITEM tr_dut);
+        return cmp.compare(tr_model, tr_dut);
+    endfunction
+
+    virtual function string model_item2string(MODEL_ITEM tr);
+        return cmp.model_item2string(tr);
+    endfunction
+
+    virtual function string dut_item2string(DUT_ITEM tr);
+        return cmp.dut_item2string(tr);
+    endfunction
+endclass
+
+class scoreboard_channel_header_ordered #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH) extends uvm_common::comparer_base_ordered #(packet #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH), uvm_logic_vector::sequence_item#(META_WIDTH + $clog2(CHANNELS) + $clog2(PKT_MTU+1) + 1));
+    `uvm_component_param_utils(uvm_app_core::scoreboard_channel_header_ordered #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH))
+
+    protected scoreboard_cmp_header #(MODEL_ITEM, DUT_ITEM, META_WIDTH, CHANNELS, PKT_MTU) cmp;
+
+    function new(string name, uvm_component parent = null);
+        super.new(name, parent);
+        cmp = new();
+    endfunction
+
+    virtual function int unsigned compare(MODEL_ITEM tr_model, DUT_ITEM tr_dut);
+        return cmp.compare(tr_model, tr_dut);
+    endfunction
+
+    virtual function string model_item2string(MODEL_ITEM tr);
+        return cmp.model_item2string(tr);
+    endfunction
+
+    virtual function string dut_item2string(DUT_ITEM tr);
+        return cmp.dut_item2string(tr);
+    endfunction
+endclass
+
+
+class scoreboard_channel_header_tagged #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH) extends uvm_common::comparer_base_tagged #(packet #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH), uvm_logic_vector::sequence_item#(META_WIDTH + $clog2(CHANNELS) + $clog2(PKT_MTU+1) + 1));
+    `uvm_component_param_utils(uvm_app_core::scoreboard_channel_header_tagged #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH))
+
+    protected scoreboard_cmp_header #(MODEL_ITEM, DUT_ITEM, META_WIDTH, CHANNELS, PKT_MTU) cmp;
+
+    function new(string name, uvm_component parent = null);
+        super.new(name, parent);
+        cmp = new();
+    endfunction
+
+    virtual function int unsigned compare(MODEL_ITEM tr_model, DUT_ITEM tr_dut);
+        return cmp.compare(tr_model, tr_dut);
+    endfunction
+
+    virtual function string model_item2string(MODEL_ITEM tr);
+        return cmp.model_item2string(tr);
+    endfunction
+
+    virtual function string dut_item2string(DUT_ITEM tr);
+        return cmp.dut_item2string(tr);
     endfunction
 endclass
 

@@ -23,6 +23,7 @@ package uvm_app_core;
     `include "regmodel.sv"
 
     `include "model.sv"
+    `include "config.sv"
     `include "scoreboard_cmp.sv"
     `include "scoreboard.sv"
     `include "sequencer.sv"

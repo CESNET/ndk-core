@@ -29,10 +29,10 @@ class scoreboard #(ETH_STREAMS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS,
 
     //////////////////////////
     // CONNECTION to internal fifos
-    protected scoreboard_channel_header#(0, 2**ETH_TX_CHANNEL_WIDTH, 2**ETH_TX_LENGTH_WIDTH-1, ITEM_WIDTH) eth_mvb_cmp[ETH_STREAMS];
-    protected scoreboard_channel_mfb   #(0, 2**ETH_TX_CHANNEL_WIDTH, 2**ETH_TX_LENGTH_WIDTH-1, ITEM_WIDTH) eth_mfb_cmp[ETH_STREAMS];
-    protected scoreboard_channel_header#(DMA_HDR_META_WIDTH, DMA_TX_CHANNELS, DMA_PKT_MTU, ITEM_WIDTH)     dma_mvb_cmp[DMA_STREAMS];
-    protected scoreboard_channel_mfb   #(DMA_HDR_META_WIDTH, DMA_TX_CHANNELS, DMA_PKT_MTU, ITEM_WIDTH)     dma_mfb_cmp[DMA_STREAMS];
+    protected  uvm_common::comparer_base #(packet #(0, 2**ETH_TX_CHANNEL_WIDTH, 2**ETH_TX_LENGTH_WIDTH-1, ITEM_WIDTH), uvm_logic_vector::sequence_item#(0 + ETH_TX_CHANNEL_WIDTH + ETH_TX_LENGTH_WIDTH + 1))                       eth_mvb_cmp[ETH_STREAMS];
+    protected  uvm_common::comparer_base #(packet #(0, 2**ETH_TX_CHANNEL_WIDTH, 2**ETH_TX_LENGTH_WIDTH-1, ITEM_WIDTH), uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))                                                         eth_mfb_cmp[ETH_STREAMS];
+    protected  uvm_common::comparer_base #(packet #(DMA_HDR_META_WIDTH, DMA_TX_CHANNELS, DMA_PKT_MTU, ITEM_WIDTH)    , uvm_logic_vector::sequence_item#(DMA_HDR_META_WIDTH + $clog2(DMA_TX_CHANNELS) + $clog2(DMA_PKT_MTU+1) + 1)) dma_mvb_cmp[DMA_STREAMS];
+    protected  uvm_common::comparer_base #(packet #(DMA_HDR_META_WIDTH, DMA_TX_CHANNELS, DMA_PKT_MTU, ITEM_WIDTH)    , uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))                                                         dma_mfb_cmp[DMA_STREAMS];
 
     /////////////////////////
     // MODEL
@@ -52,6 +52,12 @@ class scoreboard #(ETH_STREAMS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS,
     endfunction
 
     function void build_phase(uvm_phase phase);
+        config_item cfg;
+
+        if(!uvm_config_db#(config_item)::get(this, "", "config", cfg)) begin
+            cfg = new();
+        end
+
         ///////////////
         // ETH BUILD ANALYSIS EXPORTS
         for (int unsigned it = 0; it < ETH_STREAMS; it++) begin
@@ -62,8 +68,18 @@ class scoreboard #(ETH_STREAMS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS,
             eth_mvb_tx[it] = new({"eth_mvb_tx_", it_num}, this);
             eth_mfb_tx[it] = new({"eth_mfb_tx_", it_num}, this);
 
-            eth_mvb_cmp[it] = scoreboard_channel_header#(0, 2**ETH_TX_CHANNEL_WIDTH, 2**ETH_TX_LENGTH_WIDTH-1, ITEM_WIDTH)::type_id::create({"eth_mvb_cmp_", it_num}, this);
-            eth_mfb_cmp[it] = scoreboard_channel_mfb #(0, 2**ETH_TX_CHANNEL_WIDTH, 2**ETH_TX_LENGTH_WIDTH-1, ITEM_WIDTH)::type_id::create({"eth_mfb_cmp_", it_num}, this);
+            if (cfg.compare_eth == config_item::CMP_ORDERED) begin
+                eth_mvb_cmp[it] = scoreboard_channel_header_ordered#(0, 2**ETH_TX_CHANNEL_WIDTH, 2**ETH_TX_LENGTH_WIDTH-1, ITEM_WIDTH)::type_id::create({"eth_mvb_cmp_", it_num}, this);
+                eth_mfb_cmp[it] = scoreboard_channel_mfb_ordered   #(0, 2**ETH_TX_CHANNEL_WIDTH, 2**ETH_TX_LENGTH_WIDTH-1, ITEM_WIDTH)::type_id::create({"eth_mfb_cmp_", it_num}, this);
+            end else if (cfg.compare_eth == config_item::CMP_UNORDERED) begin
+                eth_mvb_cmp[it] = scoreboard_channel_header_unordered#(0, 2**ETH_TX_CHANNEL_WIDTH, 2**ETH_TX_LENGTH_WIDTH-1, ITEM_WIDTH)::type_id::create({"eth_mvb_cmp_", it_num}, this);
+                eth_mfb_cmp[it] = scoreboard_channel_mfb_unordered   #(0, 2**ETH_TX_CHANNEL_WIDTH, 2**ETH_TX_LENGTH_WIDTH-1, ITEM_WIDTH)::type_id::create({"eth_mfb_cmp_", it_num}, this);
+            end else if (cfg.compare_eth == config_item::CMP_TAGGED) begin
+                eth_mvb_cmp[it] = scoreboard_channel_header_tagged#(0, 2**ETH_TX_CHANNEL_WIDTH, 2**ETH_TX_LENGTH_WIDTH-1, ITEM_WIDTH)::type_id::create({"eth_mvb_cmp_", it_num}, this);
+                eth_mfb_cmp[it] = scoreboard_channel_mfb_tagged   #(0, 2**ETH_TX_CHANNEL_WIDTH, 2**ETH_TX_LENGTH_WIDTH-1, ITEM_WIDTH)::type_id::create({"eth_mfb_cmp_", it_num}, this);
+            end else begin
+                `uvm_fatal(this.get_full_name(), "UNknow comparator type")
+            end
         end
 
         ///////////////
@@ -76,8 +92,18 @@ class scoreboard #(ETH_STREAMS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS,
             dma_mvb_tx[it] = new({"dma_mvb_tx_", it_num}, this);
             dma_mfb_tx[it] = new({"dma_mfb_tx_", it_num}, this);
 
-            dma_mvb_cmp[it] = uvm_app_core::scoreboard_channel_header#(DMA_HDR_META_WIDTH, DMA_TX_CHANNELS, DMA_PKT_MTU, ITEM_WIDTH)::type_id::create({"dma_mvb_cmp_", it_num}, this);
-            dma_mfb_cmp[it] = scoreboard_channel_mfb #(DMA_HDR_META_WIDTH, DMA_TX_CHANNELS, DMA_PKT_MTU, ITEM_WIDTH)::type_id::create({"dma_mfb_cmp_", it_num}, this);
+            if (cfg.compare_dma == config_item::CMP_ORDERED) begin
+                dma_mvb_cmp[it] = scoreboard_channel_header_ordered#(DMA_HDR_META_WIDTH, DMA_TX_CHANNELS, DMA_PKT_MTU, ITEM_WIDTH)::type_id::create({"dma_mvb_cmp_", it_num}, this);
+                dma_mfb_cmp[it] = scoreboard_channel_mfb_ordered   #(DMA_HDR_META_WIDTH, DMA_TX_CHANNELS, DMA_PKT_MTU, ITEM_WIDTH)::type_id::create({"dma_mfb_cmp_", it_num}, this);
+            end  else if (cfg.compare_dma == config_item::CMP_UNORDERED) begin
+                dma_mvb_cmp[it] = scoreboard_channel_header_unordered#(DMA_HDR_META_WIDTH, DMA_TX_CHANNELS, DMA_PKT_MTU, ITEM_WIDTH)::type_id::create({"dma_mvb_cmp_", it_num}, this);
+                dma_mfb_cmp[it] = scoreboard_channel_mfb_unordered   #(DMA_HDR_META_WIDTH, DMA_TX_CHANNELS, DMA_PKT_MTU, ITEM_WIDTH)::type_id::create({"dma_mfb_cmp_", it_num}, this);
+            end  else if (cfg.compare_dma == config_item::CMP_TAGGED) begin
+                dma_mvb_cmp[it] = scoreboard_channel_header_tagged#(DMA_HDR_META_WIDTH, DMA_TX_CHANNELS, DMA_PKT_MTU, ITEM_WIDTH)::type_id::create({"dma_mvb_cmp_", it_num}, this);
+                dma_mfb_cmp[it] = scoreboard_channel_mfb_tagged   #(DMA_HDR_META_WIDTH, DMA_TX_CHANNELS, DMA_PKT_MTU, ITEM_WIDTH)::type_id::create({"dma_mfb_cmp_", it_num}, this);
+            end else begin
+                `uvm_fatal(this.get_full_name(), "UNknow comparator type")
+            end
         end
 
         m_model = model#(ETH_STREAMS, ETH_RX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, ITEM_WIDTH)::type_id::create("m_model", this);
