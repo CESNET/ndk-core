@@ -560,8 +560,8 @@ architecture PTILE of PCIE_CORE is
     signal dbg_credits_pd_vld   : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
     signal dbg_credits_npd_vld  : std_logic_vector(PCIE_ENDPOINTS-1 downto 0);
 
-    signal pcie_dbg_credits     : slv_array_t(PCIE_ENDPOINTS-1 downto 0)(15 downto 0);
-    signal pcie_dbg_credits_sel : slv_array_t(PCIE_ENDPOINTS-1 downto 0)( 2 downto 0);
+    signal pcie_dbg_credits     : slv_array_t(PCIE_EPS_INST-1 downto 0)(15 downto 0);
+    signal pcie_dbg_credits_sel : slv_array_t(PCIE_EPS_INST-1 downto 0)( 2 downto 0);
 
 begin
 
