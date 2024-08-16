@@ -19,12 +19,12 @@ class monitor #(type TR_TYPE, int unsigned ITEM_WIDTH, int unsigned META_WIDTH) 
     // Constructor
     function new (string name, uvm_component parent);
         super.new(name, parent);
+        analysis_port = new("analysis port", this);
     endfunction
 
     // ------------------------------------------------------------------------
     // Functions
     function void build_phase(uvm_phase phase);
-        analysis_port = new("analysis port", this);
         mvb = new("mvb", this);
         mfb = new("mfb", this);
     endfunction
@@ -34,7 +34,6 @@ class monitor #(type TR_TYPE, int unsigned ITEM_WIDTH, int unsigned META_WIDTH) 
         uvm_logic_vector_array::sequence_item#(ITEM_WIDTH) mfb_tr;
 
         forever begin
-            bit bitstream [];
             TR_TYPE item;
 
             item = TR_TYPE::type_id::create("item", this);
@@ -42,8 +41,11 @@ class monitor #(type TR_TYPE, int unsigned ITEM_WIDTH, int unsigned META_WIDTH) 
             mvb.get(mvb_tr);
             mfb.get(mfb_tr);
 
+            item.time_array_add(mvb_tr.start);
+            item.time_array_add(mfb_tr.start);
+
+            item.data = mfb_tr.data;
             item.meta2item(mvb_tr.data);
-            item.unpack(bitstream);
 
             analysis_port.write(item);
         end

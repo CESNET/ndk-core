@@ -8,15 +8,15 @@
  * SPDX-License-Identifier: BSD-3-Clause
 */
 
-class scoreboard_channel_mfb #(type CLASS_TYPE) extends uvm_common::comparer_base_unordered#(CLASS_TYPE, CLASS_TYPE);
-    `uvm_component_param_utils(uvm_app_core::scoreboard_channel_mfb #(CLASS_TYPE))
+class scoreboard_channel_mfb #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH) extends uvm_common::comparer_base_unordered#(packet #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH), uvm_logic_vector_array::sequence_item#(ITEM_WIDTH));
+    `uvm_component_param_utils(uvm_app_core::scoreboard_channel_mfb #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH))
 
     function new(string name, uvm_component parent = null);
         super.new(name, parent);
     endfunction
 
     virtual function int unsigned compare(MODEL_ITEM tr_model, DUT_ITEM tr_dut);
-        return tr_model.compare(tr_dut);
+        return (tr_model.data === tr_dut.data);
     endfunction
 
     virtual function string model_item2string(MODEL_ITEM tr);
@@ -29,14 +29,14 @@ class scoreboard_channel_mfb #(type CLASS_TYPE) extends uvm_common::comparer_bas
 endclass
 
 
-class scoreboard_channel_header #(HDR_WIDTH, META_WIDTH, CHANNELS, PKT_MTU) extends uvm_common::comparer_base_unordered #(packet_header #(META_WIDTH, CHANNELS, PKT_MTU), uvm_logic_vector::sequence_item#(HDR_WIDTH));
-    `uvm_component_param_utils(uvm_app_core::scoreboard_channel_header #(HDR_WIDTH, META_WIDTH, CHANNELS, PKT_MTU))
+class scoreboard_channel_header #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH) extends uvm_common::comparer_base_unordered #(packet #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH), uvm_logic_vector::sequence_item#(META_WIDTH + $clog2(CHANNELS) + $clog2(PKT_MTU+1) + 1));
+    `uvm_component_param_utils(uvm_app_core::scoreboard_channel_header #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH))
 
     function new(string name, uvm_component parent = null);
         super.new(name, parent);
     endfunction
 
-    virtual function int unsigned compare(packet_header #(META_WIDTH, CHANNELS, PKT_MTU) tr_model, uvm_logic_vector::sequence_item#(HDR_WIDTH) tr_dut);
+    virtual function int unsigned compare(MODEL_ITEM tr_model, DUT_ITEM tr_dut);
         int unsigned eq = 1;
         logic [META_WIDTH-1:0]meta = 'x;
         logic [$clog2(CHANNELS)-1:0] channel;
@@ -54,14 +54,22 @@ class scoreboard_channel_header #(HDR_WIDTH, META_WIDTH, CHANNELS, PKT_MTU) exte
         if (META_WIDTH != 0) begin
             eq &= (meta    === tr_model.meta);
         end
-        eq &= (packet_size === tr_model.packet_size);
+        eq &= (packet_size === tr_model.data.size());
 
         return eq;
     endfunction
 
 
     virtual function string model_item2string(MODEL_ITEM tr);
-        return tr.convert2string();
+        string msg; //ETH [%0d] header
+
+        msg = tr.time2string();
+        msg = {msg, $sformatf("\n\t\tdiscard %b",  tr.discard)};
+        msg = {msg, $sformatf("\n\t\tchannel %0d", tr.channel)};
+        msg = {msg, $sformatf("\n\t\tmeta    %h",  tr.meta)};
+        msg = {msg, $sformatf("\n\t\tpacket_size %0d", tr.data.size())};
+
+        return msg;
     endfunction
 
     virtual function string dut_item2string(DUT_ITEM tr);

@@ -234,8 +234,10 @@ class env #(ETH_STREAMS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_ST
         for (int unsigned it = 0; it < ETH_STREAMS; it++) begin
             string it_num;
             it_num.itoa(it);
-            m_eth_mvb_rx[it].analysis_port.connect(m_scoreboard.eth_mvb_rx[it]);
-            m_eth_mfb_rx[it].analysis_port_data.connect(m_scoreboard.eth_mfb_rx[it]);
+            m_eth_rx[it].analysis_port.connect(m_scoreboard.eth_rx[it]);
+
+            m_eth_mvb_rx[it].analysis_port.connect     (m_eth_rx[it].m_monitor.mvb.analysis_export);
+            m_eth_mfb_rx[it].analysis_port_data.connect(m_eth_rx[it].m_monitor.mfb.analysis_export);
             m_eth_mfb_tx[it].analysis_port_data.connect(m_scoreboard.eth_mfb_tx[it]);
             m_eth_mfb_tx[it].analysis_port_meta.connect(m_scoreboard.eth_mvb_tx[it]);
 
@@ -254,8 +256,10 @@ class env #(ETH_STREAMS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_ST
         for (int unsigned it = 0; it < DMA_STREAMS; it++) begin
             string it_num;
             it_num.itoa(it);
-            m_dma_mvb_rx[it].analysis_port.connect(m_scoreboard.dma_mvb_rx[it]);
-            m_dma_mfb_rx[it].analysis_port_data.connect(m_scoreboard.dma_mfb_rx[it]);
+            m_dma_rx[it].analysis_port.connect(m_scoreboard.dma_rx[it]);
+
+            m_dma_mvb_rx[it].analysis_port.connect     (m_dma_rx[it].m_monitor.mvb.analysis_export);
+            m_dma_mfb_rx[it].analysis_port_data.connect(m_dma_rx[it].m_monitor.mfb.analysis_export);
             m_dma_mvb_tx[it].analysis_port.connect(m_scoreboard.dma_mvb_tx[it]);
             m_dma_mfb_tx[it].analysis_port_data.connect(m_scoreboard.dma_mfb_tx[it]);
 
