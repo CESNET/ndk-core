@@ -3,6 +3,8 @@ from cocotb.clock import Clock
 from cocotb.triggers import Timer, RisingEdge, FallingEdge, Combine
 from cocotb.utils import get_sim_steps
 
+from cocotb import simulator
+
 from cocotbext.ofm.axi4stream.drivers import Axi4StreamMaster, Axi4StreamSlave
 from cocotbext.ofm.axi4stream.monitors import Axi4Stream
 from cocotbext.ofm.avst_pcie.drivers import AvstPcieDriverMaster, AvstPcieDriverSlave
@@ -43,30 +45,67 @@ class NFBDevice(cocotbext.nfb.NfbDevice):
 
     async def _init_clks(self):
         self._core = NFBDevice.core_instance_from_top(self._dut)
-        if hasattr(self._dut, 'REFCLK'):
-            # Tivoli card
+        if self._card_name == "FB2CGHH":
             await cocotb.start(Clock(self._dut.REFCLK, 20, 'ns').start())
-        elif hasattr(self._dut, 'SYSCLK_P'):
-            # NFB-200G2QL
+        elif self._card_name in ["FB2CGG3", "FB4CGG3"]:
+            await cocotb.start(Clock(self._dut.REFCLK, 20, 'ns').start())
+            await cocotb.start(Clock(self._dut.QSFP0_REFCLK_P, 6.206, 'ns').start())
+            await cocotb.start(Clock(self._dut.QSFP0_REFCLK_N, 6.206, 'ns').start(start_high=False))
+        elif self._card_name == "NFB-200G2QL":
             await cocotb.start(Clock(self._dut.SYSCLK_P, 8, 'ns').start())
             await cocotb.start(Clock(self._dut.SYSCLK_N, 8, 'ns').start(start_high=False))
-        elif hasattr(self._dut, 'AG_SYSCLK0_P'):
-            # AGI-400G
+        elif "AGI-FH400G" in self._card_name:
             # FIXME: Check freq
             await cocotb.start(Clock(self._dut.AG_SYSCLK0_P, 8, 'ns').start())
             await cocotb.start(Clock(self._dut.AG_SYSCLK1_P, 8, 'ns').start())
-        elif hasattr(self._dut, 'SYS_CLK_100M'):
-            # N6010
+            raise NotImplementedError("This card doesn't run")
+        elif self._card_name == "N6010":
             await cocotb.start(Clock(self._dut.SYS_CLK_100M, 10, 'ns').start())
+            self._core.clk_gen_i.LOCKED.value = 1
+            self._core.clk_gen_i.INIT_DONE_N.value = 0
+        elif self._card_name == "VCU118":
+            await cocotb.start(Clock(self._dut.REFCLK_P, get_sim_steps(10/3 / 2, 'ns', round_mode='round')*2).start())
+            await cocotb.start(Clock(self._dut.REFCLK_N, get_sim_steps(10/3 / 2, 'ns', round_mode='round')*2).start(start_high=False))
+
+            await cocotb.start(Clock(self._dut.QSFP0_REFCLK_P, 6.4, 'ns').start())
+            await cocotb.start(Clock(self._dut.QSFP0_REFCLK_N, 6.4, 'ns').start(start_high=False))
+            await cocotb.start(Clock(self._dut.QSFP1_REFCLK_P, 6.4, 'ns').start())
+            await cocotb.start(Clock(self._dut.QSFP1_REFCLK_N, 6.4, 'ns').start(start_high=False))
+        elif self._card_name == "IA-420F":
+            await cocotb.start(Clock(self._dut.USR_CLK_33M, get_sim_steps(1000/33 / 2, 'ns', round_mode='round')*2).start())
+            await cocotb.start(Clock(self._dut.QSFP_REFCLK_156M, 6.4, 'ns').start())
+        elif self._card_name == "DK-DEV-1SDX-P":
+            await cocotb.start(Clock(self._dut.FPGA_SYSCLK0_100M_P, 10, 'ns').start())
+            await cocotb.start(Clock(self._dut.CLK_156P25M_QSFP1_P, 6.4, 'ns').start())
+        elif self._card_name == "DK-DEV-AGI027RES":
+            await cocotb.start(Clock(self._dut.REFCLK_PCIE_14C_CH0_P, 10, 'ns').start())
+            await cocotb.start(Clock(self._dut.REFCLK_CXL_15C_CH0_P, 10, 'ns').start())
+            await cocotb.start(Clock(self._dut.REFCLK_FGT12ACH4_P, 6.4, 'ns').start())
+            raise NotImplementedError("This card doesn't run")
+        elif self._card_name == "ALVEO_U200":
+            await cocotb.start(Clock(self._dut.SYSCLK_P, 6.4, 'ns').start())
+            await cocotb.start(Clock(self._dut.SYSCLK_N, 6.4, 'ns').start(start_high=False))
+
+            await cocotb.start(Clock(self._dut.QSFP0_REFCLK_P, 6.206, 'ns').start())
+            await cocotb.start(Clock(self._dut.QSFP0_REFCLK_N, 6.206, 'ns').start(start_high=False))
+            await cocotb.start(Clock(self._dut.QSFP1_REFCLK_P, 6.206, 'ns').start())
+            await cocotb.start(Clock(self._dut.QSFP1_REFCLK_N, 6.206, 'ns').start(start_high=False))
+        elif self._card_name == "ALVEO_U55C":
+            await cocotb.start(Clock(self._dut.SYSCLK2_P, 10, 'ns').start())
+            await cocotb.start(Clock(self._dut.SYSCLK2_N, 10, 'ns').start(start_high=False))
+            await cocotb.start(Clock(self._dut.SYSCLK3_P, 10, 'ns').start())
+            await cocotb.start(Clock(self._dut.SYSCLK3_N, 10, 'ns').start(start_high=False))
+            await cocotb.start(Clock(self._dut.QSFP0_REFCLK_P, 6.206, 'ns').start())
+            await cocotb.start(Clock(self._dut.QSFP0_REFCLK_N, 6.206, 'ns').start(start_high=False))
+        else:
+            # No card: fpga_common
+            await cocotb.start(Clock(self._dut.SYSCLK, 10, 'ns').start())
+
+        if self._card_name in ["IA-420F", "N6010", "DK-DEV-1SDX-P"]:
             await cocotb.start(Clock(self._core.clk_gen_i.OUTCLK_0, 2.5, 'ns').start())
             await cocotb.start(Clock(self._core.clk_gen_i.OUTCLK_1, get_sim_steps(10/3 / 2, 'ns', round_mode='round')*2).start())
             await cocotb.start(Clock(self._core.clk_gen_i.OUTCLK_2, 5, 'ns').start())
             await cocotb.start(Clock(self._core.clk_gen_i.OUTCLK_3, 10, 'ns').start())
-            self._core.clk_gen_i.LOCKED.value = 1
-            self._core.clk_gen_i.INIT_DONE_N.value = 0
-        else:
-            # No card: fpga_common
-            await cocotb.start(Clock(self._dut.SYSCLK, 10, 'ns').start())
 
         for pcie_clk in self._core.pcie_i.pcie_core_i.pcie_hip_clk:
             await cocotb.start(Clock(pcie_clk, 4, 'ns').start())
@@ -78,6 +117,10 @@ class NFBDevice(cocotbext.nfb.NfbDevice):
                 await cocotb.start(Clock(eth_core.network_mod_core_i.etile_clk_out, 2482, 'ps').start())
 
     def _init_pcie(self):
+        handle = simulator.get_root_handle("combo_user_const")
+        combo_user_const = cocotb.handle.SimHandle(handle)
+        self._card_name = combo_user_const.CARD_NAME.value.decode()
+
         try:
             self._core = NFBDevice.core_instance_from_top(self._dut)
         except:
@@ -150,7 +193,9 @@ class NFBDevice(cocotbext.nfb.NfbDevice):
             for rst in pcie_i.pcie_hip_rst:
                 rst.value = 0
 
-            await cocotb.triggers.FallingEdge(self._core.global_reset)
+            # FIXME: some strange loopback on ALVEO_U200
+            if self._core.USE_PCIE_CLK.value == 1:
+                await cocotb.triggers.FallingEdge(self._core.global_reset)
         elif hasattr(pcie_i, 'pcie_reset_status_n'):
             for rst in pcie_i.pcie_reset_status_n:
                 rst.value = 0
@@ -159,6 +204,9 @@ class NFBDevice(cocotbext.nfb.NfbDevice):
                 rst.value = 1
         else:
             raise NotImplementedError("Unknown signals for PCI/device reset")
+
+        if self._core.rst_pci[0].value == 1:
+            await cocotb.triggers.FallingEdge(self._core.rst_pci[0])
 
     async def _pcie_cfg_ext_reg_access(self, addr, index = 0, fn = 0, sync=True, data=None):
         pcie_i = self._core.pcie_i.pcie_core_i
