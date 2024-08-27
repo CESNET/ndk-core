@@ -55,6 +55,21 @@ class env #(ETH_STREAMS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_ST
         super.new(name, parent);
     endfunction
 
+
+    function int unsigned used();
+        int unsigned ret = 0;
+        for (int unsigned it = 0; it < ETH_STREAMS; it++) begin
+            ret |= m_eth_rx[it].used();
+        end
+
+        for (int unsigned it = 0; it < DMA_STREAMS; it++) begin
+            ret |= m_dma_rx[it].used();
+        end
+
+        ret |= m_scoreboard.used();
+        return ret;
+    endfunction
+
     function void build_phase(uvm_phase phase);
         uvm_mi::regmodel_config        m_mi_config;
         uvm_reset::env_config_item#(4) m_resets_gen_config;
