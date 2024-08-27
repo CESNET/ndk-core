@@ -1,64 +1,12 @@
-
-
-
-class sequence_eth#(
-    int unsigned CHANNELS,
-    int unsigned LENGTH_WIDTH,
-    int unsigned ITEM_WIDTH
-) extends uvm_app_core_top_agent::sequence_base #(uvm_app_core_top_agent::sequence_eth_item#(CHANNELS, LENGTH_WIDTH, ITEM_WIDTH));
-    `uvm_object_param_utils(uvm_app_core::sequence_eth#(CHANNELS, LENGTH_WIDTH, ITEM_WIDTH))
-
-    typedef struct{
-        rand logic [32-1:0] sec;
-        rand logic [32-1:0] nano_sec;
-    } timestamp_t;
-
-    int unsigned transaction_min = 100;
-    int unsigned transaction_max = 300;
-
-    rand int unsigned   transactions;
-    rand timestamp_t    time_start;
-
-    constraint c_transactions {
-        transactions inside {[transaction_min:transaction_max]};
-    }
-
-    // Constructor - creates new instance of this class
-    function new(string name = "sequence");
-        super.new(name);
-    endfunction
-
-    // -----------------------
-    // Functions.
-    // -----------------------
-    task body;
-        int unsigned it;
-        uvm_common::sequence_cfg state;
-
-        if(!uvm_config_db#(uvm_common::sequence_cfg)::get(m_sequencer, "", "state", state)) begin
-            state = null;
-        end
-
-        req = uvm_app_core_top_agent::sequence_eth_item#(CHANNELS, LENGTH_WIDTH, ITEM_WIDTH)::type_id::create("req", m_sequencer);
-        while (it < transactions && (state == null || !state.stopped())) begin
-            timestamp_t     time_act;
-            logic [64-1:0]  time_sim = $time()/1ns;
-
-            time_act.nano_sec = (time_start.nano_sec + time_sim)%1000000000;
-            time_act.sec      = time_start.sec       + (time_start.nano_sec + time_sim)/1000000000;
-
-            //generat new packet
-            start_item(req);
-            req.randomize() with {
-                req.data.size() inside {[60:1500]};
-                timestamp_vld dist { 1'b1 :/ 80, 1'b0 :/20};
-                timestamp_vld -> req.timestamp == {time_act.sec, time_act.nano_sec};
-            };
-            finish_item(req);
-            it++;
-        end
-    endtask
-endclass
+/*
+ * file       : sequence.sv
+ * Copyright (C) 2024 CESNET z. s. p. o.
+ * description: verification sequence 
+ * date       : 2021
+ * author     : Radek Iša <isa@cesnet.ch>
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+*/
 
 
 class sequence_main#(
@@ -148,10 +96,11 @@ class sequence_main#(
 
 
     virtual task eth_rx_sequence(int unsigned index);
-        uvm_app_core::sequence_eth#(2**8, 16, MFB_ITEM_WIDTH) packet_seq;
+        uvm_app_core::sequence_library_eth#(2**8, 16, MFB_ITEM_WIDTH) packet_seq;
         int unsigned it;
 
-        packet_seq = uvm_app_core::sequence_eth#(2**8, 16, MFB_ITEM_WIDTH)::type_id::create("mfb_rx_seq", p_sequencer.m_eth_rx[index]);
+        packet_seq = uvm_app_core::sequence_library_eth#(2**8, 16, MFB_ITEM_WIDTH)::type_id::create("mfb_rx_seq", p_sequencer.m_eth_rx[index]);
+        packet_seq.init_sequence();
 
         uvm_config_db#(uvm_common::sequence_cfg)::set(p_sequencer.m_eth_rx[index], "", "state", rx_status);
         it = 0;

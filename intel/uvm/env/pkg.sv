@@ -29,6 +29,7 @@ package uvm_app_core;
     `include "sequencer.sv"
     `include "env.sv"
 
+    `include "sequence_eth.sv"
     `include "sequence.sv"
 
 endpackage
