@@ -69,10 +69,15 @@ if {$ETH_PORTS <= $PCIE_ENDPOINTS} {
 }
 
 if { $DMA_TYPE == 4 } {
-    if {!(($PCIE_ENDPOINTS == 1 && $PCIE_GEN == 3 && $PCIE_ENDPOINT_MODE == 0) ||
-          ($PCIE_ENDPOINTS == 1 && $PCIE_GEN == 3 && $PCIE_ENDPOINT_MODE == 2)) } {
+    if {
+        !(
+          ($PCIE_GEN == 3 && $PCIE_ENDPOINTS == 1 && $PCIE_ENDPOINT_MODE == 0) ||
+          ($PCIE_GEN == 3 && $PCIE_ENDPOINTS == 1 && $PCIE_ENDPOINT_MODE == 2) ||
+          ($PCIE_GEN == 4 && $PCIE_ENDPOINTS == 1 && $PCIE_ENDPOINT_MODE == 0)
+        )
+    } {
         error "Incompatible DMA_TYPE: $DMA_TYPE with chosen PCIE_ENDPOINTS: $PCIE_ENDPOINTS\
-                and PCIE_ENDPOINT_MODE: $PCIE_ENDPOINT_MODE! Try to use PCIE_CONF=1xGen3x8LL."
+                and PCIE_ENDPOINT_MODE: $PCIE_ENDPOINT_MODE!"
     }
 
     if { $DMA_TX_FRAME_SIZE_MAX > [expr 2**$DMA_TX_DATA_PTR_W -1] } {
