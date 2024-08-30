@@ -22,7 +22,8 @@ class env #(ETH_STREAMS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_ST
     typedef uvm_app_core_top_agent::sequence_dma_item#(DMA_TX_CHANNELS, $clog2(DMA_PKT_MTU+1), DMA_HDR_META_WIDTH, MFB_ITEM_WIDTH) sequence_item_dma_rx;
 
     //TOP Sequencer
-    uvm_app_core::sequencer#(DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_PKT_MTU, DMA_HDR_META_WIDTH, DMA_STREAMS, ETH_TX_HDR_WIDTH,  MFB_ITEM_WIDTH, ETH_STREAMS, REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE) m_sequencer;
+    uvm_app_core::sequencer#(DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_PKT_MTU, DMA_HDR_META_WIDTH, DMA_STREAMS, ETH_TX_HDR_WIDTH,  MFB_ITEM_WIDTH,
+                             ETH_STREAMS, REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, MEM_PORTS, MEM_ADDR_WIDTH, MEM_DATA_WIDTH, MEM_BURST_WIDTH) m_sequencer;
 
     // ETHERNET I/O
     uvm_app_core_top_agent::agent#(sequence_item_eth_rx, MFB_ITEM_WIDTH, ETH_RX_HDR_WIDTH)                        m_eth_rx[ETH_STREAMS];
@@ -50,6 +51,8 @@ class env #(ETH_STREAMS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_ST
     // DMA lower agetns. Convert DMA to DMA_MFB and DMA_MVB
     protected uvm_logic_vector_mvb::env_rx#(REGIONS, DMA_RX_MVB_WIDTH)                                        m_dma_mvb_rx[DMA_STREAMS];
     protected uvm_logic_vector_array_mfb::env_rx#(REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, MFB_ITEM_WIDTH, 0)   m_dma_mfb_rx[DMA_STREAMS];
+    //MEMORY INTERFACE
+    protected uvm_avmm::agent_master #(MEM_ADDR_WIDTH, MEM_DATA_WIDTH, MEM_BURST_WIDTH) m_memory[MEM_PORTS];
 
     function new(string name, uvm_component parent = null);
         super.new(name, parent);
@@ -80,7 +83,8 @@ class env #(ETH_STREAMS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_ST
         uvm_app_core_top_agent::config_item    m_eth_rx_config;
         uvm_app_core_top_agent::config_item    m_dma_rx_config;
 
-        m_sequencer = uvm_app_core::sequencer#(DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_PKT_MTU, DMA_HDR_META_WIDTH, DMA_STREAMS, ETH_TX_HDR_WIDTH,  MFB_ITEM_WIDTH, ETH_STREAMS, REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE)::type_id::create("m_sequencer", this);
+        m_sequencer = uvm_app_core::sequencer#(DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_PKT_MTU, DMA_HDR_META_WIDTH, DMA_STREAMS, ETH_TX_HDR_WIDTH,  MFB_ITEM_WIDTH,
+                             ETH_STREAMS, REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, MEM_PORTS, MEM_ADDR_WIDTH, MEM_DATA_WIDTH, MEM_BURST_WIDTH)::type_id::create("m_sequencer", this);
 
         ///////////////
         // ETH CONFIG
@@ -200,11 +204,19 @@ class env #(ETH_STREAMS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_ST
 
         m_resets_mem_config = new();
         for(int unsigned it = 0; it < MEM_PORTS; it++) begin
+            uvm_avmm::config_item mem_cfg;
             string it_num;
             it_num.itoa(it);
 
             m_resets_mem_config.active[it]         = UVM_ACTIVE;
             m_resets_mem_config.interface_name[it] = {"RESET_MEM_", it_num};
+
+            mem_cfg = new();
+            mem_cfg.active         = UVM_ACTIVE;
+            mem_cfg.interface_name = {"MEM_", it_num};
+            mem_cfg.generated_memory_file_type = uvm_avmm::config_item::RANDOM;
+            uvm_config_db#(uvm_avmm::config_item)::set(this, {"m_memory_", it_num}, "m_config", mem_cfg);
+            m_memory[it] = uvm_avmm::agent_master #(MEM_ADDR_WIDTH, MEM_DATA_WIDTH, MEM_BURST_WIDTH)::type_id::create( {"m_memory_", it_num}, this);;
         end
         uvm_config_db#(uvm_reset::env_config_item#(MEM_PORTS))::set(this, "m_resets_mem", "m_config", m_resets_mem_config);
         m_resets_mem = uvm_reset::env#(MEM_PORTS)::type_id::create("m_resets_mem", this);
@@ -290,6 +302,10 @@ class env #(ETH_STREAMS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_ST
             m_sequencer.m_dma_rx    [it] = m_dma_rx    [it].m_sequencer;
             m_sequencer.m_dma_mvb_tx[it] = m_dma_mvb_tx[it].m_sequencer;
             m_sequencer.m_dma_mfb_tx[it] = m_dma_mfb_tx[it].m_sequencer;
+        end
+
+        for (int unsigned it = 0; it < MEM_PORTS; it++) begin
+            m_sequencer.m_memory[it] = m_memory[it].m_sequencer;
         end
     endfunction
 

@@ -21,9 +21,14 @@ class sequencer#(
     int unsigned ETH_STREAMS,
     int unsigned REGIONS,
     int unsigned MFB_REG_SIZE,
-    int unsigned MFB_BLOCK_SIZE
+    int unsigned MFB_BLOCK_SIZE,
+    int unsigned MEM_PORTS,
+    int unsigned MEM_ADDR_WIDTH,
+    int unsigned MEM_DATA_WIDTH,
+    int unsigned MEM_BURST_WIDTH
 ) extends uvm_sequencer;
-    `uvm_component_param_utils(uvm_app_core::sequencer#(DMA_TX_CHANNELS, DMA_RX_CHANNELS, DMA_PKT_MTU, DMA_HDR_META_WIDTH, DMA_STREAMS, ETH_TX_HDR_WIDTH,  MFB_ITEM_WIDTH, ETH_STREAMS, REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE))
+    `uvm_component_param_utils(uvm_app_core::sequencer#(DMA_TX_CHANNELS, DMA_RX_CHANNELS, DMA_PKT_MTU, DMA_HDR_META_WIDTH, DMA_STREAMS, ETH_TX_HDR_WIDTH,
+                                MFB_ITEM_WIDTH, ETH_STREAMS, REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, MEM_PORTS, MEM_ADDR_WIDTH, MEM_DATA_WIDTH, MEM_BURST_WIDTH))
 
     localparam DMA_RX_MVB_WIDTH = $clog2(DMA_PKT_MTU+1)+DMA_HDR_META_WIDTH+$clog2(DMA_RX_CHANNELS);
     localparam DMA_TX_MVB_WIDTH = $clog2(DMA_PKT_MTU+1)+DMA_HDR_META_WIDTH+$clog2(DMA_TX_CHANNELS) + 1;
@@ -43,6 +48,9 @@ class sequencer#(
     uvm_reset::sequencer m_resets_dma;
     uvm_reset::sequencer m_resets_app;
     uvm_reset::sequencer m_resets_mem;
+
+    //External memory
+    uvm_avmm::sequencer_master#(MEM_ADDR_WIDTH, MEM_DATA_WIDTH, MEM_BURST_WIDTH) m_memory[MEM_PORTS];
 
     //CONFIGURATION INTERFACE
     uvm_app_core::regmodel m_regmodel;
