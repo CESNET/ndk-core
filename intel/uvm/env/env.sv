@@ -42,7 +42,7 @@ class env #(ETH_STREAMS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_ST
     uvm_mi::regmodel#(uvm_app_core::regmodel, MI_DATA_WIDTH, MI_ADDR_WIDTH) m_regmodel;
 
     //SCOREBOARD
-    scoreboard #(ETH_STREAMS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, MFB_ITEM_WIDTH) m_scoreboard;
+    protected scoreboard #(ETH_STREAMS, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_STREAMS, DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_HDR_META_WIDTH, DMA_PKT_MTU, MFB_ITEM_WIDTH) m_scoreboard;
 
     // ETH lower agetns. Convert ETH to ETH_MFB and ETH_MVB
     protected uvm_logic_vector_mvb::env_rx#(REGIONS, ETH_RX_HDR_WIDTH)                                        m_eth_mvb_rx[ETH_STREAMS];
