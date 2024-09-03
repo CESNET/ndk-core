@@ -30,6 +30,7 @@ package uvm_app_core;
     `include "env.sv"
 
     `include "sequence_eth.sv"
+    `include "sequence_tsu.sv"
     `include "sequence.sv"
 
 endpackage

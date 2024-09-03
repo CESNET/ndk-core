@@ -38,6 +38,8 @@ class env #(ETH_STREAMS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_ST
     uvm_reset::env#(2)         m_resets_dma;
     uvm_reset::agent           m_resets_app;
     uvm_reset::env#(MEM_PORTS) m_resets_mem;
+    //TSU
+    uvm_logic_vector_mvb::env_rx #(1, 64) m_tsu;
 
     //CONFIGURATION INTERFACE
     uvm_mi::regmodel#(uvm_app_core::regmodel, MI_DATA_WIDTH, MI_ADDR_WIDTH) m_regmodel;
@@ -82,6 +84,7 @@ class env #(ETH_STREAMS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_ST
         uvm_reset::env_config_item#(MEM_PORTS) m_resets_mem_config;
         uvm_app_core_top_agent::config_item    m_eth_rx_config;
         uvm_app_core_top_agent::config_item    m_dma_rx_config;
+        uvm_logic_vector_mvb::config_item      m_tsu_config;
 
         m_sequencer = uvm_app_core::sequencer#(DMA_RX_CHANNELS, DMA_TX_CHANNELS, DMA_PKT_MTU, DMA_HDR_META_WIDTH, DMA_STREAMS, ETH_TX_HDR_WIDTH,  MFB_ITEM_WIDTH,
                              ETH_STREAMS, REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, MEM_PORTS, MEM_ADDR_WIDTH, MEM_DATA_WIDTH, MEM_BURST_WIDTH)::type_id::create("m_sequencer", this);
@@ -222,6 +225,13 @@ class env #(ETH_STREAMS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_ST
         m_resets_mem = uvm_reset::env#(MEM_PORTS)::type_id::create("m_resets_mem", this);
 
 
+        //TSU
+        m_tsu_config = new();
+        m_tsu_config.active         = UVM_ACTIVE;
+        m_tsu_config.interface_name = "TSU_INTERFACE";
+        uvm_config_db#(uvm_logic_vector_mvb::config_item)::set(this, "m_tsu", "m_config", m_tsu_config);
+        m_tsu = uvm_logic_vector_mvb::env_rx #(1, 64)::type_id::create("m_tsu", this);
+
         //CONFIGURATION INTERFACE
         m_mi_config = new();
         m_mi_config.addr_base            = 'h0;
@@ -350,6 +360,8 @@ class env #(ETH_STREAMS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_ST
             seq.start(sqr);
         end
     endtask
+
+
 
     task run_phase(uvm_phase phase);
         for(int unsigned it = 0; it < ETH_STREAMS; it++) begin

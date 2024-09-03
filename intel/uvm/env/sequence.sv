@@ -42,6 +42,7 @@ class sequence_main#(
     //protected logic tx_done;
     protected logic [ETH_STREAMS-1:0] event_eth_rx_end;
     protected logic [DMA_STREAMS-1:0] event_dma_rx_end;
+    rand time time_start;
 
 
     function new (string name = "uvm_app_core::sequencer");
@@ -103,10 +104,13 @@ class sequence_main#(
 
     virtual task eth_rx_sequence(int unsigned index);
         uvm_app_core::sequence_library_eth#(2**8, 16, MFB_ITEM_WIDTH) packet_seq;
+        config_sequence_eth seq_cfg;
         int unsigned it;
 
+        seq_cfg = new();
+        seq_cfg.time_start = time_start;
         packet_seq = uvm_app_core::sequence_library_eth#(2**8, 16, MFB_ITEM_WIDTH)::type_id::create("mfb_rx_seq", p_sequencer.m_eth_rx[index]);
-        packet_seq.init_sequence();
+        packet_seq.init_sequence(seq_cfg);
 
         uvm_config_db#(uvm_common::sequence_cfg)::set(p_sequencer.m_eth_rx[index], "", "state", rx_status);
         it = 0;

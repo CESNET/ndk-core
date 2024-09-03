@@ -9,25 +9,16 @@
 */
 
 
-typedef struct{
-    rand logic [32-1:0] sec;
-    rand logic [32-1:0] nano_sec;
-} timestamp_t;
-
-
-
 class sequence_eth#(
     int unsigned CHANNELS,
     int unsigned LENGTH_WIDTH,
     int unsigned ITEM_WIDTH
-) extends uvm_common::sequence_base #(uvm_packet_generators::config_sequence, uvm_app_core_top_agent::sequence_eth_item#(CHANNELS, LENGTH_WIDTH, ITEM_WIDTH));
+) extends uvm_common::sequence_base #(config_sequence_eth, uvm_app_core_top_agent::sequence_eth_item#(CHANNELS, LENGTH_WIDTH, ITEM_WIDTH));
     `uvm_object_param_utils(uvm_app_core::sequence_eth#(CHANNELS, LENGTH_WIDTH, ITEM_WIDTH))
 
     int unsigned transaction_min = 100;
     int unsigned transaction_max = 300;
-
     rand int unsigned   transactions;
-    rand timestamp_t    time_start;
 
     constraint c_transactions {
         transactions inside {[transaction_min:transaction_max]};
@@ -51,18 +42,19 @@ class sequence_eth#(
 
         req = uvm_app_core_top_agent::sequence_eth_item#(CHANNELS, LENGTH_WIDTH, ITEM_WIDTH)::type_id::create("req", m_sequencer);
         while (it < transactions && (state == null || !state.stopped())) begin
-            timestamp_t     time_act;
-            logic [64-1:0]  time_sim = $time()/1ns;
+            logic [32-1:0] time_act_sec;
+            logic [32-1:0] time_act_nano_sec;
+            logic [64-1:0] time_sim = (cfg.time_start + $time())/1ns;
 
-            time_act.nano_sec = (time_start.nano_sec + time_sim)%1000000000;
-            time_act.sec      = time_start.sec       + (time_start.nano_sec + time_sim)/1000000000;
+            time_act_nano_sec = time_sim%1000000000;
+            time_act_sec      = time_sim/1000000000;
 
             //generat new packet
             start_item(req);
             assert (req.randomize() with {
                 req.data.size() inside {[60:1500]};
                 req.timestamp_vld dist { 1'b1 :/ 80, 1'b0 :/20};
-                req.timestamp_vld -> req.timestamp == {time_act.sec, time_act.nano_sec};
+                req.timestamp_vld -> req.timestamp == {time_act_sec, time_act_nano_sec};
             }) else begin
                 `uvm_fatal(m_sequencer.get_full_name(), "\n\tCannot randomize uvm_app_core_top_agent::sequence_eth_item");
             end
@@ -78,7 +70,7 @@ class sequence_flowtest_eth #(
     int unsigned CHANNELS,
     int unsigned LENGTH_WIDTH,
     int unsigned ITEM_WIDTH
-) extends uvm_common::sequence_base #(uvm_packet_generators::config_sequence, uvm_app_core_top_agent::sequence_eth_item#(CHANNELS, LENGTH_WIDTH, ITEM_WIDTH));
+) extends uvm_common::sequence_base #(config_sequence_eth, uvm_app_core_top_agent::sequence_eth_item#(CHANNELS, LENGTH_WIDTH, ITEM_WIDTH));
     `uvm_object_param_utils(uvm_app_core::sequence_flowtest_eth #(CHANNELS, LENGTH_WIDTH, ITEM_WIDTH))
 
     // Packet size configuration options
@@ -118,11 +110,6 @@ class sequence_flowtest_eth #(
 
     string config_generator_config_filepath = "";
     string profile_generator_config_filepath = "";
-
-    // ================= //
-    // Random parameters //
-    // ================= //
-    rand timestamp_t    time_start;
 
     // ------------- //
     // PACKET NUMBER //
@@ -379,16 +366,17 @@ class sequence_flowtest_eth #(
         void'(reader.open(output_filepath)); // Try open an output pcap
         req = uvm_app_core_top_agent::sequence_eth_item#(CHANNELS, LENGTH_WIDTH, ITEM_WIDTH)::type_id::create("req", m_sequencer);
         while( reader.read(data) == uvm_pcap::RET_OK && (state == null || !state.stopped())) begin
-            timestamp_t     time_act;
-            logic [64-1:0]  time_sim = $time()/1ns;
+            logic [32-1:0] time_act_sec;
+            logic [32-1:0] time_act_nano_sec;
+            logic [64-1:0] time_sim = (cfg.time_start + $time())/1ns;
 
-            time_act.nano_sec = (time_start.nano_sec + time_sim)%1000000000;
-            time_act.sec      = time_start.sec       + (time_start.nano_sec + time_sim)/1000000000;
+            time_act_nano_sec = time_sim%1000000000;
+            time_act_sec      = time_sim/1000000000;
 
             start_item(req);
             assert (req.randomize() with {
                 req.timestamp_vld dist { 1'b1 :/ 80, 1'b0 :/20};
-                req.timestamp_vld -> req.timestamp == {time_act.sec, time_act.nano_sec};
+                req.timestamp_vld -> req.timestamp == {time_act_sec, time_act_nano_sec};
             }) else begin
                 `uvm_fatal(m_sequencer.get_full_name(), "\n\tCannot randomize uvm_app_core_top_agent::sequence_eth_item");
             end
@@ -407,7 +395,7 @@ class sequence_search_eth  #(
     int unsigned CHANNELS,
     int unsigned LENGTH_WIDTH,
     int unsigned ITEM_WIDTH
-) extends uvm_common::sequence_base #(uvm_packet_generators::config_sequence, uvm_app_core_top_agent::sequence_eth_item#(CHANNELS, LENGTH_WIDTH, ITEM_WIDTH));
+) extends uvm_common::sequence_base #(config_sequence_eth, uvm_app_core_top_agent::sequence_eth_item#(CHANNELS, LENGTH_WIDTH, ITEM_WIDTH));
     `uvm_object_param_utils(uvm_app_core::sequence_search_eth#(CHANNELS, LENGTH_WIDTH, ITEM_WIDTH))
 
     int unsigned pkt_size_min = 60;
@@ -430,7 +418,6 @@ class sequence_search_eth  #(
     rand int unsigned algorithm; // 0 -> rand; 1 -> dfs
 
     rand int unsigned packet_err_prob; //empty/payload
-    rand timestamp_t    time_start;
 
     constraint c_alg{
         algorithm dist {0 :/ 10, 1 :/ 1};
@@ -623,11 +610,12 @@ class sequence_search_eth  #(
         void'(reader.open(pcap_file));
         req = uvm_app_core_top_agent::sequence_eth_item#(CHANNELS, LENGTH_WIDTH, ITEM_WIDTH)::type_id::create("req", m_sequencer);
         while(reader.read(data) == uvm_pcap::RET_OK && (state == null || !state.stopped())) begin
-            timestamp_t     time_act;
-            logic [64-1:0]  time_sim = $time()/1ns;
+            logic [32-1:0] time_act_sec;
+            logic [32-1:0] time_act_nano_sec;
+            logic [64-1:0] time_sim = (cfg.time_start + $time())/1ns;
 
-            time_act.nano_sec = (time_start.nano_sec + time_sim)%1000000000;
-            time_act.sec      = time_start.sec       + (time_start.nano_sec + time_sim)/1000000000;
+            time_act_nano_sec = time_sim%1000000000;
+            time_act_sec      = time_sim/1000000000;
 
             pkt_num++;
             // Generate random request, which must be in interval from min length to max length
@@ -635,7 +623,7 @@ class sequence_search_eth  #(
 
             assert (req.randomize() with {
                 req.timestamp_vld dist { 1'b1 :/ 80, 1'b0 :/20};
-                req.timestamp_vld -> req.timestamp == {time_act.sec, time_act.nano_sec};
+                req.timestamp_vld -> req.timestamp == {time_act_sec, time_act_nano_sec};
             }) else begin
                 `uvm_fatal(m_sequencer.get_full_name(), "\n\tCannot randomize uvm_app_core_top_agent::sequence_eth_item");
             end
@@ -662,7 +650,7 @@ class sequence_library_eth #(
     int unsigned CHANNELS,
     int unsigned LENGTH_WIDTH,
     int unsigned ITEM_WIDTH
-) extends uvm_common::sequence_library #(uvm_packet_generators::config_sequence, uvm_app_core_top_agent::sequence_eth_item#(CHANNELS, LENGTH_WIDTH, ITEM_WIDTH));
+) extends uvm_common::sequence_library #(config_sequence_eth, uvm_app_core_top_agent::sequence_eth_item#(CHANNELS, LENGTH_WIDTH, ITEM_WIDTH));
     `uvm_object_param_utils(    uvm_app_core::sequence_library_eth #(CHANNELS, LENGTH_WIDTH, ITEM_WIDTH))
     `uvm_sequence_library_utils(uvm_app_core::sequence_library_eth #(CHANNELS, LENGTH_WIDTH, ITEM_WIDTH))
 
@@ -671,7 +659,7 @@ class sequence_library_eth #(
         init_sequence_library();
     endfunction
 
-    virtual function void init_sequence(uvm_packet_generators::config_sequence param_cfg = null);
+    virtual function void init_sequence(config_sequence_eth param_cfg = null);
         super.init_sequence(param_cfg);
 
         this.add_sequence(sequence_eth          #(CHANNELS, LENGTH_WIDTH, ITEM_WIDTH)::get_type());

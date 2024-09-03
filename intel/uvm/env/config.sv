@@ -4,6 +4,17 @@
 
 //-- SPDX-License-Identifier: BSD-3-Clause
 
+class config_sequence_eth extends uvm_packet_generators::config_sequence;
+
+    rand time time_start;
+
+    function new ();
+        super.new();
+        time_start = 0ns;
+    endfunction
+endclass
+
+
 class config_item extends uvm_object;
 
     typedef enum {CMP_ORDERED, CMP_UNORDERED, CMP_TAGGED} cmp_type;
