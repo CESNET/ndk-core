@@ -63,7 +63,7 @@ virtual class sequence_item#(int unsigned ITEM_WIDTH, int unsigned META_WIDTH) e
 
 endclass
 
-
+                                                                                                                     // CHANNEL_WIDTH + LENGHT_WIDTH + FLAGS  +  MAC_HIT  + TSU WIDTH
 class sequence_eth_item#(int unsigned CHANNELS, int unsigned LENGTH_WIDTH, int unsigned ITEM_WIDTH) extends sequence_item#(ITEM_WIDTH, LENGTH_WIDTH + $clog2(CHANNELS) + 10 + 4 + 64);
     `uvm_object_param_utils(uvm_app_core_top_agent::sequence_eth_item#(CHANNELS, LENGTH_WIDTH, ITEM_WIDTH))
 

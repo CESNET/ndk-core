@@ -33,8 +33,11 @@ class sequencer#(
     localparam DMA_RX_MVB_WIDTH = $clog2(DMA_PKT_MTU+1)+DMA_HDR_META_WIDTH+$clog2(DMA_RX_CHANNELS);
     localparam DMA_TX_MVB_WIDTH = $clog2(DMA_PKT_MTU+1)+DMA_HDR_META_WIDTH+$clog2(DMA_TX_CHANNELS) + 1;
 
+    // CHANNEL_WIDTH + LENGHT_WIDTH + FLAGS  +  MAC_HIT  + TSU WIDTH
+    localparam ETH_RX_META_WIDTH   = 8 + 16 + 10 + 4 + 64;
+
     //ETH
-    uvm_app_core_top_agent::sequencer #(MFB_ITEM_WIDTH, $clog2(2**8) + 16 + 10 + 4 + 64)         m_eth_rx[ETH_STREAMS];
+    uvm_app_core_top_agent::sequencer #(MFB_ITEM_WIDTH, ETH_RX_META_WIDTH)                       m_eth_rx[ETH_STREAMS];
     uvm_mfb::sequencer#(REGIONS, MFB_REG_SIZE, MFB_BLOCK_SIZE, MFB_ITEM_WIDTH, ETH_TX_HDR_WIDTH) m_eth_tx[ETH_STREAMS];
 
     //DMA
