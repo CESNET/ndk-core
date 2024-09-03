@@ -26,13 +26,23 @@ class sequence_base#(type TR_TYPE) extends uvm_sequence #(TR_TYPE);
     // Functions.
     // -----------------------
     task body;
+        int unsigned it;
+        uvm_common::sequence_cfg state;
+
+        if(!uvm_config_db#(uvm_common::sequence_cfg)::get(m_sequencer, "", "state", state)) begin
+            state = null;
+        end
+
         req = TR_TYPE::type_id::create("req", m_sequencer);
 
-        for (int unsigned it = 0; it < transactions; it++) begin
+        it = 0;
+        while(it < transactions && (state == null || !state.stopped())) begin
             //generat new packet
             start_item(req);
             req.randomize() with {req.data.size() inside {[60:1500]}; }; 
             finish_item(req);
+
+            it++;
         end
     endtask
 endclass

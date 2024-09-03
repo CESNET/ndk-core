@@ -20,7 +20,7 @@ class agent #(type TR_TYPE, int unsigned ITEM_WIDTH, int unsigned META_WIDTH) ex
     uvm_common::fifo#(sequence_item#(ITEM_WIDTH, META_WIDTH)) fifo_mfb;
 
     protected driver#(ITEM_WIDTH, META_WIDTH)           m_driver;
-    protected monitor#(TR_TYPE, ITEM_WIDTH, META_WIDTH) m_monitor;
+    /*protected*/ monitor#(TR_TYPE, ITEM_WIDTH, META_WIDTH) m_monitor;
     protected config_item                               m_config;
 
     // Contructor, where analysis port is created.
@@ -28,6 +28,13 @@ class agent #(type TR_TYPE, int unsigned ITEM_WIDTH, int unsigned META_WIDTH) ex
         super.new(name, parent);
         reset_sync  = new();
     endfunction: new
+
+
+    function int unsigned used();
+        int unsigned ret = 0;
+        ret |= m_driver.used();
+        return ret;
+    endfunction
 
     // -----------------------
     // Functions.

@@ -5,7 +5,7 @@
 //-- SPDX-License-Identifier: BSD-3-Clause
 
 
-virtual class sequence_item#(int unsigned ITEM_WIDTH, int unsigned META_WIDTH) extends uvm_sequence_item;
+virtual class sequence_item#(int unsigned ITEM_WIDTH, int unsigned META_WIDTH) extends uvm_common::sequence_item;
 
     rand logic [ITEM_WIDTH-1:0]      data[];
 
@@ -27,6 +27,7 @@ virtual class sequence_item#(int unsigned ITEM_WIDTH, int unsigned META_WIDTH) e
             return;
         end
 
+        super.do_copy(rhs);
         data = rhs_.data;
     endfunction
 
@@ -46,7 +47,7 @@ virtual class sequence_item#(int unsigned ITEM_WIDTH, int unsigned META_WIDTH) e
     endfunction
 
     function string convert2string();
-        string msg = "\n";
+        string msg = super.convert2string();
 
         for (int unsigned it = 0; it < data.size(); it++) begin
             if (it % 32 == 0) begin
@@ -62,7 +63,7 @@ virtual class sequence_item#(int unsigned ITEM_WIDTH, int unsigned META_WIDTH) e
 
 endclass
 
-
+                                                                                                                     // CHANNEL_WIDTH + LENGHT_WIDTH + FLAGS  +  MAC_HIT  + TSU WIDTH
 class sequence_eth_item#(int unsigned CHANNELS, int unsigned LENGTH_WIDTH, int unsigned ITEM_WIDTH) extends sequence_item#(ITEM_WIDTH, LENGTH_WIDTH + $clog2(CHANNELS) + 10 + 4 + 64);
     `uvm_object_param_utils(uvm_app_core_top_agent::sequence_eth_item#(CHANNELS, LENGTH_WIDTH, ITEM_WIDTH))
 
@@ -210,7 +211,7 @@ class sequence_eth_item#(int unsigned CHANNELS, int unsigned LENGTH_WIDTH, int u
 
     // Visualize the sequence item to string
     function string convert2string();
-        string msg = "\n";
+        string msg = super.convert2string();
 
         msg = {msg, $sformatf("\tchannel       %0d\n", channel     )};
         msg = {msg, $sformatf("\terror         %b\n", error        )};
@@ -224,7 +225,7 @@ class sequence_eth_item#(int unsigned CHANNELS, int unsigned LENGTH_WIDTH, int u
         msg = {msg, $sformatf("\thit_mac_vld   %b\n", hit_mac_vld  )};
         msg = {msg, $sformatf("\thit_mac       %0d\n", hit_mac     )};
         msg = {msg, $sformatf("\ttmimstemp_vld %b\n", timestamp_vld)};
-        msg = {msg, $sformatf("\ttimestamp     %h\n", timestamp    )};
+        msg = {msg, $sformatf("\ttimestamp     0x%h\n", timestamp    )};
 
         return msg;
     endfunction
@@ -319,11 +320,11 @@ class sequence_dma_item#(int unsigned CHANNELS, int unsigned LENGTH_WIDTH, int u
 
     // Visualize the sequence item to string
     function string convert2string();
-        string msg = "\n";
+        string msg = super.convert2string();
 
-        msg = {msg, $sformatf("\tPACK FORM %h\n",      this.item2meta())};
+        msg = {msg, $sformatf("\tPACK FORM   0x%h\n",      this.item2meta())};
         msg = {msg, $sformatf("\tchannel       %0d\n", channel )};
-        msg = {msg, $sformatf("\tmeta          %h\n",  meta    )};
+        msg = {msg, $sformatf("\tmeta        0x%h\n",  meta    )};
         msg = {msg, super.convert2string()};
 
         return msg;
