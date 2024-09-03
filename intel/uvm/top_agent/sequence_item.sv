@@ -225,7 +225,7 @@ class sequence_eth_item#(int unsigned CHANNELS, int unsigned LENGTH_WIDTH, int u
         msg = {msg, $sformatf("\thit_mac_vld   %b\n", hit_mac_vld  )};
         msg = {msg, $sformatf("\thit_mac       %0d\n", hit_mac     )};
         msg = {msg, $sformatf("\ttmimstemp_vld %b\n", timestamp_vld)};
-        msg = {msg, $sformatf("\ttimestamp     %h\n", timestamp    )};
+        msg = {msg, $sformatf("\ttimestamp     0x%h\n", timestamp    )};
 
         return msg;
     endfunction
@@ -322,9 +322,9 @@ class sequence_dma_item#(int unsigned CHANNELS, int unsigned LENGTH_WIDTH, int u
     function string convert2string();
         string msg = super.convert2string();
 
-        msg = {msg, $sformatf("\tPACK FORM %h\n",      this.item2meta())};
+        msg = {msg, $sformatf("\tPACK FORM   0x%h\n",      this.item2meta())};
         msg = {msg, $sformatf("\tchannel       %0d\n", channel )};
-        msg = {msg, $sformatf("\tmeta          %h\n",  meta    )};
+        msg = {msg, $sformatf("\tmeta        0x%h\n",  meta    )};
         msg = {msg, super.convert2string()};
 
         return msg;

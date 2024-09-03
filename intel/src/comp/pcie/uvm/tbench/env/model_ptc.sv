@@ -32,9 +32,9 @@ class tag_register#(int unsigned TAG_WIDTH) extends uvm_object;
         if (type_tr == 0) begin
             //check if there isnt
             if (pcie2dma.exists(pcie_tag)) begin
-                `uvm_error(this.get_full_name(), $sformatf("\n\tPCIE tag %0d(%h) already exists", pcie_tag, pcie_tag));
+                `uvm_error(this.get_full_name(), $sformatf("\n\tPCIE tag %0d(0x%h) already exists", pcie_tag, pcie_tag));
             end else if (dma2pcie.exists({unit_id, dma_tag})) begin
-                `uvm_error(this.get_full_name(), $sformatf("\n\tDMA unit id %h tag %0d(%h) already exists", unit_id, dma_tag, dma_tag));
+                `uvm_error(this.get_full_name(), $sformatf("\n\tDMA unit id 0x%h tag %0d(0x%h) already exists", unit_id, dma_tag, dma_tag));
             end else begin
                 //dma to pcie
                 dma2pcie[{unit_id, dma_tag}] = pcie_tag;
@@ -149,7 +149,7 @@ class tag_cbs #(int unsigned REGIONS, int unsigned TAG_WIDTH) extends uvm_event_
                 `uvm_info(this.get_full_name(), $sformatf("\n\tTag translaction %0d WR(%0d) DMA TAG : 0x%h DMA ID : 0x%h => PCIE tag 0x%h", transactions, act_dma_hdr.type_ide, act_dma_hdr.tag, act_dma_hdr.unitid, tag_act), UVM_HIGH);
 
                 if ($isunknown(tag_act)) begin
-                    `uvm_error(this.get_full_name(), $sformatf("\n\tUndefined Value in TAG assigment %h", tag_act));
+                    `uvm_error(this.get_full_name(), $sformatf("\n\tUndefined Value in TAG assigment 0x%h", tag_act));
                 end
 
                 registration.register_pcie_tag(act_dma_hdr.type_ide, act_dma_hdr.length*4, act_dma_hdr.unitid, act_dma_hdr.tag, tag_act);

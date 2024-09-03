@@ -61,8 +61,8 @@ class packet #(WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH) extends uvm_app_core_top_ag
 
         packet_size = data.size();
         msg = super.convert2string();
-        msg = {msg, $sformatf("\n\tPacket form %h", {discard, channel, meta, packet_size})}; 
-        msg = {msg, $sformatf("\n\tmeta %h\n\tchannel %0d\n\tpacket size %0d\n\tdiscard %b", meta, channel, packet_size, discard)};
+        msg = {msg, $sformatf("\n\tPacket form 0x%h", {discard, channel, meta, packet_size})}; 
+        msg = {msg, $sformatf("\n\tmeta 0x%h\n\tchannel %0d\n\tpacket size %0d\n\tdiscard %b", meta, channel, packet_size, discard)};
         return msg;
     endfunction
 endclass

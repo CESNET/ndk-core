@@ -38,7 +38,7 @@ class scoreboard_cmp_header #(type MODEL_ITEM, type DUT_ITEM, int unsigned META_
         msg = tr.time2string();
         msg = {msg, $sformatf("\n\t\tdiscard %b",  tr.discard)};
         msg = {msg, $sformatf("\n\t\tchannel %0d", tr.channel)};
-        msg = {msg, $sformatf("\n\t\tmeta    %h",  tr.meta)};
+        msg = {msg, $sformatf("\n\t\tmeta    0x%h",  tr.meta)};
         msg = {msg, $sformatf("\n\t\tpacket_size %0d", tr.data.size())};
 
         return msg;
@@ -60,7 +60,7 @@ class scoreboard_cmp_header #(type MODEL_ITEM, type DUT_ITEM, int unsigned META_
         error_msg = tr.time2string();
         error_msg = {error_msg, $sformatf("\n\t\tdiscard %b", discard)};
         error_msg = {error_msg, $sformatf("\n\t\tchannel %0d", channel)};
-        error_msg = {error_msg, $sformatf("\n\t\tmeta    %h",  meta)};
+        error_msg = {error_msg, $sformatf("\n\t\tmeta    0x%h",  meta)};
         error_msg = {error_msg, $sformatf("\n\t\tpacket_size %0d", packet_size)};
 
         return error_msg;
