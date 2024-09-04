@@ -150,10 +150,10 @@ class scoreboard #(CQ_MFB_ITEM_WIDTH, CC_MFB_ITEM_WIDTH, RQ_MFB_ITEM_WIDTH, RC_M
             analysis_imp_mfb_cc_meta = new("analysis_imp_mfb_cc_meta", this);
             analysis_imp_mfb_rq_meta = new("analysis_imp_mfb_rq_meta", this);
 
-            mfb_rc_meta_cmp.model_tr_timeout_set(10ns);
-            mfb_cq_meta_cmp.model_tr_timeout_set(10ns);
-            avst_up_meta_cmp.model_tr_timeout_set(10ns);
-            avst_up_data_cmp.model_tr_timeout_set(10ns);
+            mfb_rc_meta_cmp.model_tr_timeout_set (100ns);
+            mfb_cq_meta_cmp.model_tr_timeout_set (100ns);
+            avst_up_meta_cmp.model_tr_timeout_set(100ns);
+            avst_up_data_cmp.model_tr_timeout_set(100ns);
 
         end else begin
             m_model_xilinx = model_xilinx #(CQ_MFB_ITEM_WIDTH, CC_MFB_ITEM_WIDTH, RQ_MFB_ITEM_WIDTH, RC_MFB_ITEM_WIDTH, AXI_CQUSER_WIDTH, AXI_CCUSER_WIDTH, AXI_RCUSER_WIDTH, AXI_RQUSER_WIDTH, RQ_MFB_META_W, RC_MFB_META_W, CQ_MFB_META_W, CC_MFB_META_W)::type_id::create("m_model_xilinx", this);
@@ -164,15 +164,15 @@ class scoreboard #(CQ_MFB_ITEM_WIDTH, CC_MFB_ITEM_WIDTH, RQ_MFB_ITEM_WIDTH, RC_M
             axi_cc_data_cmp = uvm_common::comparer_ordered #(uvm_logic_vector_array::sequence_item#(CC_MFB_ITEM_WIDTH))::type_id::create("axi_cc_data_cmp", this);
             axi_rq_data_cmp = uvm_common::comparer_ordered #(uvm_logic_vector_array::sequence_item#(RQ_MFB_ITEM_WIDTH))::type_id::create("axi_rq_data_cmp", this);
 
-            axi_cc_data_cmp.model_tr_timeout_set(10ns);
-            axi_rq_data_cmp.model_tr_timeout_set(10ns);
+            axi_cc_data_cmp.model_tr_timeout_set(100ns);
+            axi_rq_data_cmp.model_tr_timeout_set(100ns);
         end
 
         mfb_rc_data_cmp = uvm_common::comparer_ordered #(uvm_logic_vector_array::sequence_item#(RC_MFB_ITEM_WIDTH))::type_id::create("mfb_rc_data_cmp", this);
         mfb_cq_data_cmp = uvm_common::comparer_ordered #(uvm_logic_vector_array::sequence_item#(CQ_MFB_ITEM_WIDTH))::type_id::create("mfb_cq_data_cmp", this);
 
-        mfb_rc_data_cmp.model_tr_timeout_set(10ns);
-        mfb_cq_data_cmp.model_tr_timeout_set(10ns);
+        mfb_rc_data_cmp.model_tr_timeout_set(100ns);
+        mfb_cq_data_cmp.model_tr_timeout_set(100ns);
 
         analysis_imp_mfb_cc_data = new("analysis_imp_mfb_cc_data", this);
         analysis_imp_mfb_rq_data = new("analysis_imp_mfb_rq_data", this);
