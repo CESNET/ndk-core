@@ -51,15 +51,15 @@ endclass
 class model #(string ETH_CORE_ARCH, int unsigned ETH_PORTS, int unsigned ETH_PORT_SPEED[ETH_PORTS-1:0], int unsigned ETH_PORT_CHAN[ETH_PORTS-1:0], REGIONS, ITEM_WIDTH, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH) extends uvm_component;
     `uvm_component_param_utils(uvm_network_mod_env::model #(ETH_CORE_ARCH, ETH_PORTS, ETH_PORT_SPEED, ETH_PORT_CHAN, REGIONS, ITEM_WIDTH, ETH_TX_HDR_WIDTH, ETH_RX_HDR_WIDTH));
 
-    uvm_tlm_analysis_fifo#(uvm_common::model_item#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))) eth_rx_data[ETH_PORTS];
-    uvm_tlm_analysis_fifo#(uvm_common::model_item#(uvm_logic_vector::sequence_item#(6)))                eth_rx_hdr [ETH_PORTS];
-    uvm_analysis_port    #(uvm_common::model_item#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))) eth_tx_data[ETH_PORTS];
-    uvm_analysis_port    #(uvm_common::model_item#(uvm_logic_vector::sequence_item#(1)))                eth_tx_hdr[ETH_PORTS];
+    uvm_tlm_analysis_fifo#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)) eth_rx_data[ETH_PORTS];
+    uvm_tlm_analysis_fifo#(uvm_logic_vector::sequence_item#(6))                eth_rx_hdr [ETH_PORTS];
+    uvm_analysis_port    #(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)) eth_tx_data[ETH_PORTS];
+    uvm_analysis_port    #(uvm_logic_vector::sequence_item#(1))                eth_tx_hdr[ETH_PORTS];
 
     uvm_tlm_analysis_fifo#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)) usr_rx_data[ETH_PORTS];
     uvm_tlm_analysis_fifo#(uvm_logic_vector::sequence_item#(ETH_TX_HDR_WIDTH)) usr_rx_hdr [ETH_PORTS];
-    uvm_analysis_port    #(uvm_common::model_item#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))) usr_tx_data[ETH_PORTS];
-    uvm_analysis_port    #(uvm_common::model_item#(uvm_logic_vector::sequence_item#(ETH_RX_HDR_WIDTH))) usr_tx_hdr[ETH_PORTS];
+    uvm_analysis_port    #(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)) usr_tx_data[ETH_PORTS];
+    uvm_analysis_port    #(uvm_logic_vector::sequence_item#(ETH_RX_HDR_WIDTH)) usr_tx_hdr[ETH_PORTS];
 
     //SYNCHRONIZATION 
     protected drop_cbs #(ETH_CORE_ARCH, ETH_PORT_SPEED[0]) drop_sync[ETH_PORTS][];
@@ -119,11 +119,11 @@ class model #(string ETH_CORE_ARCH, int unsigned ETH_PORTS, int unsigned ETH_POR
     endfunction
 
     task automatic run_eth(int unsigned index);
-        uvm_common::model_item#(uvm_logic_vector::sequence_item#(6))                 hdr;
-        uvm_common::model_item#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))  data;
+        uvm_logic_vector::sequence_item#(6)                 hdr;
+        uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)  data;
 
-        uvm_common::model_item#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)) data_out;
-        uvm_common::model_item#(uvm_logic_vector::sequence_item#(ETH_RX_HDR_WIDTH)) hdr_out;
+        uvm_logic_vector_array::sequence_item#(ITEM_WIDTH) data_out;
+        uvm_logic_vector::sequence_item#(ETH_RX_HDR_WIDTH) hdr_out;
 
         forever begin
             int unsigned channel;
@@ -153,7 +153,7 @@ class model #(string ETH_CORE_ARCH, int unsigned ETH_PORTS, int unsigned ETH_POR
             `uvm_info(this.get_full_name(), {$sformatf("\n\tReceived %0d data to port[%0d]", eth_recv[index], index), hdr.convert2string(), data.convert2string()}, /*UVM_FULL*/ UVM_FULL)
 
             eth_recv[index]++;
-            length = data.item.size();
+            length = data.size();
             port   = index;
 
             channel = 0;
@@ -161,9 +161,9 @@ class model #(string ETH_CORE_ARCH, int unsigned ETH_PORTS, int unsigned ETH_POR
                 //channel = 'x;
                 `uvm_fatal(this.get_full_name(), "\n\tChannels is not implemented!!")
             end
-            {dst_mac, src_mac, eth_type} = {>>{data.item.data[0: (48+48+16)/ITEM_WIDTH-1]}};
+            {dst_mac, src_mac, eth_type} = {>>{data.data[0: (48+48+16)/ITEM_WIDTH-1]}};
 
-            error_frame  = !is_frame_valid(hdr.item.data);
+            error_frame  = !is_frame_valid(hdr.data);
             error_min_tu = length < 60;
             error_max_tu = length > 1526;
             error_crc    = 0;
@@ -184,7 +184,7 @@ class model #(string ETH_CORE_ARCH, int unsigned ETH_PORTS, int unsigned ETH_POR
             drop_sync[index][channel].get(drop);
             drop |= error_frame | error_min_tu | error_max_tu | error_crc | error_mac;
 
-            msg = $sformatf("\n\thdr input time %s", hdr.convert2string_time());
+            msg = $sformatf("\n\thdr input time %s", hdr.time2string());
             msg = {msg, $sformatf("\n\tlength        [%0d]" , length)};
             msg = {msg, $sformatf("\n\terror         [0x%h]", error)};
             msg = {msg, $sformatf("\n\terror frame   [0x%h]", error_frame)};
@@ -205,18 +205,18 @@ class model #(string ETH_CORE_ARCH, int unsigned ETH_PORTS, int unsigned ETH_POR
                 //crc_value = ~crc32_ethernet(mfbTrans.data, 32'hffffffff); nebylo by lepší?? crc_value = crc32_ethernet(mfbTrans.data, 32'h0);
                 //crc = {<< byte{crc_value}};
 
-                hdr_out = uvm_common::model_item#(uvm_logic_vector::sequence_item#(ETH_RX_HDR_WIDTH))::type_id::create("hdr_out", this);
+                hdr_out = uvm_logic_vector::sequence_item#(ETH_RX_HDR_WIDTH)::type_id::create("hdr_out", this);
                 hdr_out.start[$sformatf("ETH_RX[%0d]", index)] = $time();
                 hdr_out.tag = "USR_TX";
-                hdr_out.item = uvm_logic_vector::sequence_item#(ETH_RX_HDR_WIDTH)::type_id::create("hdr_out.item", this);
-                hdr_out.item.data = {timestamp, timestamp_vld, mac_hit, mac_hit_vld, multicast, broadcast, error_mac, error_crc, error_max_tu, error_min_tu, error_frame, error, port, length};
+                hdr_out.data = {timestamp, timestamp_vld, mac_hit, mac_hit_vld, multicast, broadcast, error_mac, error_crc, error_max_tu, error_min_tu, error_frame, error, port, length};
 
-                data_out = uvm_common::model_item#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))::type_id::create("data_out", this);
-                data_out.start[$sformatf("ETH_RX[%0d]", index)] = $time();
-                data_out.tag = "USR_TX";
-                data_out.item = data.item;
-                //data_out.item = uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)::type_id::create("data_out.item", this);
-                //data_out.item.data = new[data.data.size()-4](data.data); //remove CRC
+                data_out = data;
+                //data_out = uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)::type_id::create("data_out", this);
+                //data_out.start[$sformatf("ETH_RX[%0d]", index)] = $time();
+                //data_out.tag = "USR_TX";
+                //data_out.data = data.data;
+                //data_out = uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)::type_id::create("data_out", this);
+                //data_out.data = new[data.data.size()-4](data.data); //remove CRC
 
                 usr_tx_data[index].write(data_out);
                 usr_tx_hdr[index].write(hdr_out);
@@ -233,8 +233,8 @@ class model #(string ETH_CORE_ARCH, int unsigned ETH_PORTS, int unsigned ETH_POR
         uvm_logic_vector::sequence_item#(ETH_TX_HDR_WIDTH) hdr;
         uvm_logic_vector_array::sequence_item#(ITEM_WIDTH) data;
 
-        uvm_common::model_item#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)) data_out;
-        uvm_common::model_item#(uvm_logic_vector::sequence_item#(1))                hdr_out;
+        uvm_logic_vector_array::sequence_item#(ITEM_WIDTH) data_out;
+        uvm_logic_vector::sequence_item#(1)                hdr_out;
 
         // TX pošle paket pouze pokud je větší jak 60B
         forever begin
@@ -250,16 +250,16 @@ class model #(string ETH_CORE_ARCH, int unsigned ETH_PORTS, int unsigned ETH_POR
 
             if (data.size() >= 64) begin
                 {discard, port, length} = hdr.data;
-                hdr_out = uvm_common::model_item#(uvm_logic_vector::sequence_item#(1))::type_id::create("hdr_out", this);
+                hdr_out = uvm_logic_vector::sequence_item#(1)::type_id::create("hdr_out", this);
                 hdr_out.start[$sformatf("USR_RX[%0d]", index)] = $time();
                 hdr_out.tag = "ETH_TX";
-                hdr_out.item = uvm_logic_vector::sequence_item#(1)::type_id::create("hdr_out", this);
-                hdr_out.item.data = 1'b0; 
+                hdr_out.data = 1'b0; 
 
-                data_out = uvm_common::model_item#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))::type_id::create("data_out", this);
-                data_out.start[$sformatf("USR_RX[%0d]", index)] = $time();
-                data_out.tag = "ETH_TX";
-                data_out.item = data;
+                data_out = data;
+                //data_out = uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)::type_id::create("data_out", this);
+                //data_out.start[$sformatf("USR_RX[%0d]", index)] = $time();
+                //data_out.tag = "ETH_TX";
+                //data_out = data;
 
                 eth_tx_hdr [index].write(hdr_out);
                 eth_tx_data[index].write(data_out);
