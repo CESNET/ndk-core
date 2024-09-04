@@ -11,25 +11,25 @@ class scoreboard #(CQ_MFB_ITEM_WIDTH, CC_MFB_ITEM_WIDTH, RQ_MFB_ITEM_WIDTH, RC_M
     localparam IS_INTEL_DEV = (DEVICE == "STRATIX10" || DEVICE == "AGILEX");
 
     // Analysis components.
-    uvm_common::subscriber #(uvm_logic_vector_array::sequence_item#(CQ_MFB_ITEM_WIDTH)) analysis_imp_avst_down_data;
-    uvm_common::subscriber #(uvm_logic_vector::sequence_item#(AVST_DOWN_META_W))        analysis_imp_avst_down_meta;
+    uvm_analysis_export #(uvm_logic_vector_array::sequence_item#(CQ_MFB_ITEM_WIDTH))    analysis_imp_avst_down_data;
+    uvm_analysis_export #(uvm_logic_vector::sequence_item#(AVST_DOWN_META_W))           analysis_imp_avst_down_meta;
     uvm_analysis_export #(uvm_logic_vector_array::sequence_item#(CC_MFB_ITEM_WIDTH))    analysis_imp_avst_up_data;
     uvm_analysis_export #(uvm_logic_vector::sequence_item#(AVST_UP_META_W))             analysis_imp_avst_up_meta;
 
-    uvm_common::subscriber #(uvm_logic_vector_array::sequence_item#(CQ_MFB_ITEM_WIDTH)) analysis_imp_axi_cq_data;
+    uvm_analysis_export #(uvm_logic_vector_array::sequence_item#(CQ_MFB_ITEM_WIDTH))    analysis_imp_axi_cq_data;
     uvm_analysis_export #(uvm_logic_vector_array::sequence_item#(CC_MFB_ITEM_WIDTH))    analysis_imp_axi_cc_data;
-    uvm_common::subscriber #(uvm_logic_vector_array::sequence_item#(RC_MFB_ITEM_WIDTH)) analysis_imp_axi_rc_data;
+    uvm_analysis_export #(uvm_logic_vector_array::sequence_item#(RC_MFB_ITEM_WIDTH))    analysis_imp_axi_rc_data;
     uvm_analysis_export #(uvm_logic_vector_array::sequence_item#(RQ_MFB_ITEM_WIDTH))    analysis_imp_axi_rq_data;
 
     uvm_analysis_export #(uvm_logic_vector_array::sequence_item#(CQ_MFB_ITEM_WIDTH))    analysis_imp_mfb_cq_data;
-    uvm_common::subscriber #(uvm_logic_vector_array::sequence_item#(CC_MFB_ITEM_WIDTH)) analysis_imp_mfb_cc_data;
+    uvm_analysis_export #(uvm_logic_vector_array::sequence_item#(CC_MFB_ITEM_WIDTH))    analysis_imp_mfb_cc_data;
     uvm_analysis_export #(uvm_logic_vector_array::sequence_item#(RC_MFB_ITEM_WIDTH))    analysis_imp_mfb_rc_data;
-    uvm_common::subscriber #(uvm_logic_vector_array::sequence_item#(RQ_MFB_ITEM_WIDTH)) analysis_imp_mfb_rq_data;
+    uvm_analysis_export #(uvm_logic_vector_array::sequence_item#(RQ_MFB_ITEM_WIDTH))    analysis_imp_mfb_rq_data;
 
     uvm_analysis_export #(uvm_logic_vector::sequence_item#(CQ_MFB_META_W))             analysis_imp_mfb_cq_meta;
-    uvm_common::subscriber #(uvm_logic_vector::sequence_item#(CC_MFB_META_W))          analysis_imp_mfb_cc_meta;
+    uvm_analysis_export #(uvm_logic_vector::sequence_item#(CC_MFB_META_W))             analysis_imp_mfb_cc_meta;
     uvm_analysis_export #(uvm_logic_vector::sequence_item#(RC_MFB_META_W))             analysis_imp_mfb_rc_meta;
-    uvm_common::subscriber #(uvm_logic_vector::sequence_item#(RQ_MFB_META_W))          analysis_imp_mfb_rq_meta;
+    uvm_analysis_export #(uvm_logic_vector::sequence_item#(RQ_MFB_META_W))             analysis_imp_mfb_rq_meta;
 
     uvm_common::comparer_ordered #(uvm_logic_vector_array::sequence_item#(RC_MFB_ITEM_WIDTH))                        mfb_rc_data_cmp;
     uvm_common::comparer_ordered #(uvm_logic_vector::sequence_item#(RC_MFB_META_W))                                  mfb_rc_meta_cmp;
@@ -38,7 +38,7 @@ class scoreboard #(CQ_MFB_ITEM_WIDTH, CC_MFB_ITEM_WIDTH, RQ_MFB_ITEM_WIDTH, RC_M
     uvm_common::comparer_ordered #(uvm_logic_vector_array::sequence_item#(CC_MFB_ITEM_WIDTH))                        axi_cc_data_cmp;
     uvm_common::comparer_ordered #(uvm_logic_vector_array::sequence_item#(RQ_MFB_ITEM_WIDTH))                        axi_rq_data_cmp;
     uvm_pcie_adapter::scoreboard_mfb #(CC_MFB_BLOCK_SIZE, uvm_logic_vector_array::sequence_item#(CC_MFB_ITEM_WIDTH)) avst_up_data_cmp;
-    uvm_common::comparer_disordered #(uvm_logic_vector::sequence_item#(AVST_UP_META_W))                              avst_up_meta_cmp;
+    uvm_common::comparer_unordered #(uvm_logic_vector::sequence_item#(AVST_UP_META_W))                              avst_up_meta_cmp;
 
     model_intel #(CQ_MFB_ITEM_WIDTH, CC_MFB_ITEM_WIDTH, RQ_MFB_ITEM_WIDTH, RC_MFB_ITEM_WIDTH, AVST_DOWN_META_W, AVST_UP_META_W, RQ_MFB_META_W, RC_MFB_META_W, CQ_MFB_META_W, CC_MFB_META_W, ENDPOINT_TYPE) m_model_intel;
     model_xilinx #(CQ_MFB_ITEM_WIDTH, CC_MFB_ITEM_WIDTH, RQ_MFB_ITEM_WIDTH, RC_MFB_ITEM_WIDTH, AXI_CQUSER_WIDTH, AXI_CCUSER_WIDTH, AXI_RCUSER_WIDTH, AXI_RQUSER_WIDTH, RQ_MFB_META_W, RC_MFB_META_W, CQ_MFB_META_W, CC_MFB_META_W) m_model_xilinx;
@@ -139,16 +139,16 @@ class scoreboard #(CQ_MFB_ITEM_WIDTH, CC_MFB_ITEM_WIDTH, RQ_MFB_ITEM_WIDTH, RC_M
         if (IS_INTEL_DEV) begin
             m_model_intel = model_intel #(CQ_MFB_ITEM_WIDTH, CC_MFB_ITEM_WIDTH, RQ_MFB_ITEM_WIDTH, RC_MFB_ITEM_WIDTH, AVST_DOWN_META_W, AVST_UP_META_W, RQ_MFB_META_W, RC_MFB_META_W, CQ_MFB_META_W, CC_MFB_META_W, ENDPOINT_TYPE)::type_id::create("m_model_intel", this);
 
-            analysis_imp_avst_down_data = uvm_common::subscriber#(uvm_logic_vector_array::sequence_item#(CQ_MFB_ITEM_WIDTH))::type_id::create("analysis_imp_avst_down_data", this);
-            analysis_imp_avst_down_meta = uvm_common::subscriber#(uvm_logic_vector::sequence_item#(AVST_DOWN_META_W))::type_id::create("analysis_imp_avst_down_meta", this);
+            analysis_imp_avst_down_data = new("analysis_imp_avst_down_data", this);
+            analysis_imp_avst_down_meta = new("analysis_imp_avst_down_meta", this);
 
-            avst_up_meta_cmp = uvm_common::comparer_disordered #(uvm_logic_vector::sequence_item#(AVST_UP_META_W))::type_id::create("avst_up_meta_cmp", this);
+            avst_up_meta_cmp = uvm_common::comparer_unordered #(uvm_logic_vector::sequence_item#(AVST_UP_META_W))::type_id::create("avst_up_meta_cmp", this);
             avst_up_data_cmp = uvm_pcie_adapter::scoreboard_mfb #(CC_MFB_BLOCK_SIZE, uvm_logic_vector_array::sequence_item#(CC_MFB_ITEM_WIDTH))::type_id::create("avst_up_data_cmp", this);
             mfb_rc_meta_cmp  = uvm_common::comparer_ordered #(uvm_logic_vector::sequence_item#(RC_MFB_META_W))::type_id::create("mfb_rc_meta_cmp", this);
             mfb_cq_meta_cmp  = uvm_common::comparer_ordered #(uvm_logic_vector::sequence_item#(CQ_MFB_META_W))::type_id::create("mfb_cq_meta_cmp", this);
 
-            analysis_imp_mfb_cc_meta = uvm_common::subscriber #(uvm_logic_vector::sequence_item#(CC_MFB_META_W))::type_id::create("analysis_imp_mfb_cc_meta", this);
-            analysis_imp_mfb_rq_meta = uvm_common::subscriber #(uvm_logic_vector::sequence_item#(RQ_MFB_META_W))::type_id::create("analysis_imp_mfb_rq_meta", this);
+            analysis_imp_mfb_cc_meta = new("analysis_imp_mfb_cc_meta", this);
+            analysis_imp_mfb_rq_meta = new("analysis_imp_mfb_rq_meta", this);
 
             mfb_rc_meta_cmp.model_tr_timeout_set(10ns);
             mfb_cq_meta_cmp.model_tr_timeout_set(10ns);
@@ -158,8 +158,8 @@ class scoreboard #(CQ_MFB_ITEM_WIDTH, CC_MFB_ITEM_WIDTH, RQ_MFB_ITEM_WIDTH, RC_M
         end else begin
             m_model_xilinx = model_xilinx #(CQ_MFB_ITEM_WIDTH, CC_MFB_ITEM_WIDTH, RQ_MFB_ITEM_WIDTH, RC_MFB_ITEM_WIDTH, AXI_CQUSER_WIDTH, AXI_CCUSER_WIDTH, AXI_RCUSER_WIDTH, AXI_RQUSER_WIDTH, RQ_MFB_META_W, RC_MFB_META_W, CQ_MFB_META_W, CC_MFB_META_W)::type_id::create("m_model_xilinx", this);
 
-            analysis_imp_axi_cq_data    = uvm_common::subscriber #(uvm_logic_vector_array::sequence_item#(CQ_MFB_ITEM_WIDTH))::type_id::create("analysis_imp_axi_cq_data", this);
-            analysis_imp_axi_rc_data    = uvm_common::subscriber #(uvm_logic_vector_array::sequence_item#(RC_MFB_ITEM_WIDTH))::type_id::create("analysis_imp_axi_rc_data", this);
+            analysis_imp_axi_cq_data    = new("analysis_imp_axi_cq_data", this);
+            analysis_imp_axi_rc_data    = new("analysis_imp_axi_rc_data", this);
 
             axi_cc_data_cmp = uvm_common::comparer_ordered #(uvm_logic_vector_array::sequence_item#(CC_MFB_ITEM_WIDTH))::type_id::create("axi_cc_data_cmp", this);
             axi_rq_data_cmp = uvm_common::comparer_ordered #(uvm_logic_vector_array::sequence_item#(RQ_MFB_ITEM_WIDTH))::type_id::create("axi_rq_data_cmp", this);
@@ -174,8 +174,8 @@ class scoreboard #(CQ_MFB_ITEM_WIDTH, CC_MFB_ITEM_WIDTH, RQ_MFB_ITEM_WIDTH, RC_M
         mfb_rc_data_cmp.model_tr_timeout_set(10ns);
         mfb_cq_data_cmp.model_tr_timeout_set(10ns);
 
-        analysis_imp_mfb_cc_data = uvm_common::subscriber#(uvm_logic_vector_array::sequence_item#(CC_MFB_ITEM_WIDTH))::type_id::create("analysis_imp_mfb_cc_data", this);
-        analysis_imp_mfb_rq_data = uvm_common::subscriber#(uvm_logic_vector_array::sequence_item#(RQ_MFB_ITEM_WIDTH))::type_id::create("analysis_imp_mfb_rq_data", this);
+        analysis_imp_mfb_cc_data = new("analysis_imp_mfb_cc_data", this);
+        analysis_imp_mfb_rq_data = new("analysis_imp_mfb_rq_data", this);
 
     endfunction
 
@@ -183,8 +183,8 @@ class scoreboard #(CQ_MFB_ITEM_WIDTH, CC_MFB_ITEM_WIDTH, RQ_MFB_ITEM_WIDTH, RC_M
 
         if (IS_INTEL_DEV) begin
             // Model INTEL INPUTS
-            analysis_imp_avst_down_data.port.connect(m_model_intel.avst_down_data_in.analysis_export);
-            analysis_imp_avst_down_meta.port.connect(m_model_intel.avst_down_meta_in.analysis_export);
+            analysis_imp_avst_down_data.connect(m_model_intel.avst_down_data_in.analysis_export);
+            analysis_imp_avst_down_meta.connect(m_model_intel.avst_down_meta_in.analysis_export);
             // Model INTEL OUTPUTS
             m_model_intel.avst_up_data_out.connect(avst_up_data_cmp.analysis_imp_model);
             m_model_intel.avst_up_meta_out.connect(avst_up_meta_cmp.analysis_imp_model);
@@ -192,10 +192,10 @@ class scoreboard #(CQ_MFB_ITEM_WIDTH, CC_MFB_ITEM_WIDTH, RQ_MFB_ITEM_WIDTH, RC_M
             analysis_imp_avst_up_data.connect(avst_up_data_cmp.analysis_imp_dut);
             analysis_imp_avst_up_meta.connect(avst_up_meta_cmp.analysis_imp_dut);
             // Shared INPUTS
-            analysis_imp_mfb_cc_data.port.connect(m_model_intel.mfb_cc_data_in.analysis_export);
-            analysis_imp_mfb_cc_meta.port.connect(m_model_intel.mfb_cc_meta_in.analysis_export);
-            analysis_imp_mfb_rq_data.port.connect(m_model_intel.mfb_rq_data_in.analysis_export);
-            analysis_imp_mfb_rq_meta.port.connect(m_model_intel.mfb_rq_meta_in.analysis_export);
+            analysis_imp_mfb_cc_data.connect(m_model_intel.mfb_cc_data_in.analysis_export);
+            analysis_imp_mfb_cc_meta.connect(m_model_intel.mfb_cc_meta_in.analysis_export);
+            analysis_imp_mfb_rq_data.connect(m_model_intel.mfb_rq_data_in.analysis_export);
+            analysis_imp_mfb_rq_meta.connect(m_model_intel.mfb_rq_meta_in.analysis_export);
             // Shared Model OUTPUTS
             m_model_intel.mfb_rc_data_out.connect(mfb_rc_data_cmp.analysis_imp_model);
             m_model_intel.mfb_rc_meta_out.connect(mfb_rc_meta_cmp.analysis_imp_model);
@@ -206,8 +206,8 @@ class scoreboard #(CQ_MFB_ITEM_WIDTH, CC_MFB_ITEM_WIDTH, RQ_MFB_ITEM_WIDTH, RC_M
             analysis_imp_mfb_cq_meta.connect(mfb_cq_meta_cmp.analysis_imp_dut);
         end else begin
             // Model XILINX INPUTS
-            analysis_imp_axi_cq_data.port.connect(m_model_xilinx.axi_cq_data_in.analysis_export);
-            analysis_imp_axi_rc_data.port.connect(m_model_xilinx.axi_rc_data_in.analysis_export);
+            analysis_imp_axi_cq_data.connect(m_model_xilinx.axi_cq_data_in.analysis_export);
+            analysis_imp_axi_rc_data.connect(m_model_xilinx.axi_rc_data_in.analysis_export);
             // Model XILINX OUTPUTS
             m_model_xilinx.axi_cc_data_out.connect(axi_cc_data_cmp.analysis_imp_model);
             m_model_xilinx.axi_rq_data_out.connect(axi_rq_data_cmp.analysis_imp_model);
@@ -215,8 +215,8 @@ class scoreboard #(CQ_MFB_ITEM_WIDTH, CC_MFB_ITEM_WIDTH, RQ_MFB_ITEM_WIDTH, RC_M
             analysis_imp_axi_cc_data.connect(axi_cc_data_cmp.analysis_imp_dut);
             analysis_imp_axi_rq_data.connect(axi_rq_data_cmp.analysis_imp_dut);
             // Shared INPUTS
-            analysis_imp_mfb_cc_data.port.connect(m_model_xilinx.mfb_cc_data_in.analysis_export);
-            analysis_imp_mfb_rq_data.port.connect(m_model_xilinx.mfb_rq_data_in.analysis_export);
+            analysis_imp_mfb_cc_data.connect(m_model_xilinx.mfb_cc_data_in.analysis_export);
+            analysis_imp_mfb_rq_data.connect(m_model_xilinx.mfb_rq_data_in.analysis_export);
             // Shared Model OUTPUTS
             m_model_xilinx.mfb_rc_data_out.connect(mfb_rc_data_cmp.analysis_imp_model);
             m_model_xilinx.mfb_cq_data_out.connect(mfb_cq_data_cmp.analysis_imp_model);
