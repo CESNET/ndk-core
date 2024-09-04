@@ -168,11 +168,11 @@ class model_ptc#(RQ_REGIONS, DMA_PORTS, ITEM_WIDTH) extends uvm_component;
 
     localparam int unsigned PTC_TAG_WIDTH     = 8;
 
-    uvm_analysis_port     #(uvm_common::model_item #(uvm_pcie::request_header))   pcie_rq;
-    uvm_tlm_analysis_fifo #(uvm_common::model_item #(uvm_pcie::completer_header)) pcie_rc;
+    uvm_analysis_port     #(uvm_pcie::request_header)   pcie_rq;
+    uvm_tlm_analysis_fifo #(uvm_pcie::completer_header) pcie_rc;
 
-    uvm_tlm_analysis_fifo #(uvm_common::model_item #(uvm_dma::sequence_item_rq)) dma_rq[DMA_PORTS];
-    uvm_analysis_port     #(uvm_common::model_item #(uvm_dma::sequence_item_rc)) dma_rc[DMA_PORTS];
+    uvm_tlm_analysis_fifo #(uvm_dma::sequence_item_rq) dma_rq[DMA_PORTS];
+    uvm_analysis_port     #(uvm_dma::sequence_item_rc) dma_rc[DMA_PORTS];
 
     protected uvm_pcie_top::tag_cbs #(RQ_REGIONS, PTC_TAG_WIDTH) tags_cbs;
     protected uvm_pcie_top::tag_register#(PTC_TAG_WIDTH)  tags;
@@ -228,8 +228,8 @@ class model_ptc#(RQ_REGIONS, DMA_PORTS, ITEM_WIDTH) extends uvm_component;
     endfunction
 
     task run_rc();
-        uvm_common::model_item #(uvm_pcie::completer_header) pcie_tr;
-        uvm_common::model_item #(uvm_dma::sequence_item_rc) dma_tr;
+        uvm_pcie::completer_header pcie_tr;
+        uvm_dma::sequence_item_rc dma_tr;
         logic completed;
         logic [PTC_TAG_WIDTH-1:0] pcie_tag;
         int unsigned move;
@@ -239,23 +239,22 @@ class model_ptc#(RQ_REGIONS, DMA_PORTS, ITEM_WIDTH) extends uvm_component;
 
             pcie_rc.get(pcie_tr);
 
-            dma_tr = uvm_common::model_item #(uvm_dma::sequence_item_rc)::type_id::create("dma_tr", this);
-            dma_tr.item = uvm_dma::sequence_item_rc::type_id::create("dma_tr.item", this);
+            dma_tr = uvm_dma::sequence_item_rc::type_id::create("dma_tr", this);
             dma_tr.start = pcie_tr.start;
 
             rc_transactions++;
             `uvm_info(this.get_full_name(), $sformatf("\nGET PCIE RC TRANSACTION %0d %s", rc_transactions, pcie_tr.convert2string()), UVM_FULL);
 
-            move       = pcie_tr.item.lower_address & 2'b11;
-            pcie_tag   = pcie_tr.item.tag;
-            completed  = (pcie_tr.item.byte_count <= (pcie_tr.item.length*4 - move));
+            move       = pcie_tr.lower_address & 2'b11;
+            pcie_tag   = pcie_tr.tag;
+            completed  = (pcie_tr.byte_count <= (pcie_tr.length*4 - move));
 
             dma_info              = tags.get_pcie2dma(pcie_tag, completed);
-            dma_tr.item.length    = pcie_tr.item.length;
-            dma_tr.item.completed = completed;
-            dma_tr.item.tag       = dma_info.tag;
-            dma_tr.item.unit_id   = dma_info.unit_id;
-            dma_tr.item.data      = pcie_tr.item.data;
+            dma_tr.length    = pcie_tr.length;
+            dma_tr.completed = completed;
+            dma_tr.tag       = dma_info.tag;
+            dma_tr.unit_id   = dma_info.unit_id;
+            dma_tr.data      = pcie_tr.data;
             `uvm_info(this.get_full_name(), $sformatf("\nDMA RC PORT %0d %s", dma_info.port, dma_tr.convert2string()), UVM_FULL);
 
             dma_rc[dma_info.port].write(dma_tr);
@@ -264,56 +263,55 @@ class model_ptc#(RQ_REGIONS, DMA_PORTS, ITEM_WIDTH) extends uvm_component;
     endtask
 
     task run_rq(int unsigned dma);
-        uvm_common::model_item #(uvm_dma::sequence_item_rq) rq_tr;
-        uvm_common::model_item #(uvm_pcie::request_header)                  rsp_tr;
+        uvm_dma::sequence_item_rq rq_tr;
+        uvm_pcie::request_header  rsp_tr;
         int unsigned rq_tr_tmp;
 
         forever begin
             dma_rq[dma].get(rq_tr);
 
-            rsp_tr       = uvm_common::model_item #(uvm_pcie::request_header)::type_id::create("rsp_tr", this);
+            rsp_tr       = uvm_pcie::request_header::type_id::create("rsp_tr", this);
             rsp_tr.start = rq_tr.start;
-            rsp_tr.item  = uvm_pcie::request_header::type_id::create("rsp_tr.item", this);
 
             rq_transactions[dma]++;
             rq_tr_tmp = rq_transactions[dma];
 
-            rsp_tr.item.fmt        = {1'b0, rq_tr.item.hdr.type_ide, rq_tr.item.hdr.global_id[64-1:0] != 32'b0 ? 1'b1 : 1'b0};
-            rsp_tr.item.pcie_type  = 5'b0;
+            rsp_tr.fmt        = {1'b0, rq_tr.hdr.type_ide, rq_tr.hdr.global_id[64-1:0] != 32'b0 ? 1'b1 : 1'b0};
+            rsp_tr.pcie_type  = 5'b0;
 
-            //rq_tr.item.hdr.unitid // NOT USED
+            //rq_tr.hdr.unitid // NOT USED
 
             `uvm_info(this.get_full_name(), $sformatf("\nGET DMA RX [%0d] TRANSACTION %0d %s", dma, rq_tr_tmp, rq_tr.convert2string()), UVM_FULL);
 
-            rsp_tr.item.traffic_class     = 0;
-            rsp_tr.item.id_based_ordering = 0;
-            rsp_tr.item.relaxed_ordering  = rq_tr.item.hdr.relaxed;
-            rsp_tr.item.no_snoop          = 0;
-            rsp_tr.item.th                = 0;
-            rsp_tr.item.td                = 0;
-            rsp_tr.item.ep                = 0;
-            rsp_tr.item.at                = 0;
-            rsp_tr.item.length            = rq_tr.item.hdr.length;
-            rsp_tr.item.data              = rq_tr.item.hdr.type_ide == 1'b1 ? rq_tr.item.data : {};
-            rsp_tr.item.requester_id      = {8'b0,  rq_tr.item.hdr.vfid};
-            tags.get_dma2pcie(rq_tr.item.hdr.type_ide, dma, rq_tr.item.hdr.tag, rq_tr.item.hdr.unitid, rsp_tr.item.tag);
-            case(rq_tr.item.hdr.lastib) 
-                0 : rsp_tr.item.lbe = 4'b1111;
-                1 : rsp_tr.item.lbe = 4'b0111;
-                2 : rsp_tr.item.lbe = 4'b0011;
-                3 : rsp_tr.item.lbe = 4'b0001;
-                default : rsp_tr.item.lbe = 'x;
+            rsp_tr.traffic_class     = 0;
+            rsp_tr.id_based_ordering = 0;
+            rsp_tr.relaxed_ordering  = rq_tr.hdr.relaxed;
+            rsp_tr.no_snoop          = 0;
+            rsp_tr.th                = 0;
+            rsp_tr.td                = 0;
+            rsp_tr.ep                = 0;
+            rsp_tr.at                = 0;
+            rsp_tr.length            = rq_tr.hdr.length;
+            rsp_tr.data              = rq_tr.hdr.type_ide == 1'b1 ? rq_tr.data : {};
+            rsp_tr.requester_id      = {8'b0,  rq_tr.hdr.vfid};
+            tags.get_dma2pcie(rq_tr.hdr.type_ide, dma, rq_tr.hdr.tag, rq_tr.hdr.unitid, rsp_tr.tag);
+            case(rq_tr.hdr.lastib) 
+                0 : rsp_tr.lbe = 4'b1111;
+                1 : rsp_tr.lbe = 4'b0111;
+                2 : rsp_tr.lbe = 4'b0011;
+                3 : rsp_tr.lbe = 4'b0001;
+                default : rsp_tr.lbe = 'x;
             endcase
-            case(rq_tr.item.hdr.firstib) 
-                0 : rsp_tr.item.fbe = 4'b1111;
-                1 : rsp_tr.item.fbe = 4'b1110;
-                2 : rsp_tr.item.fbe = 4'b1100;
-                3 : rsp_tr.item.fbe = 4'b1000;
-                default : rsp_tr.item.lbe = 'x;
+            case(rq_tr.hdr.firstib) 
+                0 : rsp_tr.fbe = 4'b1111;
+                1 : rsp_tr.fbe = 4'b1110;
+                2 : rsp_tr.fbe = 4'b1100;
+                3 : rsp_tr.fbe = 4'b1000;
+                default : rsp_tr.lbe = 'x;
             endcase
-            rsp_tr.item.lbe               = (rsp_tr.item.length != 1) ? rsp_tr.item.lbe : 0;
-            rsp_tr.item.address           = rq_tr.item.hdr.global_id[64-1:2];
-            rsp_tr.item.ph                = 0;
+            rsp_tr.lbe               = (rsp_tr.length != 1) ? rsp_tr.lbe : 0;
+            rsp_tr.address           = rq_tr.hdr.global_id[64-1:2];
+            rsp_tr.ph                = 0;
 
 
             `uvm_info(this.get_full_name(), $sformatf("\nPCIE RQ transaction %0d %s", rq_tr_tmp,  rsp_tr.convert2string()), UVM_MEDIUM);

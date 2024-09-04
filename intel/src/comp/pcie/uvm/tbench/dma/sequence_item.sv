@@ -4,7 +4,7 @@
 
 // SPDX-License-Identifier: BSD-3-Clause
 
-class sequence_item_rq  extends uvm_sequence_item;
+class sequence_item_rq  extends uvm_common::sequence_item;
     `uvm_object_param_utils(uvm_dma::sequence_item_rq)
 
     rand uvm_ptc_info::sequence_item hdr;
@@ -50,7 +50,7 @@ class sequence_item_rq  extends uvm_sequence_item;
 endclass
 
 
-class sequence_item_rc  extends uvm_object;
+class sequence_item_rc  extends uvm_common::sequence_item;
     `uvm_object_param_utils(uvm_dma::sequence_item_rc)
 
     int unsigned length;
