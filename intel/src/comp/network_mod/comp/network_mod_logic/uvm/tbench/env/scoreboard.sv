@@ -7,12 +7,14 @@
 `uvm_analysis_imp_decl(_data)
 `uvm_analysis_imp_decl(_meta)
 
-class model_input_fifo#(ITEM_WIDTH, META_WIDTH) extends uvm_common::fifo#(uvm_common::model_item#(model_data#(ITEM_WIDTH, META_WIDTH)));
+class model_input_fifo#(ITEM_WIDTH, META_WIDTH) extends uvm_component;
     `uvm_component_param_utils(net_mod_logic_env::model_input_fifo#(ITEM_WIDTH, META_WIDTH))
 
     typedef model_input_fifo#(ITEM_WIDTH, META_WIDTH) this_type;
     uvm_analysis_imp_data#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH), this_type) analysis_export_data;
     uvm_analysis_imp_meta#(uvm_logic_vector::sequence_item#(META_WIDTH),       this_type) analysis_export_meta;
+
+    uvm_analysis_port#(model_data#(ITEM_WIDTH, META_WIDTH))  port;
 
     typedef struct {
         uvm_logic_vector_array::sequence_item#(ITEM_WIDTH) input_item;
@@ -26,11 +28,13 @@ class model_input_fifo#(ITEM_WIDTH, META_WIDTH) extends uvm_common::fifo#(uvm_co
 
     protected data_item tmp_data[$];
     protected meta_item tmp_meta[$];
+    protected uvm_component parent;
 
     function new(string name, uvm_component parent = null);
         super.new(name, parent);
         analysis_export_data = new("analysis_export_data", this); 
         analysis_export_meta = new("analysis_export_meta", this);
+        port                 = new("port", this);
     endfunction
 
     function void write_data(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH) t);
@@ -41,8 +45,15 @@ class model_input_fifo#(ITEM_WIDTH, META_WIDTH) extends uvm_common::fifo#(uvm_co
         tmp_meta.push_back('{t, $time()});
     endfunction
 
+    function int unsigned used();
+        int unsigned ret = 0;
+        ret |= (tmp_data.size() != 0);
+        ret |= (tmp_meta.size() != 0);
+        return ret;
+    endfunction
+
     task run_phase(uvm_phase phase);
-        uvm_common::model_item#(model_data#(ITEM_WIDTH, META_WIDTH)) item;
+        model_data#(ITEM_WIDTH, META_WIDTH) item;
 
         forever begin
             data_item data;
@@ -52,15 +63,14 @@ class model_input_fifo#(ITEM_WIDTH, META_WIDTH) extends uvm_common::fifo#(uvm_co
             data = tmp_data.pop_front();
             meta = tmp_meta.pop_front();
 
-            item = uvm_common::model_item#(model_data#(ITEM_WIDTH, META_WIDTH))::type_id::create("item", this);
-            item.item = model_data#(ITEM_WIDTH, META_WIDTH)::type_id::create("item.item", this);
-            item.item.data = data.input_item;
-            item.item.meta = meta.input_item;
+            item = model_data#(ITEM_WIDTH, META_WIDTH)::type_id::create("item", this);
+            item.data = data.input_item;
+            item.meta = meta.input_item;
             item.tag  = "USER_TO_CORE";
             item.start[{item.tag, " DATA"}] = data.input_time;
             item.start[{item.tag, " META"}] = meta.input_time;
 
-            this.push_back(item);
+            port.write(item);
         end
     endtask
 endclass
@@ -72,16 +82,9 @@ class comparer_meta #(ITEM_WIDTH, META_WIDTH) extends uvm_common::comparer_base_
         super.new(name, parent);
     endfunction
 
-    virtual function int unsigned compare(uvm_common::model_item #(MODEL_ITEM) tr_model, uvm_common::dut_item #(DUT_ITEM) tr_dut);
+    virtual function int unsigned compare(MODEL_ITEM tr_model, DUT_ITEM tr_dut);
         //return tr_model.meta.compare(tr_dut);
-        return (tr_dut.in_item.data[24-1:0] == tr_model.item.meta.data[24-1:0]);
-    endfunction
-
-    virtual function string message(uvm_common::model_item #(MODEL_ITEM) tr_model, uvm_common::dut_item #(DUT_ITEM) tr_dut);
-        string msg = "";
-        $swrite(msg, "%s\n\tDUT PACKET %s\n\n",   msg, tr_dut.convert2string());
-        $swrite(msg, "%s\n\tMODEL PACKET%s\n\n",  msg, tr_model.item.meta.convert2string());
-        return msg;
+        return (tr_dut.data[24-1:0] == tr_model.meta.data[24-1:0]);
     endfunction
 endclass
 
@@ -92,15 +95,8 @@ class comparer_data #(ITEM_WIDTH, META_WIDTH) extends uvm_common::comparer_base_
         super.new(name, parent);
     endfunction
 
-    virtual function int unsigned compare(uvm_common::model_item #(MODEL_ITEM) tr_model, uvm_common::dut_item #(DUT_ITEM) tr_dut);
-        return tr_model.item.data.compare(tr_dut.in_item);
-    endfunction
-
-    virtual function string message(uvm_common::model_item #(MODEL_ITEM) tr_model, uvm_common::dut_item #(DUT_ITEM) tr_dut);
-        string msg = "";
-        $swrite(msg, "%s\n\tDUT PACKET %s\n\n",   msg, tr_dut.convert2string());
-        $swrite(msg, "%s\n\tMODEL PACKET%s\n\n",  msg, tr_model.item.data.convert2string());
-        return msg;
+    virtual function int unsigned compare(MODEL_ITEM tr_model, DUT_ITEM tr_dut);
+        return tr_model.data.compare(tr_dut);
     endfunction
 endclass
 
@@ -111,6 +107,7 @@ class scoreboard #(CHANNELS, REGIONS, ITEM_WIDTH, META_WIDTH, HDR_WIDTH, RX_MAC_
     // TX path
     uvm_analysis_export #(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))         tx_input_data;
     uvm_analysis_export #(uvm_logic_vector::sequence_item #(META_WIDTH))              tx_input_meta;
+    protected model_input_fifo#(ITEM_WIDTH, META_WIDTH)                               tx_input; 
 
     uvm_analysis_export #(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))         tx_out[CHANNELS];
     //comparesrs
@@ -154,16 +151,13 @@ class scoreboard #(CHANNELS, REGIONS, ITEM_WIDTH, META_WIDTH, HDR_WIDTH, RX_MAC_
 
     function void build_phase(uvm_phase phase);
 
-        m_model          = model #(CHANNELS, ITEM_WIDTH, META_WIDTH, HDR_WIDTH)::type_id::create("m_model", this);
-        m_model.tx_input = model_input_fifo#(ITEM_WIDTH, META_WIDTH)::type_id::create("tx_input" , m_model);
+        m_model  = model #(CHANNELS, ITEM_WIDTH, META_WIDTH, HDR_WIDTH)::type_id::create("m_model", this);
+        tx_input = model_input_fifo#(ITEM_WIDTH, META_WIDTH)::type_id::create("tx_input" , this);
         for (int it = 0; it < CHANNELS; it++) begin
             string it_string;
             it_string.itoa(it);
 
             tx_compare[it] = uvm_common::comparer_ordered#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))::type_id::create({"tx_compare_", it_string}, this);
-
-            m_model.rx_input[it]   = uvm_common::fifo_model_input#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH))::type_id::create({"rx_input_data_", it_string} , m_model);
-            m_model.rx_discard[it] = uvm_common::fifo_model_input#(uvm_logic_vector::sequence_item #(1))::type_id::create({"rx_discard_", it_string} , m_model);
         end
 
         rx_compare_data = comparer_data #(ITEM_WIDTH, HDR_WIDTH)::type_id::create("rx_compare_data", this);
@@ -171,23 +165,18 @@ class scoreboard #(CHANNELS, REGIONS, ITEM_WIDTH, META_WIDTH, HDR_WIDTH, RX_MAC_
     endfunction
 
     function void connect_phase(uvm_phase phase);
-        model_input_fifo#(ITEM_WIDTH, META_WIDTH) tx_input;
-        uvm_common::fifo_model_input#(uvm_logic_vector_array::sequence_item#(ITEM_WIDTH)) rx_input;
-        uvm_common::fifo_model_input#(uvm_logic_vector::sequence_item #(1))               rx_discard;
-
         //TX INPUT
-        $cast(tx_input, m_model.tx_input);
         tx_input_data.connect(tx_input.analysis_export_data);
         tx_input_meta.connect(tx_input.analysis_export_meta);
+        tx_input.port.connect(m_model.tx_input.analysis_export);
+
         //RX INPUT
         for (int unsigned it = 0; it < CHANNELS; it++) begin
             m_model.tx_output[it].connect(tx_compare[it].analysis_imp_model);
             tx_out[it].connect(tx_compare[it].analysis_imp_dut);
 
-            $cast(rx_input, m_model.rx_input[it]);
-            rx_input_data[it].connect(rx_input.analysis_export);
-            $cast(rx_discard, m_model.rx_discard[it]);
-            mvb_discard[it].connect(rx_discard.analysis_export);
+            rx_input_data[it].connect(m_model.rx_input[it].analysis_export);
+            mvb_discard[it].connect(m_model.rx_discard[it].analysis_export);
         end
 
         m_model.rx_output.connect(rx_compare_data.analysis_imp_model);
@@ -198,6 +187,7 @@ class scoreboard #(CHANNELS, REGIONS, ITEM_WIDTH, META_WIDTH, HDR_WIDTH, RX_MAC_
 
     function int unsigned used();
         int unsigned ret = 0;
+        ret |= tx_input.used();
         ret |= m_model.used();
         for (int unsigned it = 0; it < CHANNELS; it++) begin
             ret |= tx_compare[it].used();
