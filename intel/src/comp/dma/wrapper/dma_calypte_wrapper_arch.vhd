@@ -181,15 +181,6 @@ architecture CALYPTE of DMA_WRAPPER is
     signal pcie_cq_mfb_src_rdy_piped   : std_logic_vector(DMA_STREAMS-1 downto 0);
     signal pcie_cq_mfb_dst_rdy_piped   : std_logic_vector(DMA_STREAMS-1 downto 0);
 
-    signal pcie_cc_mfb_data_piped      : slv_array_t(DMA_STREAMS-1 downto 0)(PCIE_CC_MFB_REGIONS*PCIE_CC_MFB_REGION_SIZE*PCIE_CC_MFB_BLOCK_SIZE*PCIE_CC_MFB_ITEM_WIDTH -1 downto 0);
-    signal pcie_cc_mfb_meta_piped      : slv_array_t(DMA_STREAMS-1 downto 0)(PCIE_CC_MFB_REGIONS*PCIE_CC_META_WIDTH                                                    -1 downto 0);
-    signal pcie_cc_mfb_sof_piped       : slv_array_t(DMA_STREAMS-1 downto 0)(PCIE_CC_MFB_REGIONS                                                                       -1 downto 0);
-    signal pcie_cc_mfb_eof_piped       : slv_array_t(DMA_STREAMS-1 downto 0)(PCIE_CC_MFB_REGIONS                                                                       -1 downto 0);
-    signal pcie_cc_mfb_sof_pos_piped   : slv_array_t(DMA_STREAMS-1 downto 0)(PCIE_CC_MFB_REGIONS*max(1,log2(PCIE_CC_MFB_REGION_SIZE))                                  -1 downto 0);
-    signal pcie_cc_mfb_eof_pos_piped   : slv_array_t(DMA_STREAMS-1 downto 0)(PCIE_CC_MFB_REGIONS*max(1,log2(PCIE_CC_MFB_REGION_SIZE*PCIE_CC_MFB_BLOCK_SIZE))           -1 downto 0);
-    signal pcie_cc_mfb_src_rdy_piped   : std_logic_vector(DMA_STREAMS-1 downto 0);
-    signal pcie_cc_mfb_dst_rdy_piped   : std_logic_vector(DMA_STREAMS-1 downto 0);
-
     --==============================================================================================
     -- Miscelaneous signals
     --==============================================================================================
@@ -699,11 +690,6 @@ begin
                 PCIE_CQ_MFB_BLOCK_SIZE  => PCIE_CQ_MFB_BLOCK_SIZE,
                 PCIE_CQ_MFB_ITEM_WIDTH  => PCIE_CQ_MFB_ITEM_WIDTH,
 
-                PCIE_CC_MFB_REGIONS     => PCIE_CC_MFB_REGIONS,
-                PCIE_CC_MFB_REGION_SIZE => PCIE_CC_MFB_REGION_SIZE,
-                PCIE_CC_MFB_BLOCK_SIZE  => PCIE_CC_MFB_BLOCK_SIZE,
-                PCIE_CC_MFB_ITEM_WIDTH  => PCIE_CC_MFB_ITEM_WIDTH,
-
                 HDR_META_WIDTH => HDR_META_WIDTH,
 
                 RX_CHANNELS         => RX_CHANNELS,
@@ -771,15 +757,6 @@ begin
                 PCIE_CQ_MFB_SRC_RDY => pcie_cq_mfb_src_rdy_piped(i),
                 PCIE_CQ_MFB_DST_RDY => pcie_cq_mfb_dst_rdy_piped(i),
 
-                PCIE_CC_MFB_DATA    => pcie_cc_mfb_data_piped(i),
-                PCIE_CC_MFB_META    => pcie_cc_mfb_meta_piped(i),
-                PCIE_CC_MFB_SOF     => pcie_cc_mfb_sof_piped(i),
-                PCIE_CC_MFB_EOF     => pcie_cc_mfb_eof_piped(i),
-                PCIE_CC_MFB_SOF_POS => pcie_cc_mfb_sof_pos_piped(i),
-                PCIE_CC_MFB_EOF_POS => pcie_cc_mfb_eof_pos_piped(i),
-                PCIE_CC_MFB_SRC_RDY => pcie_cc_mfb_src_rdy_piped(i),
-                PCIE_CC_MFB_DST_RDY => pcie_cc_mfb_dst_rdy_piped(i),
-
                 MI_ADDR => mi_sync_addr(i),
                 MI_DWR  => mi_sync_dwr(i),
                 MI_BE   => mi_sync_be(i),
@@ -822,40 +799,6 @@ begin
                 TX_EOF     => PCIE_RQ_MFB_EOF(i),
                 TX_SRC_RDY => PCIE_RQ_MFB_SRC_RDY(i),
                 TX_DST_RDY => PCIE_RQ_MFB_DST_RDY(i));
-
-        pcie_cc_mfb_pipe_i : entity work.MFB_PIPE
-            generic map (
-                REGIONS     => PCIE_CC_MFB_REGIONS,
-                REGION_SIZE => PCIE_CC_MFB_REGION_SIZE,
-                BLOCK_SIZE  => PCIE_CC_MFB_BLOCK_SIZE,
-                ITEM_WIDTH  => PCIE_CC_MFB_ITEM_WIDTH,
-
-                META_WIDTH  => PCIE_CC_META_WIDTH,
-                FAKE_PIPE   => (not OUT_PIPE_EN) or (not TX_GEN_EN),
-                USE_DST_RDY => TRUE,
-                PIPE_TYPE   => "REG",
-                DEVICE      => DEVICE)
-            port map (
-                CLK        => PCIE_USR_CLK(i),
-                RESET      => PCIE_USR_RESET(i),
-
-                RX_DATA    => pcie_cc_mfb_data_piped(i),
-                RX_META    => pcie_cc_mfb_meta_piped(i),
-                RX_SOF_POS => pcie_cc_mfb_sof_pos_piped(i),
-                RX_EOF_POS => pcie_cc_mfb_eof_pos_piped(i),
-                RX_SOF     => pcie_cc_mfb_sof_piped(i),
-                RX_EOF     => pcie_cc_mfb_eof_piped(i),
-                RX_SRC_RDY => pcie_cc_mfb_src_rdy_piped(i),
-                RX_DST_RDY => pcie_cc_mfb_dst_rdy_piped(i),
-
-                TX_DATA    => PCIE_CC_MFB_DATA(i),
-                TX_META    => PCIE_CC_MFB_META(i),
-                TX_SOF_POS => PCIE_CC_MFB_SOF_POS(i),
-                TX_EOF_POS => PCIE_CC_MFB_EOF_POS(i),
-                TX_SOF     => PCIE_CC_MFB_SOF(i),
-                TX_EOF     => PCIE_CC_MFB_EOF(i),
-                TX_SRC_RDY => PCIE_CC_MFB_SRC_RDY(i),
-                TX_DST_RDY => PCIE_CC_MFB_DST_RDY(i));
 
         pcie_cq_mfb_pipe_i : entity work.MFB_PIPE
             generic map (
