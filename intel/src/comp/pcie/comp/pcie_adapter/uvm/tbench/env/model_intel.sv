@@ -10,15 +10,15 @@ extends model_base #(CQ_MFB_ITEM_WIDTH, CC_MFB_ITEM_WIDTH, RQ_MFB_ITEM_WIDTH, RC
     `uvm_component_param_utils(uvm_pcie_adapter::model_intel#(CQ_MFB_ITEM_WIDTH, CC_MFB_ITEM_WIDTH, RQ_MFB_ITEM_WIDTH, RC_MFB_ITEM_WIDTH, AVST_DOWN_META_W, AVST_UP_META_W, RQ_MFB_META_W, RC_MFB_META_W, CQ_MFB_META_W, CC_MFB_META_W, ENDPOINT_TYPE))
 
     // Model inputs
-    uvm_tlm_analysis_fifo #(uvm_common::model_item #(uvm_logic_vector_array::sequence_item #(CQ_MFB_ITEM_WIDTH))) avst_down_data_in;
-    uvm_tlm_analysis_fifo #(uvm_common::model_item #(uvm_logic_vector::sequence_item #(AVST_DOWN_META_W)))        avst_down_meta_in;
-    uvm_tlm_analysis_fifo #(uvm_common::model_item #(uvm_logic_vector::sequence_item #(CC_MFB_META_W)))           mfb_cc_meta_in;
-    uvm_tlm_analysis_fifo #(uvm_common::model_item #(uvm_logic_vector::sequence_item #(RQ_MFB_META_W)))           mfb_rq_meta_in;
+    uvm_tlm_analysis_fifo #(uvm_logic_vector_array::sequence_item #(CQ_MFB_ITEM_WIDTH)) avst_down_data_in;
+    uvm_tlm_analysis_fifo #(uvm_logic_vector::sequence_item #(AVST_DOWN_META_W))        avst_down_meta_in;
+    uvm_tlm_analysis_fifo #(uvm_logic_vector::sequence_item #(CC_MFB_META_W))           mfb_cc_meta_in;
+    uvm_tlm_analysis_fifo #(uvm_logic_vector::sequence_item #(RQ_MFB_META_W))           mfb_rq_meta_in;
 
-    uvm_analysis_port #(uvm_common::model_item #(uvm_logic_vector_array::sequence_item #(CC_MFB_ITEM_WIDTH))) avst_up_data_out;
-    uvm_analysis_port #(uvm_common::model_item #(uvm_logic_vector::sequence_item #(AVST_UP_META_W)))          avst_up_meta_out;
-    uvm_analysis_port #(uvm_common::model_item #(uvm_logic_vector::sequence_item #(RC_MFB_META_W)))           mfb_rc_meta_out;
-    uvm_analysis_port #(uvm_common::model_item #(uvm_logic_vector::sequence_item #(CQ_MFB_META_W)))           mfb_cq_meta_out;
+    uvm_analysis_port #(uvm_logic_vector_array::sequence_item #(CC_MFB_ITEM_WIDTH)) avst_up_data_out;
+    uvm_analysis_port #(uvm_logic_vector::sequence_item #(AVST_UP_META_W))          avst_up_meta_out;
+    uvm_analysis_port #(uvm_logic_vector::sequence_item #(RC_MFB_META_W))           mfb_rc_meta_out;
+    uvm_analysis_port #(uvm_logic_vector::sequence_item #(CQ_MFB_META_W))           mfb_cq_meta_out;
 
     logic rws[$];
     int rq_cnt = 0;
@@ -66,10 +66,10 @@ extends model_base #(CQ_MFB_ITEM_WIDTH, CC_MFB_ITEM_WIDTH, RQ_MFB_ITEM_WIDTH, RC
     endfunction
 
     task run_down_meta();
-        uvm_common::model_item #(uvm_logic_vector::sequence_item #(AVST_DOWN_META_W)) tr_avst_down_meta_in;
+        uvm_logic_vector::sequence_item #(AVST_DOWN_META_W) tr_avst_down_meta_in;
 
-        uvm_common::model_item #(uvm_logic_vector::sequence_item #(RC_MFB_META_W)) tr_mfb_rc_meta_out;
-        uvm_common::model_item #(uvm_logic_vector::sequence_item #(CQ_MFB_META_W)) tr_mfb_cq_meta_out;
+        uvm_logic_vector::sequence_item #(RC_MFB_META_W) tr_mfb_rc_meta_out;
+        uvm_logic_vector::sequence_item #(CQ_MFB_META_W) tr_mfb_cq_meta_out;
 
         logic [8-1 : 0] tlp_type;
         logic rw;
@@ -83,28 +83,23 @@ extends model_base #(CQ_MFB_ITEM_WIDTH, CC_MFB_ITEM_WIDTH, RQ_MFB_ITEM_WIDTH, RC
 
             avst_down_meta_in.get(tr_avst_down_meta_in);
             $swrite(msg, "%s\tAVST DOWN INPUT META %s\n", msg, tr_avst_down_meta_in.convert2string());
-            tlp_type = tr_avst_down_meta_in.item.data[128-1 : 120];
+            tlp_type = tr_avst_down_meta_in.data[128-1 : 120];
 
             rw = solve_type(tlp_type);
             rws.push_back(rw);
 
             if (rw == 1'b0) begin 
-                tr_mfb_cq_meta_out      = uvm_common::model_item #(uvm_logic_vector::sequence_item #(CQ_MFB_META_W))::type_id::create("tr_mfb_cq_meta_out", this);
-                tr_mfb_cq_meta_out.item = uvm_logic_vector::sequence_item #(CQ_MFB_META_W)::type_id::create("tr_mfb_cq_meta_out_item", this);
-
-                tr_mfb_cq_meta_out.item.data = '0;
-
-                tr_mfb_cq_meta_out.item.data = {tr_avst_down_meta_in.item.data[163-1 : 160], tr_avst_down_meta_in.item.data[160-1 : 128], tr_avst_down_meta_in.item.data[32-1 : 0], tr_avst_down_meta_in.item.data[64-1 : 32], tr_avst_down_meta_in.item.data[96-1 : 64], tr_avst_down_meta_in.item.data[128-1 : 96]};
+                tr_mfb_cq_meta_out      = uvm_logic_vector::sequence_item #(CQ_MFB_META_W)::type_id::create("tr_mfb_cq_meta_out", this);
+                tr_mfb_cq_meta_out.data = '0;
+                tr_mfb_cq_meta_out.data = {tr_avst_down_meta_in.data[163-1 : 160], tr_avst_down_meta_in.data[160-1 : 128], tr_avst_down_meta_in.data[32-1 : 0], tr_avst_down_meta_in.data[64-1 : 32], tr_avst_down_meta_in.data[96-1 : 64], tr_avst_down_meta_in.data[128-1 : 96]};
 
                 $swrite(msg, "%s\tMFB CQ OUTPUT META %s Time %t\n", msg, tr_mfb_cq_meta_out.convert2string(), $time());
 
                 mfb_cq_meta_out.write(tr_mfb_cq_meta_out);
             end
             else begin
-                tr_mfb_rc_meta_out      = uvm_common::model_item #(uvm_logic_vector::sequence_item #(RC_MFB_META_W))::type_id::create("tr_mfb_rc_meta_out", this);
-                tr_mfb_rc_meta_out.item = uvm_logic_vector::sequence_item #(RC_MFB_META_W)::type_id::create("tr_mfb_rc_meta_out_item", this);
-
-                tr_mfb_rc_meta_out.item.data = {tr_avst_down_meta_in.item.data[32-1 : 0], tr_avst_down_meta_in.item.data[64-1 : 32], tr_avst_down_meta_in.item.data[96-1 : 64], tr_avst_down_meta_in.item.data[128-1 : 96]};
+                tr_mfb_rc_meta_out      = uvm_logic_vector::sequence_item #(RC_MFB_META_W)::type_id::create("tr_mfb_rc_meta_out", this);
+                tr_mfb_rc_meta_out.data = {tr_avst_down_meta_in.data[32-1 : 0], tr_avst_down_meta_in.data[64-1 : 32], tr_avst_down_meta_in.data[96-1 : 64], tr_avst_down_meta_in.data[128-1 : 96]};
 
                 $swrite(msg, "%s\tMFB RC OUTPUT META %s Time %t\n", msg, tr_mfb_rc_meta_out.convert2string(), $time());
 
@@ -119,11 +114,11 @@ extends model_base #(CQ_MFB_ITEM_WIDTH, CC_MFB_ITEM_WIDTH, RQ_MFB_ITEM_WIDTH, RC
 
     // (RC+CQ) Interface
     task run_down_data();
-        uvm_common::model_item #(uvm_logic_vector::sequence_item #(AVST_DOWN_META_W))        tr_avst_down_meta_in;
-        uvm_common::model_item #(uvm_logic_vector_array::sequence_item #(CQ_MFB_ITEM_WIDTH)) tr_avst_down_data_in;
+        uvm_logic_vector::sequence_item #(AVST_DOWN_META_W)        tr_avst_down_meta_in;
+        uvm_logic_vector_array::sequence_item #(CQ_MFB_ITEM_WIDTH) tr_avst_down_data_in;
 
-        uvm_common::model_item #(uvm_logic_vector::sequence_item #(RC_MFB_META_W)) tr_mfb_rc_meta_out;
-        uvm_common::model_item #(uvm_logic_vector::sequence_item #(CQ_MFB_META_W)) tr_mfb_cq_meta_out;
+        uvm_logic_vector::sequence_item #(RC_MFB_META_W) tr_mfb_rc_meta_out;
+        uvm_logic_vector::sequence_item #(CQ_MFB_META_W) tr_mfb_cq_meta_out;
 
         logic [8-1 : 0] tlp_type;
         logic rw;
@@ -151,8 +146,8 @@ extends model_base #(CQ_MFB_ITEM_WIDTH, CC_MFB_ITEM_WIDTH, RQ_MFB_ITEM_WIDTH, RC
     endtask
 
     task run_cc_meta();
-        uvm_common::model_item #(uvm_logic_vector::sequence_item #(CC_MFB_META_W))  tr_mfb_cc_meta_in;
-        uvm_common::model_item #(uvm_logic_vector::sequence_item #(AVST_UP_META_W)) tr_avst_up_meta_out;
+        uvm_logic_vector::sequence_item #(CC_MFB_META_W)  tr_mfb_cc_meta_in;
+        uvm_logic_vector::sequence_item #(AVST_UP_META_W) tr_avst_up_meta_out;
 
         string msg = "\n";
 
@@ -164,10 +159,9 @@ extends model_base #(CQ_MFB_ITEM_WIDTH, CC_MFB_ITEM_WIDTH, RQ_MFB_ITEM_WIDTH, RC
 
             mfb_cc_meta_in.get(tr_mfb_cc_meta_in);
 
-            tr_avst_up_meta_out      = uvm_common::model_item #(uvm_logic_vector::sequence_item #(AVST_UP_META_W))::type_id::create("tr_avst_up_meta_out", this);
-            tr_avst_up_meta_out.item = uvm_logic_vector::sequence_item #(AVST_UP_META_W)::type_id::create("tr_avst_up_meta_out_item", this);
+            tr_avst_up_meta_out      = uvm_logic_vector::sequence_item #(AVST_UP_META_W)::type_id::create("tr_avst_up_meta_out", this);
 
-            tr_avst_up_meta_out.item.data = {32'bx, tr_mfb_cc_meta_in.item.data[32-1 : 0], tr_mfb_cc_meta_in.item.data[64-1 : 32], tr_mfb_cc_meta_in.item.data[96-1 : 64], tr_mfb_cc_meta_in.item.data[128-1 : 96]};
+            tr_avst_up_meta_out.data = {32'bx, tr_mfb_cc_meta_in.data[32-1 : 0], tr_mfb_cc_meta_in.data[64-1 : 32], tr_mfb_cc_meta_in.data[96-1 : 64], tr_mfb_cc_meta_in.data[128-1 : 96]};
 
             $swrite(msg, "%s\tMFB CC INPUT META %s Time %t\n", msg, tr_mfb_cc_meta_in.convert2string(), $time());
             $swrite(msg, "%s\tMFB CC OUTPUT META %s Time %t\n", msg, tr_avst_up_meta_out.convert2string(), $time());
@@ -177,8 +171,8 @@ extends model_base #(CQ_MFB_ITEM_WIDTH, CC_MFB_ITEM_WIDTH, RQ_MFB_ITEM_WIDTH, RC
     endtask
 
     task run_rq_meta();
-        uvm_common::model_item #(uvm_logic_vector::sequence_item #(RQ_MFB_META_W))  tr_mfb_rq_meta_in;
-        uvm_common::model_item #(uvm_logic_vector::sequence_item #(AVST_UP_META_W)) tr_avst_up_meta_out;
+        uvm_logic_vector::sequence_item #(RQ_MFB_META_W)  tr_mfb_rq_meta_in;
+        uvm_logic_vector::sequence_item #(AVST_UP_META_W) tr_avst_up_meta_out;
 
         string msg = "\n";
 
@@ -190,12 +184,9 @@ extends model_base #(CQ_MFB_ITEM_WIDTH, CC_MFB_ITEM_WIDTH, RQ_MFB_ITEM_WIDTH, RC
 
             mfb_rq_meta_in.get(tr_mfb_rq_meta_in);
 
-            tr_avst_up_meta_out      = uvm_common::model_item #(uvm_logic_vector::sequence_item #(AVST_UP_META_W))::type_id::create("tr_avst_up_meta_out", this);
-            tr_avst_up_meta_out.item = uvm_logic_vector::sequence_item #(AVST_UP_META_W)::type_id::create("tr_avst_up_meta_out_item", this);
-
-            tr_avst_up_meta_out.item.data = '0;
-
-            tr_avst_up_meta_out.item.data = {1'b0, tr_mfb_rq_meta_in.item.data[AVST_UP_META_W-2 : 128], tr_mfb_rq_meta_in.item.data[32-1 : 0], tr_mfb_rq_meta_in.item.data[64-1 : 32], tr_mfb_rq_meta_in.item.data[96-1 : 64], tr_mfb_rq_meta_in.item.data[128-1 : 96]};
+            tr_avst_up_meta_out      = uvm_logic_vector::sequence_item #(AVST_UP_META_W)::type_id::create("tr_avst_up_meta_out", this);
+            tr_avst_up_meta_out.data = '0;
+            tr_avst_up_meta_out.data = {1'b0, tr_mfb_rq_meta_in.data[AVST_UP_META_W-2 : 128], tr_mfb_rq_meta_in.data[32-1 : 0], tr_mfb_rq_meta_in.data[64-1 : 32], tr_mfb_rq_meta_in.data[96-1 : 64], tr_mfb_rq_meta_in.data[128-1 : 96]};
 
             $swrite(msg, "%s\tMFB RQ INPUT META %s Time %t\n", msg, tr_mfb_rq_meta_in.convert2string(), $time());
             $swrite(msg, "%s\tMFB RQ OUTPUT META %s Time %t\n", msg, tr_avst_up_meta_out.convert2string(), $time());
@@ -206,9 +197,9 @@ extends model_base #(CQ_MFB_ITEM_WIDTH, CC_MFB_ITEM_WIDTH, RQ_MFB_ITEM_WIDTH, RC
 
     // (CC+RQ) Interface
     task run_up_cc();
-        uvm_common::model_item #(uvm_logic_vector_array::sequence_item #(CC_MFB_ITEM_WIDTH)) tr_mfb_cc_data_in;
-        uvm_common::model_item #(uvm_logic_vector::sequence_item #(CC_MFB_META_W))  tr_mfb_cc_meta_in;
-        uvm_common::model_item #(uvm_logic_vector::sequence_item #(AVST_UP_META_W)) tr_avst_up_meta_out;
+        uvm_logic_vector_array::sequence_item #(CC_MFB_ITEM_WIDTH) tr_mfb_cc_data_in;
+        uvm_logic_vector::sequence_item #(CC_MFB_META_W)  tr_mfb_cc_meta_in;
+        uvm_logic_vector::sequence_item #(AVST_UP_META_W) tr_avst_up_meta_out;
 
         string msg = "\n";
 
@@ -225,9 +216,9 @@ extends model_base #(CQ_MFB_ITEM_WIDTH, CC_MFB_ITEM_WIDTH, RQ_MFB_ITEM_WIDTH, RC
     endtask
 
     task run_up_rq();
-        uvm_common::model_item #(uvm_logic_vector_array::sequence_item #(RQ_MFB_ITEM_WIDTH)) tr_mfb_rq_data_in;
-        uvm_common::model_item #(uvm_logic_vector::sequence_item #(RQ_MFB_META_W))  tr_mfb_rq_meta_in;
-        uvm_common::model_item #(uvm_logic_vector::sequence_item #(AVST_UP_META_W)) tr_avst_up_meta_out;
+        uvm_logic_vector_array::sequence_item #(RQ_MFB_ITEM_WIDTH) tr_mfb_rq_data_in;
+        uvm_logic_vector::sequence_item #(RQ_MFB_META_W)  tr_mfb_rq_meta_in;
+        uvm_logic_vector::sequence_item #(AVST_UP_META_W) tr_avst_up_meta_out;
 
         string msg = "\n";
 

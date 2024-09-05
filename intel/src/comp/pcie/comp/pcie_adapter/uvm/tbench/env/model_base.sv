@@ -9,11 +9,11 @@ class model_base #(CQ_MFB_ITEM_WIDTH, CC_MFB_ITEM_WIDTH, RQ_MFB_ITEM_WIDTH, RC_M
     `uvm_component_param_utils(uvm_pcie_adapter::model_base#(CQ_MFB_ITEM_WIDTH, CC_MFB_ITEM_WIDTH, RQ_MFB_ITEM_WIDTH, RC_MFB_ITEM_WIDTH, RQ_MFB_META_W, RC_MFB_META_W, CQ_MFB_META_W, CC_MFB_META_W))
 
     // Model inputs
-    uvm_tlm_analysis_fifo #(uvm_common::model_item #(uvm_logic_vector_array::sequence_item #(CC_MFB_ITEM_WIDTH))) mfb_cc_data_in;
-    uvm_tlm_analysis_fifo #(uvm_common::model_item #(uvm_logic_vector_array::sequence_item #(RQ_MFB_ITEM_WIDTH))) mfb_rq_data_in;
+    uvm_tlm_analysis_fifo #(uvm_logic_vector_array::sequence_item #(CC_MFB_ITEM_WIDTH)) mfb_cc_data_in;
+    uvm_tlm_analysis_fifo #(uvm_logic_vector_array::sequence_item #(RQ_MFB_ITEM_WIDTH)) mfb_rq_data_in;
 
-    uvm_analysis_port #(uvm_common::model_item #(uvm_logic_vector_array::sequence_item #(RC_MFB_ITEM_WIDTH)))   mfb_rc_data_out;
-    uvm_analysis_port #(uvm_common::model_item #(uvm_logic_vector_array::sequence_item #(CQ_MFB_ITEM_WIDTH)))   mfb_cq_data_out;
+    uvm_analysis_port #(uvm_logic_vector_array::sequence_item #(RC_MFB_ITEM_WIDTH))   mfb_rc_data_out;
+    uvm_analysis_port #(uvm_logic_vector_array::sequence_item #(CQ_MFB_ITEM_WIDTH))   mfb_cq_data_out;
 
     function new(string name = "model_base", uvm_component parent = null);
         super.new(name, parent);

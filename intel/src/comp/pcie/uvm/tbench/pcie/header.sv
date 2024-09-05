@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 // This class represents high level transaction, which can be reusable for other components.
-class header extends uvm_sequence_item;
+class header extends uvm_common::sequence_item;
     // Registration of object tools.
     `uvm_object_utils(uvm_pcie::header)
 
@@ -105,7 +105,10 @@ class header extends uvm_sequence_item;
 
 
     function string convert2string();
-        string msg = $sformatf("\nheader type %s\n", hdr_type);
+        string msg;
+
+        msg = super.convert2string();
+        msg = {msg, $sformatf("\nheader type %s\n", hdr_type)};
         msg = {msg, $sformatf("\tfmt : 0x%h type : 0x%h trafic_class : 0x%h\n", fmt, pcie_type[5-1:0], traffic_class)};
         msg = {msg, $sformatf("\t(id_ordering, relax_ordering, no_snoop   : %b,%b,%b\n", id_based_ordering, relaxed_ordering, no_snoop)};
         msg = {msg, $sformatf("\t(th, td, ep   : %b,%b,%b\n", th, td, ep)};

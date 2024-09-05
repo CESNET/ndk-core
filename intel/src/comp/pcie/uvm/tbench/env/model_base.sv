@@ -13,18 +13,18 @@ class model #(REGIONS, PCIE_ENDPOINTS, DMA_PORTS, ITEM_WIDTH) extends uvm_compon
     localparam ENDPOINT_TYPE = "DUMMY";
 
     //PCIE
-    uvm_analysis_export  #(uvm_common::model_item #(uvm_pcie::request_header))   pcie_rq[PCIE_ENDPOINTS];
-    uvm_analysis_export  #(uvm_common::model_item #(uvm_pcie::completer_header)) pcie_rc[PCIE_ENDPOINTS];
-    uvm_analysis_export  #(uvm_common::model_item #(uvm_pcie::request_header))   pcie_cq[PCIE_ENDPOINTS];
-    uvm_analysis_export  #(uvm_common::model_item #(uvm_pcie::completer_header)) pcie_cc[PCIE_ENDPOINTS];
+    uvm_analysis_export  #(uvm_pcie::request_header)   pcie_rq[PCIE_ENDPOINTS];
+    uvm_analysis_export  #(uvm_pcie::completer_header) pcie_rc[PCIE_ENDPOINTS];
+    uvm_analysis_export  #(uvm_pcie::request_header)   pcie_cq[PCIE_ENDPOINTS];
+    uvm_analysis_export  #(uvm_pcie::completer_header) pcie_cc[PCIE_ENDPOINTS];
 
-    uvm_analysis_export  #(uvm_common::model_item #(uvm_dma::sequence_item_rq)) dma_rq[PCIE_ENDPOINTS][DMA_PORTS];
-    uvm_analysis_export  #(uvm_common::model_item #(uvm_dma::sequence_item_rc)) dma_rc[PCIE_ENDPOINTS][DMA_PORTS];
+    uvm_analysis_export  #(uvm_dma::sequence_item_rq) dma_rq[PCIE_ENDPOINTS][DMA_PORTS];
+    uvm_analysis_export  #(uvm_dma::sequence_item_rc) dma_rc[PCIE_ENDPOINTS][DMA_PORTS];
 
     ////
     //MI
-    uvm_analysis_export #(uvm_common::model_item #(uvm_mi::sequence_item_response #(32)))        mi_rsp[PCIE_ENDPOINTS];
-    uvm_analysis_export #(uvm_common::model_item #(uvm_mi::sequence_item_request #(32, 32, 0)))  mi_req[PCIE_ENDPOINTS];
+    uvm_analysis_export #(uvm_mi::sequence_item_response #(32))        mi_rsp[PCIE_ENDPOINTS];
+    uvm_analysis_export #(uvm_mi::sequence_item_request #(32, 32, 0))  mi_req[PCIE_ENDPOINTS];
 
     protected model_mtc #(32, 32)                        mtc[PCIE_ENDPOINTS];
     protected model_ptc#(REGIONS, DMA_PORTS, ITEM_WIDTH) ptc[PCIE_ENDPOINTS];

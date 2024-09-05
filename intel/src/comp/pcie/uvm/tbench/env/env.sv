@@ -176,14 +176,14 @@ class env #(
             for (int unsigned pcie_logic = 0; pcie_logic < PCIE_ENDPOINTS/PCIE_CONS; pcie_logic++) begin
                 const int unsigned pcie = cons*PCIE_ENDPOINTS/PCIE_CONS + pcie_logic; 
                 //PCIE CONNECT
-                m_pcie_env[pcie].rc_analysis_port.connect(m_scoreboard.pcie_rc[pcie].analysis_export);
-                m_pcie_env[pcie].cq_analysis_port.connect(m_scoreboard.pcie_cq[pcie].analysis_export);
+                m_pcie_env[pcie].rc_analysis_port.connect(m_scoreboard.pcie_rc[pcie]);
+                m_pcie_env[pcie].cq_analysis_port.connect(m_scoreboard.pcie_cq[pcie]);
                 m_pcie_env[pcie].rq_analysis_port.connect(m_scoreboard.pcie_rq[pcie]);
                 m_pcie_env[pcie].cc_analysis_port.connect(m_scoreboard.pcie_cc[pcie]);
 
                 //MI CONNECT
                 m_mi_agent[pcie].analysis_port_rq.connect(m_scoreboard.mi_req[pcie].analysis_export);
-                m_mi_agent[pcie].analysis_port_rs.connect(m_scoreboard.mi_rsp[pcie].analysis_export);
+                m_mi_agent[pcie].analysis_port_rs.connect(m_scoreboard.mi_rsp[pcie]);
 
                 m_sequencer.m_mi_sqr[pcie] = m_mi_agent[pcie].m_sequencer;
                 m_sequencer.m_pcie[pcie]   = m_pcie_env[pcie].m_sequencer;
@@ -191,7 +191,7 @@ class env #(
 
                 for (int dma = 0; dma < DMA_PORTS; dma++) begin
                     m_dma_env[pcie][dma].rc_analysis_port.connect(m_scoreboard.dma_rc[pcie][dma]);
-                    m_dma_env[pcie][dma].rq_analysis_port.connect(m_scoreboard.dma_rq[pcie][dma].analysis_export);
+                    m_dma_env[pcie][dma].rq_analysis_port.connect(m_scoreboard.dma_rq[pcie][dma]);
 
                     // ------------------------------------------------------------------
                     // Reset sync connection

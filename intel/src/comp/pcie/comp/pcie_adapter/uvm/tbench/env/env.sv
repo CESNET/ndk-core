@@ -251,14 +251,14 @@ class env #(CQ_MFB_REGIONS, CC_MFB_REGIONS, RQ_MFB_REGIONS, RC_MFB_REGIONS, CQ_M
         // Connect AVALON environments to Scoreboard
         if (IS_INTEL_DEV) begin
             // DOWN environment
-            m_avst_down_env.analysis_port_data.connect(m_scoreboard.analysis_imp_avst_down_data.analysis_export);
-            m_avst_down_env.analysis_port_meta.connect(m_scoreboard.analysis_imp_avst_down_meta.analysis_export);
+            m_avst_down_env.analysis_port_data.connect(m_scoreboard.analysis_imp_avst_down_data);
+            m_avst_down_env.analysis_port_meta.connect(m_scoreboard.analysis_imp_avst_down_meta);
             // UP environment
             m_avst_up_env.analysis_port_data.connect(m_scoreboard.analysis_imp_avst_up_data);
             m_avst_up_env.analysis_port_meta.connect(m_scoreboard.analysis_imp_avst_up_meta);
 
-            m_mfb_rq_env.analysis_port_meta.connect(m_scoreboard.analysis_imp_mfb_rq_meta.analysis_export);
-            m_mfb_cc_env.analysis_port_meta.connect(m_scoreboard.analysis_imp_mfb_cc_meta.analysis_export);
+            m_mfb_rq_env.analysis_port_meta.connect(m_scoreboard.analysis_imp_mfb_rq_meta);
+            m_mfb_cc_env.analysis_port_meta.connect(m_scoreboard.analysis_imp_mfb_cc_meta);
 
             m_mfb_rc_env.analysis_port_meta.connect(m_scoreboard.analysis_imp_mfb_rc_meta);
             m_mfb_cq_env.analysis_port_meta.connect(m_scoreboard.analysis_imp_mfb_cq_meta);
@@ -290,11 +290,11 @@ class env #(CQ_MFB_REGIONS, CC_MFB_REGIONS, RQ_MFB_REGIONS, RC_MFB_REGIONS, CQ_M
         end else begin
             // Connect AXI environments to Scoreboard
             // CQ environment
-            m_axi_cq_env.analysis_port_data.connect(m_scoreboard.analysis_imp_axi_cq_data.analysis_export);
+            m_axi_cq_env.analysis_port_data.connect(m_scoreboard.analysis_imp_axi_cq_data);
             // CC environment
             m_axi_cc_env.analysis_port_data.connect(m_scoreboard.analysis_imp_axi_cc_data);
             // RC environment
-            m_axi_rc_env.analysis_port_data.connect(m_scoreboard.analysis_imp_axi_rc_data.analysis_export);
+            m_axi_rc_env.analysis_port_data.connect(m_scoreboard.analysis_imp_axi_rc_data);
             // RQ environment
             m_axi_rq_env.analysis_port_data.connect(m_scoreboard.analysis_imp_axi_rq_data);
 
@@ -316,13 +316,13 @@ class env #(CQ_MFB_REGIONS, CC_MFB_REGIONS, RQ_MFB_REGIONS, RC_MFB_REGIONS, CQ_M
 
         // Connect MFB environments to Scoreboard
         // RQ environment
-        m_mfb_rq_env.analysis_port_data.connect(m_scoreboard.analysis_imp_mfb_rq_data.analysis_export);
+        m_mfb_rq_env.analysis_port_data.connect(m_scoreboard.analysis_imp_mfb_rq_data);
         // RC environment
         m_mfb_rc_env.analysis_port_data.connect(m_scoreboard.analysis_imp_mfb_rc_data);
         // CQ environment
         m_mfb_cq_env.analysis_port_data.connect(m_scoreboard.analysis_imp_mfb_cq_data);
         // CC environment
-        m_mfb_cc_env.analysis_port_data.connect(m_scoreboard.analysis_imp_mfb_cc_data.analysis_export);
+        m_mfb_cc_env.analysis_port_data.connect(m_scoreboard.analysis_imp_mfb_cc_data);
 
         // ------------------------------------------------------------------
         // Reset sync connection
