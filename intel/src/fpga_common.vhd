@@ -364,6 +364,12 @@ architecture FULL of FPGA_COMMON is
             end if;
         end if;
 
+        if (PCIE_ENDPOINT_TYPE="H_TILE") then -- Gen3 mode only
+            if (PCIE_ENDPOINT_MODE = 0) then -- x16
+                pcie_mfb_regions := 2; --2x256b AVST
+            end if;
+        end if;
+
         if (IS_USP_PCIE_EP = True) then -- Gen3 mode only
             if (PCIE_ENDPOINT_MODE = 0) then -- x16
                 pcie_mfb_regions := 2; --2x256b AXI
