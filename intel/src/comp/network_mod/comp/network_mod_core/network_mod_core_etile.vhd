@@ -543,11 +543,9 @@ architecture ETILE of NETWORK_MOD_CORE is
     signal eth_inf_drd_phy_ser      : std_logic_vector(ETH_PORT_CHAN*            MI_DATA_WIDTH_PHY-1 downto 0);
     signal eth_inf_drdy_phy         : std_logic_vector(ETH_PORT_CHAN-1 downto 0);
     -- xcvr reconfig interface
-    signal xcvr_inf_dwr_phy          : slv_array_t     (LANES-1 downto 0)(MI_DATA_WIDTH_PHY-1 downto 0);
-    signal xcvr_inf_dwr_phy_res      : slv_array_t     (LANES-1 downto 0)(8                -1 downto 0);
+    signal xcvr_inf_dwr_phy          : slv_array_t     (LANES-1 downto 0)(8                -1 downto 0);
     signal xcvr_inf_dwr_phy_res_ser  : std_logic_vector(LANES*            8                -1 downto 0);
-    signal xcvr_inf_addr_phy         : slv_array_t     (LANES-1 downto 0)(MI_ADDR_WIDTH_PHY-1 downto 0);
-    signal xcvr_inf_addr_phy_res     : slv_array_t     (LANES-1 downto 0)(19-1 downto 0);
+    signal xcvr_inf_addr_phy         : slv_array_t     (LANES-1 downto 0)(19-1 downto 0);
     signal xcvr_inf_addr_phy_res_ser : std_logic_vector(LANES*            19-1 downto 0);
     signal xcvr_inf_rd_phy           : std_logic_vector(LANES-1 downto 0);
     signal xcvr_inf_wr_phy           : std_logic_vector(LANES-1 downto 0);
@@ -705,7 +703,7 @@ begin
         mgmt_pcs_control_i(15 downto 1) <= (others => '0');
         mgmt_pcs_control_i(0)           <= sync_repeater_ctrl(i); -- MAC loopback active
         -- MDIO reg 3.4001 (vendor specific PCS status/abilities)
-        mgmt_pcs_status(15 downto 1) <= (others => '0'); 
+        mgmt_pcs_status(15 downto 1) <= (others => '0');
         mgmt_pcs_status(0)           <= '1';        -- MAC loopback ability supported
 
         -- Store mi_ia_sel for read operations
@@ -733,7 +731,7 @@ begin
             mi_ia_dwr_phy (xcvr + i*LANES_PER_CHANNEL + ETH_PORT_CHAN) <= mi_ia_dwr;
         end generate;
         rsfec_wr_rd_g: if (ETH_PORT_SPEED /= 10) and (i = 0) generate
-            -- rsfec inf is on the last Output port of MI IA. 
+            -- rsfec inf is on the last Output port of MI IA.
             -- Eth channel 0 is the only able to access the RS-FEC !
             mi_ia_wr_phy  (IA_OUTPUT_INFS-1) <= mi_ia_en and     mi_ia_we_phy when mi_ia_sel = "1001" else '0'; -- RS-FEC mapped to page 9
             mi_ia_rd_phy  (IA_OUTPUT_INFS-1) <= mi_ia_en and not mi_ia_we_phy when mi_ia_sel = "1001" else '0'; -- RS-FEC mapped to page 9
@@ -838,9 +836,6 @@ begin
     eth_inf_drd_phy <= slv_array_deser(eth_inf_drd_phy_ser, ETH_PORT_CHAN);
 
     -- xcvr --------------------------------------------------------------------
-    xcvr_inf_dwr_phy  <= mi_ia_dwr_phy (LANES + ETH_PORT_CHAN-1 downto ETH_PORT_CHAN);
-    xcvr_inf_addr_phy <= mi_ia_addr_phy(LANES + ETH_PORT_CHAN-1 downto ETH_PORT_CHAN);
-
     xcvr_reconfig_inf_res_g: for i in LANES-1 downto 0 generate
         signal init_busy      : std_logic;
         signal init_addr      : std_logic_vector(18 downto 0);
@@ -852,16 +847,33 @@ begin
 
     begin
 
-        mi_ia_drdy_phy(i + ETH_PORT_CHAN) <= xcvr_inf_rd_phy(i) and not xcvr_inf_ardy_phy_n(i) when init_busy = '0' else '0'; -- DRDY not used on the xcvr inf
-        mi_ia_ardy_phy(i + ETH_PORT_CHAN) <= not xcvr_inf_ardy_phy_n(i) when init_busy = '0' else '0';
-        mi_ia_drd_phy (i + ETH_PORT_CHAN) <= xcvr_inf_drd_phy(i);
+        -- Arbitrage the xcvr_inf signals between XCVR_INIT and MGMT based on the init_busy signal:
+        -- After power up or reset, the xcvr_inf bus is driven by the xcvr_init component to perform
+        -- initialization of the e-tile transceivers. After the initialization finishes, the software is
+        -- allowed to access this interface (via the MGMT)
+        xcvr_inf_mux: process(all)
+        begin
+            if init_busy = '0' then
+                mi_ia_drdy_phy(i + ETH_PORT_CHAN) <= xcvr_inf_rd_phy(i) and not xcvr_inf_ardy_phy_n(i);
+                mi_ia_ardy_phy(i + ETH_PORT_CHAN) <= not xcvr_inf_ardy_phy_n(i);
+                mi_ia_drd_phy (i + ETH_PORT_CHAN) <= xcvr_inf_drd_phy(i);
+                xcvr_inf_rd_phy  (i) <= mi_ia_rd_phy(ETH_PORT_CHAN+i);
+                xcvr_inf_wr_phy  (i) <= mi_ia_wr_phy(ETH_PORT_CHAN+i);
+                xcvr_inf_dwr_phy (i) <= mi_ia_dwr_phy(ETH_PORT_CHAN+i)(8 -1 downto 0);
+                xcvr_inf_addr_phy(i) <= mi_ia_addr_phy(ETH_PORT_CHAN+i)(19-1 downto 0);
+            else
+                mi_ia_drdy_phy(i + ETH_PORT_CHAN) <= '0';
+                mi_ia_ardy_phy(i + ETH_PORT_CHAN) <= '0';
+                mi_ia_drd_phy (i + ETH_PORT_CHAN) <= xcvr_inf_drd_phy(i);
+                xcvr_inf_rd_phy  (i) <= init_read;
+                xcvr_inf_wr_phy  (i) <= init_write;
+                xcvr_inf_dwr_phy (i) <= init_writedata(8 -1 downto 0);
+                xcvr_inf_addr_phy(i) <= init_addr;
+            end if;
+        end process;
 
-        xcvr_inf_rd_phy      (i) <= mi_ia_rd_phy(ETH_PORT_CHAN+i)       when init_busy = '0' else init_read;
-        xcvr_inf_wr_phy      (i) <= mi_ia_wr_phy(ETH_PORT_CHAN+i)       when init_busy = '0' else init_write;
-        xcvr_inf_dwr_phy_res (i) <= xcvr_inf_dwr_phy (i)(8 -1 downto 0) when init_busy = '0' else init_writedata(8 -1 downto 0);
-        xcvr_inf_addr_phy_res(i) <= xcvr_inf_addr_phy(i)(19-1 downto 0) when init_busy = '0' else init_addr;
-        xcvr_inf_drd_phy     (i)(MI_DATA_WIDTH_PHY-1 downto 8) <= (others => '0');
-        xcvr_inf_drd_phy     (i)(8-1 downto 0)                 <= xcvr_inf_drd_phy_res(i);
+        xcvr_inf_drd_phy(i)(MI_DATA_WIDTH_PHY-1 downto 8) <= (others => '0');
+        xcvr_inf_drd_phy(i)(8-1 downto 0)                 <= xcvr_inf_drd_phy_res(i);
 
         xcvr_init: entity work.etile_xcvr_init
         port map (
@@ -883,8 +895,8 @@ begin
 
     end generate;
 
-    xcvr_inf_dwr_phy_res_ser  <= slv_array_ser(xcvr_inf_dwr_phy_res);
-    xcvr_inf_addr_phy_res_ser <= slv_array_ser(xcvr_inf_addr_phy_res);
+    xcvr_inf_dwr_phy_res_ser  <= slv_array_ser(xcvr_inf_dwr_phy);
+    xcvr_inf_addr_phy_res_ser <= slv_array_ser(xcvr_inf_addr_phy);
     xcvr_inf_drd_phy_res <= slv_array_deser(xcvr_inf_drd_phy_res_ser, LANES);
 
     -- rsfec -------------------------------------------------------------------
