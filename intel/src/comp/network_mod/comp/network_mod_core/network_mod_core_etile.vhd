@@ -840,8 +840,6 @@ begin
     -- xcvr --------------------------------------------------------------------
     xcvr_inf_dwr_phy  <= mi_ia_dwr_phy (LANES + ETH_PORT_CHAN-1 downto ETH_PORT_CHAN);
     xcvr_inf_addr_phy <= mi_ia_addr_phy(LANES + ETH_PORT_CHAN-1 downto ETH_PORT_CHAN);
-    mi_ia_ardy_phy(LANES + ETH_PORT_CHAN-1 downto ETH_PORT_CHAN) <= not xcvr_inf_ardy_phy_n;
-    mi_ia_drd_phy (LANES + ETH_PORT_CHAN-1 downto ETH_PORT_CHAN) <= xcvr_inf_drd_phy;
 
     xcvr_reconfig_inf_res_g: for i in LANES-1 downto 0 generate
         signal init_busy      : std_logic;
@@ -854,7 +852,9 @@ begin
 
     begin
 
-        mi_ia_drdy_phy(i + ETH_PORT_CHAN) <= xcvr_inf_rd_phy(i) and not xcvr_inf_ardy_phy_n(i); -- DRDY not used on the xcvr inf
+        mi_ia_drdy_phy(i + ETH_PORT_CHAN) <= xcvr_inf_rd_phy(i) and not xcvr_inf_ardy_phy_n(i) when init_busy = '0' else '0'; -- DRDY not used on the xcvr inf
+        mi_ia_ardy_phy(i + ETH_PORT_CHAN) <= not xcvr_inf_ardy_phy_n(i) when init_busy = '0' else '0';
+        mi_ia_drd_phy (i + ETH_PORT_CHAN) <= xcvr_inf_drd_phy(i);
 
         xcvr_inf_rd_phy      (i) <= mi_ia_rd_phy(ETH_PORT_CHAN+i)       when init_busy = '0' else init_read;
         xcvr_inf_wr_phy      (i) <= mi_ia_wr_phy(ETH_PORT_CHAN+i)       when init_busy = '0' else init_write;
