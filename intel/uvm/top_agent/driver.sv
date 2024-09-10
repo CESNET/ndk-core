@@ -83,9 +83,9 @@ class driver#(ITEM_WIDTH, META_WIDTH) extends uvm_driver #(sequence_item#(ITEM_W
                 assert(std::randomize(diff_type, diff, diff_count) with
                     {
                         diff_type  dist { STORE_MVB := m_config.weigth_mfb_first, 1'b1, STORE_MFB := m_config.weigth_mvb_first};
-                        diff       dist { [m_config.diff_min              : m_config.diff_min + diff_step] :/ 60,
-                                          [m_config.diff_min+ diff_step   : m_config.diff_min + diff_step*9] :/ 10,
-                                          [m_config.diff_min+ diff_step*9 : m_config.diff_max] :/ 30};
+                        diff       dist { [m_config.diff_min              : m_config.diff_min + diff_step] :/ 95,
+                                          [m_config.diff_min+ diff_step   : m_config.diff_min + diff_step*9] :/ 1,
+                                          [m_config.diff_min+ diff_step*9 : m_config.diff_max] :/ 5};
                         diff_count dist { [m_config.diff_count_min:m_config.diff_count_max] };
                     })
                     else begin
