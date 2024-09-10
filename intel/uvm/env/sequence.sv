@@ -43,6 +43,8 @@ class sequence_main#(
     protected logic [ETH_STREAMS-1:0] event_eth_rx_end;
     protected logic [DMA_STREAMS-1:0] event_dma_rx_end;
     rand time time_start;
+    logic [128-1:0] conf_ipv6[];
+    logic [32-1:0]  conf_ipv4[];
 
 
     function new (string name = "uvm_app_core::sequencer");
@@ -109,6 +111,8 @@ class sequence_main#(
 
         seq_cfg = new();
         seq_cfg.time_start = time_start;
+        seq_cfg.ipv4_addresses = conf_ipv4;
+        seq_cfg.ipv6_addresses = conf_ipv6;
         packet_seq = uvm_app_core::sequence_library_eth#(2**8, 16, MFB_ITEM_WIDTH)::type_id::create("mfb_rx_seq", p_sequencer.m_eth_rx[index]);
         packet_seq.init_sequence(seq_cfg);
 
