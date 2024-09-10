@@ -33,6 +33,8 @@ class driver#(ITEM_WIDTH, META_WIDTH) extends uvm_driver #(sequence_item#(ITEM_W
         int unsigned ret = 0;
         ret |= (fifo_mvb_tmp.size() != 0);
         ret |= (fifo_mfb_tmp.size() != 0);
+        ret |= (fifo_mvb.size() != 0);
+        ret |= (fifo_mfb.size() != 0);
         return ret;
     endfunction
 

@@ -32,7 +32,7 @@ class agent #(type TR_TYPE, int unsigned ITEM_WIDTH, int unsigned META_WIDTH) ex
 
     function int unsigned used();
         int unsigned ret = 0;
-        ret |= m_driver.used();
+        ret |= (m_driver.used() != 0);
         return ret;
     endfunction
 
