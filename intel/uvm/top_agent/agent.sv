@@ -32,7 +32,7 @@ class agent #(type TR_TYPE, int unsigned ITEM_WIDTH, int unsigned META_WIDTH) ex
 
     function int unsigned used();
         int unsigned ret = 0;
-        ret |= m_driver.used();
+        ret |= (m_driver.used() != 0);
         return ret;
     endfunction
 
@@ -54,6 +54,7 @@ class agent #(type TR_TYPE, int unsigned ITEM_WIDTH, int unsigned META_WIDTH) ex
         if (get_is_active() == UVM_ACTIVE) begin
             m_sequencer = sequencer#(ITEM_WIDTH, META_WIDTH)::type_id::create("m_sequencer", this);
             m_driver    = driver#(ITEM_WIDTH, META_WIDTH)::type_id::create   ("m_driver",    this);
+            m_driver.m_config = m_config;
 
             fifo_mvb = uvm_common::fifo#(sequence_item#(ITEM_WIDTH, META_WIDTH))::type_id::create("fifo_mvb", this);
             fifo_mfb = uvm_common::fifo#(sequence_item#(ITEM_WIDTH, META_WIDTH))::type_id::create("fifo_mfb", this);

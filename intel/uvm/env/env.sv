@@ -250,7 +250,7 @@ class env #(ETH_STREAMS, ETH_PKT_MTU, ETH_RX_HDR_WIDTH, ETH_TX_HDR_WIDTH, DMA_ST
     endfunction
 
     function void delay_max_set(time delay_max, time model_timeout = 1ms);
-        m_scoreboard.delay_max_set(delay_max, model_timeout);
+        m_scoreboard.timeout_set(delay_max, model_timeout);
     endfunction
 
     function void connect_phase(uvm_phase phase);

@@ -184,37 +184,46 @@ class sequence_flowtest_eth #(
         cfg = new();
     endfunction
 
-    function void configure();
-        foreach (cfg.ipv4_addresses[i]) begin
-            ipv4 = new[ipv4.size()+1](ipv4);
-            ipv4[ipv4.size()-1].address = cfg.ipv4_addresses[i];
-            ipv4[ipv4.size()-1].mask = 32;
-        end
+    //function void configure();
+    //    //foreach (cfg.ipv4_addresses[i]) begin
+    //    //    ipv4 = new[ipv4.size()+1](ipv4);
+    //    //    ipv4[ipv4.size()-1].address = cfg.ipv4_addresses[i];
+    //    //    ipv4[ipv4.size()-1].mask = 32;
+    //    //end
 
-        foreach (cfg.ipv6_addresses[i]) begin
-            ipv6 = new[ipv6.size()+1](ipv6);
-            ipv6[ipv6.size()-1].address = cfg.ipv6_addresses[i];
-            ipv6[ipv6.size()-1].mask = 128;
-        end
-    endfunction
+    //    //foreach (cfg.ipv6_addresses[i]) begin
+    //    //    ipv6 = new[ipv6.size()+1](ipv6);
+    //    //    ipv6[ipv6.size()-1].address = cfg.ipv6_addresses[i];
+    //    //    ipv6[ipv6.size()-1].mask = 128;
+    //    //end
+    //endfunction
 
     function string get_ipv4_addresses();
         string ipv4_addresses = "";
-        string ipv4_address;
+        string sep = "";
 
         foreach (ipv4[i]) begin
-            ipv4_address = $sformatf("%0d.%0d.%0d.%0d/32",
+            const string ipv4_address = $sformatf("%0d.%0d.%0d.%0d/%0d",
                             ipv4[i].address[31 : 24],
                             ipv4[i].address[23 : 16],
                             ipv4[i].address[15 : 8],
-                            ipv4[i].address[7 : 0]);
+                            ipv4[i].address[7 : 0],
+                            ipv4[i].mask);
 
-            if (ipv4_addresses == "") begin
-                ipv4_addresses = ipv4_address;
-            end
-            else begin
-                ipv4_addresses = { ipv4_addresses, ";", ipv4_address };
-            end
+            ipv4_addresses = { ipv4_addresses, sep, ipv4_address };
+            sep = ";";
+        end
+
+        foreach (cfg.ipv4_addresses[i]) begin
+            const string ipv4_address = $sformatf("%0d.%0d.%0d.%0d/%0d",
+                            cfg.ipv4_addresses[i][31 : 24],
+                            cfg.ipv4_addresses[i][23 : 16],
+                            cfg.ipv4_addresses[i][15 : 8],
+                            cfg.ipv4_addresses[i][7 : 0],
+                            30);
+
+            ipv4_addresses = { ipv4_addresses, sep, ipv4_address };
+            sep = ";";
         end
 
         return ipv4_addresses;
@@ -222,10 +231,10 @@ class sequence_flowtest_eth #(
 
     function string get_ipv6_addresses();
         string ipv6_addresses = "";
-        string ipv6_address;
+        string sep = "";
 
         foreach (ipv6[i]) begin
-            ipv6_address = $sformatf("%04h:%04h:%04h:%04h:%04h:%04h:%04h:%04h/128",
+            const string ipv6_address = $sformatf("%04h:%04h:%04h:%04h:%04h:%04h:%04h:%04h/%0d",
                             ipv6[i].address[127 : 112],
                             ipv6[i].address[111 : 96],
                             ipv6[i].address[95 : 80],
@@ -233,14 +242,29 @@ class sequence_flowtest_eth #(
                             ipv6[i].address[63 : 48],
                             ipv6[i].address[47 : 32],
                             ipv6[i].address[31 : 16],
-                            ipv6[i].address[15 : 0]);
+                            ipv6[i].address[15 : 0],
+                            ipv6[i].mask
+                        );
 
-            if (ipv6_addresses == "") begin
-                ipv6_addresses = ipv6_address;
-            end
-            else begin
-                ipv6_addresses = { ipv6_addresses, ";", ipv6_address };
-            end
+            ipv6_addresses = { ipv6_addresses, sep, ipv6_address };
+            sep = ";";
+        end
+
+        foreach (cfg.ipv6_addresses[i]) begin
+            const string ipv6_address = $sformatf("%04h:%04h:%04h:%04h:%04h:%04h:%04h:%04h/%0d",
+                            cfg.ipv6_addresses[i][127 : 112],
+                            cfg.ipv6_addresses[i][111 : 96],
+                            cfg.ipv6_addresses[i][95 : 80],
+                            cfg.ipv6_addresses[i][79 : 64],
+                            cfg.ipv6_addresses[i][63 : 48],
+                            cfg.ipv6_addresses[i][47 : 32],
+                            cfg.ipv6_addresses[i][31 : 16],
+                            cfg.ipv6_addresses[i][15 : 0],
+                            126
+                        );
+
+            ipv6_addresses = { ipv6_addresses, sep, ipv6_address };
+            sep = ";";
         end
 
         return ipv6_addresses;
@@ -334,7 +358,7 @@ class sequence_flowtest_eth #(
         string generator_parameters;
         string generator_execute_command;
 
-        configure();
+        //configure();
         generate_tools_configuration();
 
         reader = new();
@@ -562,7 +586,7 @@ class sequence_search_eth  #(
     function string generate_ipv6_rule();
         string rule = "";
         foreach (cfg.ipv6_addresses[i]) begin
-            rule = { rule, ",\n\t", ipv6_print(cfg.ipv4_addresses[i], 128) };
+            rule = { rule, ",\n\t", ipv6_print(cfg.ipv6_addresses[i], 126) };
         end
         return rule;
     endfunction

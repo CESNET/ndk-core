@@ -16,10 +16,7 @@ class driver#(ITEM_WIDTH, META_WIDTH) extends uvm_driver #(sequence_item#(ITEM_W
         STORE_MFB
     } store_diff_type;
 
-    protected int unsigned diff_min;
-    protected int unsigned diff_max;
-    protected int unsigned diff_count_min;
-    protected int unsigned diff_count_max;
+    config_item m_config;
     protected sequence_item#(ITEM_WIDTH, META_WIDTH) fifo_mvb_tmp[$];
     protected sequence_item#(ITEM_WIDTH, META_WIDTH) fifo_mfb_tmp[$];
     protected uvm_common::fifo#(sequence_item#(ITEM_WIDTH, META_WIDTH)) fifo_mvb;
@@ -29,11 +26,6 @@ class driver#(ITEM_WIDTH, META_WIDTH) extends uvm_driver #(sequence_item#(ITEM_W
     function new(string name, uvm_component parent = null);
         super.new(name, parent);
         reset_sync = new();
-        diff_min = 1;
-        diff_max = 100;
-        //diff_max = 500;
-        diff_count_min =  10;
-        diff_count_max = 2000;
     endfunction: new
 
 
@@ -41,6 +33,8 @@ class driver#(ITEM_WIDTH, META_WIDTH) extends uvm_driver #(sequence_item#(ITEM_W
         int unsigned ret = 0;
         ret |= (fifo_mvb_tmp.size() != 0);
         ret |= (fifo_mfb_tmp.size() != 0);
+        ret |= (fifo_mvb.size() != 0);
+        ret |= (fifo_mfb.size() != 0);
         return ret;
     endfunction
 
@@ -80,15 +74,25 @@ class driver#(ITEM_WIDTH, META_WIDTH) extends uvm_driver #(sequence_item#(ITEM_W
         int unsigned diff_count;
         store_diff_type diff_type;
         time end_time;
+        //time max_wait;
 
         diff_count = 0;
         forever begin
             time end_time;
 
             if (diff_count == 0) begin
-                diff_count = $urandom_range(diff_count_min, diff_count_max);
-                diff       = $urandom_range(diff_min, diff_max);
-                assert(std::randomize(diff_type) with { diff_type dist { STORE_MVB := 1'b1, STORE_MFB := 1'b1}; }) else begin `uvm_fatal(this.get_full_name(), "\n\tCannot randomize diff type"); end
+                const int unsigned diff_step = (m_config.diff_max - m_config.diff_min)/10;
+                assert(std::randomize(diff_type, diff, diff_count) with
+                    {
+                        diff_type  dist { STORE_MVB := m_config.weigth_mfb_first, 1'b1, STORE_MFB := m_config.weigth_mvb_first};
+                        diff       dist { [m_config.diff_min              : m_config.diff_min + diff_step] :/ 95,
+                                          [m_config.diff_min+ diff_step   : m_config.diff_min + diff_step*9] :/ 1,
+                                          [m_config.diff_min+ diff_step*9 : m_config.diff_max] :/ 5};
+                        diff_count dist { [m_config.diff_count_min:m_config.diff_count_max] };
+                    })
+                    else begin
+                        `uvm_fatal(this.get_full_name(), "\n\tCannot randomize diff type");
+                    end
             end else begin
                 diff_count--;
             end
@@ -97,7 +101,8 @@ class driver#(ITEM_WIDTH, META_WIDTH) extends uvm_driver #(sequence_item#(ITEM_W
             // There is timeout if application cannot received enough data on MVB interface or MFB interface
             wait(fifo_mvb_tmp.size() != 0 && fifo_mfb_tmp.size() != 0);
             if (diff_type == STORE_MVB) begin
-                end_time = $time() + 100ns;
+                //MFB is generated first
+                end_time = $time() + 300ns;
                 wait(fifo_mfb.size() == 0 || (fifo_mvb.size() == 0 && end_time < $time()));
                 if (diff < fifo_mvb_tmp.size() || fifo_mfb_tmp.size() > 0) begin
                     gen = fifo_mvb_tmp.pop_front();
@@ -106,7 +111,8 @@ class driver#(ITEM_WIDTH, META_WIDTH) extends uvm_driver #(sequence_item#(ITEM_W
                 gen = fifo_mfb_tmp.pop_front();
                 fifo_mfb.push_back(gen);
             end else if (diff_type == STORE_MFB) begin
-                end_time = $time() + 10ns;
+                //MVB is generated first
+                end_time = $time() + 300ns;
                 wait(fifo_mvb.size() == 0 || (fifo_mfb.size() == 0 && end_time < $time()));
                 if (diff < fifo_mfb_tmp.size() || fifo_mvb_tmp.size() > 0) begin
                     gen = fifo_mfb_tmp.pop_front();
