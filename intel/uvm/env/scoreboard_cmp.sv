@@ -75,7 +75,7 @@ class scoreboard_channel_mfb_unordered #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WID
     endfunction
 
     virtual function int unsigned compare(MODEL_ITEM tr_model, DUT_ITEM tr_dut);
-        return (tr_model.data === tr_dut.data);
+        return (tr_dut.data ==? tr_model.data);
     endfunction
 
     virtual function string model_item2string(MODEL_ITEM tr);
@@ -95,7 +95,7 @@ class scoreboard_channel_mfb_ordered #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH
     endfunction
 
     virtual function int unsigned compare(MODEL_ITEM tr_model, DUT_ITEM tr_dut);
-        return (tr_model.data === tr_dut.data);
+        return (tr_dut.data ==? tr_model.data);
     endfunction
 
     virtual function string model_item2string(MODEL_ITEM tr);
@@ -115,7 +115,7 @@ class scoreboard_channel_mfb_tagged #(META_WIDTH, CHANNELS, PKT_MTU, ITEM_WIDTH)
     endfunction
 
     virtual function int unsigned compare(MODEL_ITEM tr_model, DUT_ITEM tr_dut);
-        return (tr_model.data === tr_dut.data);
+        return (tr_dut.data ==? tr_model.data);
     endfunction
 
     virtual function string model_item2string(MODEL_ITEM tr);
