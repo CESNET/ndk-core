@@ -88,6 +88,11 @@ proc dts_build_netcope {} {
         append ret [dts_dmamod_open $ADDR_DMA_MOD $DMA_TYPE [expr $DMA_RX_CHANNELS / $PCIE_ENDPOINTS] [expr $DMA_TX_CHANNELS / $PCIE_ENDPOINTS] $mi_idx $DMA_RX_FRAME_SIZE_MAX $DMA_TX_FRAME_SIZE_MAX $DMA_RX_FRAME_SIZE_MIN $DMA_TX_FRAME_SIZE_MIN]
     }
 
+    global DMA_DEBUG_ENABLE
+    if {$DMA_TYPE == 4 && $DMA_DEBUG_ENABLE} {
+        append ret [data_logger "0x1320000" 0 "dma_calypte_latency_meter"]
+    }
+
     # Network module
     global NET_MOD_ARCH ETH_PORTS ETH_PORT_SPEED ETH_PORT_CHAN ETH_PORT_LANES ETH_PORT_RX_MTU ETH_PORT_TX_MTU NET_MOD_ARCH QSFP_CAGES QSFP_I2C_ADDR
     if {$NET_MOD_ARCH != "EMPTY"} {
