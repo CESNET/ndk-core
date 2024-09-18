@@ -22,6 +22,7 @@ architecture FULL of SDM_CTRL is
         avmm_read          : in  std_logic                     := 'X';             -- read
         avmm_readdata      : out std_logic_vector(31 downto 0);                    -- readdata
         avmm_readdatavalid : out std_logic;                                        -- readdatavalid
+        avmm_waitrequest   : out std_logic;                                        -- waitrequest
         irq_irq            : out std_logic                                         -- irq
     );
     end component mailbox_client_ip;
@@ -42,6 +43,7 @@ architecture FULL of SDM_CTRL is
     signal mc_dwr       : std_logic_vector(DATA_WIDTH-1 downto 0);
     signal mc_drd       : std_logic_vector(DATA_WIDTH-1 downto 0);
     signal mc_drd_vld   : std_logic;
+    signal mc_wait      : std_logic;
 
     -- mailbox client data register
     signal mc_drd_reg   : std_logic_vector(DATA_WIDTH-1 downto 0);
@@ -107,7 +109,7 @@ begin
             if (rising_edge(CLK)) then
                 if (RESET = '1') then
                     p_state <= IDLE;
-                else
+                elsif (mc_wait = '0') then
                     p_state <= n_state;
                 end if;
             end if;
@@ -290,7 +292,7 @@ begin
                     mc_dwr       <= avmm_dwr;
                     avmm_drd     <= mc_drd;
                     avmm_drd_vld <= mc_drd_vld;
-                    avmm_wait    <= '0';
+                    avmm_wait    <= mc_wait;
                     chip_id_done <= '1';
                 when others =>
                     null;
@@ -352,7 +354,7 @@ begin
             if (rising_edge(CLK)) then
                 if (RESET = '1') then
                     retry_cnt <= (others => '0');
-                elsif (p_state = SEND_CMD) then
+                elsif (p_state = SEND_CMD and mc_wait = '0') then
                     retry_cnt <= std_logic_vector(unsigned(retry_cnt) + 1);
                 end if;
             end if;
@@ -366,7 +368,7 @@ begin
         mc_dwr       <= avmm_dwr;
         avmm_drd     <= mc_drd;
         avmm_drd_vld <= mc_drd_vld;
-        avmm_wait    <= '0';
+        avmm_wait    <= mc_wait;
 
     end generate;
 
@@ -415,6 +417,7 @@ begin
         avmm_read          => mc_rd,
         avmm_readdata      => mc_drd,
         avmm_readdatavalid => mc_drd_vld,
+        avmm_waitrequest   => mc_wait,
         irq_irq            => open
     );
 

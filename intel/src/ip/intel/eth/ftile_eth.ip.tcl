@@ -126,7 +126,7 @@ proc do_create_ftile_eth_ip {device family ipname filename} {
 	set_instance_parameter_value eth_f_0 {tx_ipg_size_gui} {12}
 	set_instance_parameter_value eth_f_0 {tx_max_frame_size_gui} {1518}
 	set_instance_parameter_value eth_f_0 {tx_vlan_detection_gui} {1}
-	set_instance_parameter_value eth_f_0 {txmac_saddr_gui} {73588229205}
+	set_instance_parameter_value eth_f_0 {txmac_saddr_gui} {773588229205}
 	set_instance_property eth_f_0 AUTO_EXPORT true
 
 	# add wirelevel expressions
