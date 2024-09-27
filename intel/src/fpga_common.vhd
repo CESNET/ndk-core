@@ -370,8 +370,10 @@ architecture FULL of FPGA_COMMON is
             end if;
         end if;
 
-        if (IS_USP_PCIE_EP = True) then -- Gen3 mode only
+        if (IS_USP_PCIE_EP = True) then -- Gen3/4 mode only
             if (PCIE_ENDPOINT_MODE = 0) then -- x16
+                pcie_mfb_regions := 2; --2x256b AXI
+            elsif (PCIE_ENDPOINT_MODE = 1) then -- x8x8
                 pcie_mfb_regions := 2; --2x256b AXI
             elsif (PCIE_ENDPOINT_MODE = 2) then --x8
                 pcie_mfb_regions := 1; --1x256b AXI
