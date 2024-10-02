@@ -58,16 +58,6 @@ if {$ETH_PORTS == 0} {
 # Checking of parameter compatibility
 # ------------------------------------------------------------------------------
 
-if {$ETH_PORTS <= $PCIE_ENDPOINTS} {
-    if {$DMA_MODULES != $ETH_PORTS && $ETH_PORTS != 0 && $DMA_MODULES != 0} {
-        error "Incompatible value of DMA_MODULES: $DMA_MODULES! Must be equal to ETH_PORTS."
-    }
-} else {
-    if {($DMA_MODULES != $ETH_PORTS) && ($DMA_MODULES != 1)} {
-        error "Incompatible value of DMA_MODULES: $DMA_MODULES! Must be equal to ETH_PORTS or equal to 1."
-    }
-}
-
 if { $DMA_TYPE == 4 } {
     if {
         !(
