@@ -133,7 +133,6 @@ architecture CALYPTE of DMA_WRAPPER is
     --==============================================================================================
     --  Testing Module ---> DMA Module interface
     --==============================================================================================
-    signal rx_usr_mfb_meta_size_tst      : slv_array_t(DMA_STREAMS-1 downto 0)(log2(USR_RX_PKT_SIZE_MAX+1)-1 downto 0);
     signal rx_usr_mfb_meta_hdr_meta_tst  : slv_array_t(DMA_STREAMS-1 downto 0)(HDR_META_WIDTH             -1 downto 0);
     signal rx_usr_mfb_meta_channel_tst   : slv_array_t(DMA_STREAMS-1 downto 0)(log2(RX_CHANNELS)          -1 downto 0);
 
@@ -622,7 +621,7 @@ begin
                 RX_MFB_SRC_RDY_IN  => rx_usr_mfb_src_rdy_sync(i),
                 RX_MFB_DST_RDY_IN  => rx_usr_mfb_dst_rdy_sync(i),
 
-                RX_MFB_META_PKT_SIZE_OUT => rx_usr_mfb_meta_size_tst(i),
+                RX_MFB_META_PKT_SIZE_OUT => open,
                 RX_MFB_META_HDR_META_OUT => rx_usr_mfb_meta_hdr_meta_tst(i),
                 RX_MFB_META_CHAN_OUT     => rx_usr_mfb_meta_channel_tst(i),
 
@@ -712,7 +711,6 @@ begin
                 CLK   => PCIE_USR_CLK(i),
                 RESET => PCIE_USR_RESET(i) or force_reset_dbg(i),
 
-                USR_RX_MFB_META_PKT_SIZE => rx_usr_mfb_meta_size_tst(i),
                 USR_RX_MFB_META_HDR_META => rx_usr_mfb_meta_hdr_meta_tst(i),
                 USR_RX_MFB_META_CHAN     => rx_usr_mfb_meta_channel_tst(i),
 
